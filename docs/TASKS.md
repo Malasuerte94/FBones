@@ -2,9 +2,10 @@
 
 Latest user goal: publish the open-source beta, observe successful GitHub builds
 on all three platforms, and verify README presentation. F000-public remains
-ACTIVE with public Malasuerte94/FBones and main workflow41202180924 running.
-Local CI/test fixes and source prep
-are complete, hosted builds/publication/live README checks are not observed. The product priority remains **F105 Animate/timeline/keyframes ACTIVE**. The user
+ACTIVE with public Malasuerte94/FBones. All3native builds pass on5086547;
+two paired-audited UI test corrections are preparing beta.2 final gates.
+Live README desktop/mobile passes; final gated source release remains pending.
+The product priority remains **F105 Animate/timeline/keyframes ACTIVE**. The user
 confirmed Physics and meshes work and explicitly deferred remaining F307/F308
 fidelity work as PENDING. Do not block animation on those old probes. Published
 0.9.4/429e4c4f retains bone/slot/draw/deform/constraint/Event tracks, portable WAV
@@ -21,7 +22,7 @@ belong to their named delivery, not to a new combined test run.
 
 | ID | Status | Dependencies | Acceptance |
 | --- | --- | --- | --- |
-| F000-public | ACTIVE | Current0.9.4 | PUBLIC Malasuerte94/FBones created after official gh OAuth; reviewed main7efc2f1 pushed via SSH. Independent audits match471remote blobs; MIT/main/issues/topics confirmed. Live GitHub README desktop1440/narrow390 visually passes with3decoded images/contained table. Actual main CI41202180924 in_progress; macOS packaging found missing default-run after prior checks passed; paired-gated manifest fix/Cargo metadata accepted, hosted rebuild pending. All3same first packaging defect. Second run41202581221 built editors then Tauri tried missing auto-discovered e2e_host; paired-gated identical wrapper relocation now builds clean local deb with no host and opt-in host separately. FirstUI85pass/3timeouts/7notrun; calibrated CI1worker/budgets preserve all95 and assertions; new hosted proof pending. Current6578770 run41203936898: Linux+Windows builds/reports and95/95UI pass. macOS app+DMG builds/signs but verifier lipo order is wrong; paired Apple-source-gated verifier-only fix preserves botharch/codesign/path/DMG checks. Push finalcandidate+beta tag; release stays gated on all exact-commit jobs, no manual bypass. Root watch exec86642. Next fix actual failures,tag green source then verify gated beta assets. Local263JS+skip,Rust254/46/7+legacy93,frontend/TS and fresh install retained. Full goal incomplete; see STATE/progress receipt. |
+| F000-public | ACTIVE | Current0.9.4 | PUBLIC FBones/MIT/contributor kit/live desktop+mobile README pass. All3native package/report jobs green on main5086547/run41205464845 and beta.1/run41205464589; eachUI94pass/1invalid-test-oracle failure. Paired DATA/UI proves Reset cross-epoch baseline and stale moving-pointer coordinates; test-only corrections focused PASS, all numeric/epoch/key/history assertions retained. Retain beta.1; prepare new beta.2, require final3native+95UI then verify public5assets/archive/checksums. Source-only; no installer/nativeGUI/notarization claim. See STATE. |
 | F001 | DONE | — | Instructions, continuation notes, ignored research data; remove exactly the three obsolete editor packages and update inventory. |
 | F002 | WAITING | F001 | Shell/viewport implemented; Windows user-confirmed and current Linux debug GTK/X11/WebGL startup observed. macOS launch remains unverified. |
 | F003a | DONE | F001 | Reproducible 4.3.26 corpus inspection; distinguish proven format facts from unknowns. |

@@ -2,7 +2,7 @@ name: Desktop checks and builds
 on:
   push:
     branches: [main]
-    tags: [v0.9.4-beta.1]
+    tags: [v0.9.4-beta.2]
   pull_request:
   workflow_dispatch:
 
@@ -111,7 +111,7 @@ jobs:
   release:
     name: Publish source beta after all checks
     needs: [desktop, linux-ui]
-    if: github.repository == 'Malasuerte94/FBones' && github.ref == 'refs/tags/v0.9.4-beta.1'
+    if: github.repository == 'Malasuerte94/FBones' && github.ref == 'refs/tags/v0.9.4-beta.2'
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -131,4 +131,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v0.9.4-beta.1 .local/ci-source-release/fbones-v0.9.4-beta.1-source.tar.gz .local/ci-source-release/SHA256SUMS .local/platform-build-reports/*.json --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease --latest=false --title 'FBones 0.9.4 Beta 1 — source preview' --notes-file docs/releases/v0.9.4-beta.1.md
+          gh release create v0.9.4-beta.2 .local/ci-source-release/fbones-v0.9.4-beta.2-source.tar.gz .local/ci-source-release/SHA256SUMS .local/platform-build-reports/*.json --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease --latest=false --title 'FBones 0.9.4 Beta 2 — source preview' --notes-file docs/releases/v0.9.4-beta.2.md

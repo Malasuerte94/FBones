@@ -2,145 +2,56 @@
 
 ## Public beta and platform CI — current user goal
 
-Goal: publish public Malasuerte94/FBones, observe successful Windows/Linux/macOS
-GitHub workflows, and verify README presentation. This goal has a public repository and awaits hosted validation/release; it is NOT
-complete. Source-only beta v0.9.4-beta.1 is prepared; no public repository, hosted
-workflow run or release has been observed. Internal Windows delivery below is
-separate and unchanged.
+PUBLIC repository: https://github.com/Malasuerte94/FBones (main, MIT, issues,
+contributor kit). User authorized public creation/push/releases. Official gh OAuth
+and SSH now work; credentials remain ignored. Root private/original materials and
+protected user windows are untouched. Only allowlisted source is exported.
 
-### Completed locally
+Current published main and immutable candidate tag v0.9.4-beta.1 point to
+5086547ebafc148f8cc2a631e86418b1f3f1a080. Both hosted runs41205464845 (main)
+and41205464589 (tag) finished: ALL THREE native build/package/report jobs PASS,
+including Linux deb/AppImage, Windows NSIS and universal macOS app/DMG with both
+architectures, codesign verification and executable path scan. Reports mark native
+GUI validation false; no installers are distributed or notarization claimed.
+The release job correctly stayed skipped because each UI run had94pass/1fail.
+No public release exists yet. The public tag is retained; beta.2 is being prepared.
 
-MIT/license metadata, contributor guide, ROADMAP, issue/PR templates, source and
-asset provenance, direct dependency notices and beta notes are present. README
-contains three genuine0.9.4 captures; all PNGs/hashes and relative/navigation
-links pass. CommonMark+table rendering produces six headings/three images/eleven
-status rows/two code fences; Setup alt text now matches its bone-only fixture.
-Live GitHub/desktop/narrow README layout remains unobserved because browser/socket
-launches are sandbox-blocked. UI reference audit: research/PUBLIC-BETA-README-UI.md.
+Paired DATA/UI trace audits proved two test errors, not solver failures:
+- Tag: Reset creates a new epoch; resumed movement was compared with a pre-Reset
+  overshoot. Test now samples the paused post-Step pose, preserves the strict0.01
+  movement, Off/clock/authored-state/history checks. Focused CI-profile1/1PASS.
+- Main: the parent moved11.336px between sampling and pointerdown, outside9px hit
+  tolerance; Tree deselection proves an empty-space box. Replay freeze/time/all6
+  matrix checks already passed. Test installs Playwright clock before navigation,
+  proves Play progression, then holds RAF while sending real mouse down/drag/up.
+  Adds selected-parent assertion; preserves exactly1Replay/1edit, epoch/key/frame,
+  Setup/nonbaking and numeric checks. Focused CI-profile1/1PASS. Official clock
+  API documents pre-navigation install and RAF pause; no production source change.
+Audit receipts: .local/public-beta/live-ci-data/{tag-ui-reset-baseline-finding,
+main-508-moving-target-finding}.{json,md} and live-readme/{reset-epoch-baseline-ui-gate,
+play-pointer-hit-ui-gate}.md. No retries/skips/tolerance relaxation introduced.
 
-Paired reference DATA/UI audits precede CI fixes. weights-panel test now imports
-Vue's declared compiler export and uses native dirname rather than slash slicing.
-An isolated pnpm resolution check OUTSIDE the workspace proves the new import
-resolves and the old undeclared import fails. The original nested probe inherited
-ancestor node_modules; that negative isolation result is retained, not counted as
-fresh isolation. Full clean install linked97cached packages but esbuild postinstall
-hit spawnSync EPERM; the subsequent outside-workspace check deliberately used
---ignore-scripts and proves module resolution only, not full install/build.
+Earlier6578770/run41203936898 passed full95UI with zero retries/skips/fails.
+Hosted rendering was measured5.77x slower than local; CI uses1worker and calibrated
+execution allowances, all assertions retained. Earlier packaging fixes explicitly
+select fbones and move the identical opt-in host wrapper outside Tauri auto-scan;
+Apple lipo input order was corrected after primary-source audit. None changes
+editor/runtime/codec algorithms. Local263JS/1knownskip,254native+46format+7research,
+93legacy/1ignored, product/test TypeScript and frontend build pass. Isolated clean
+install/build/test passed after full access superseded the old sandbox blocker.
 
-Fresh local checks on current sources: JS263pass/1knownskip; production frontend
-build and product/test TypeScript pass; Rust workspace254native+46format+7research
-pass (2native ignored), legacy93pass/1ignored. Logs .local/public-beta/ci-{js,
-frontend,rust,rust-legacy}.log; isolated import/install logs use ci-isolated-*.
-No runtime/editor/codec source changed. Existing95UI remains historical evidence;
-no new full editor UI run or platform launch is claimed. After full access was
-granted, the same previously blocked dependency install completed successfully
-with esbuild postinstall, followed by263JS/1knownskip, production build and testTS
-in the isolated checkout. Log clean-install-test/fresh-checks.log under
-.local/public-beta/. This supersedes the sandbox install blocker only.
+README has3 genuine FBones screenshots, implementation/remaining-work table,
+CONTRIBUTING/ROADMAP/license/notices. Actual live GitHub1440/390 visual inspection
+passes: images decoded, no document overflow/errors, contained table scrolling;
+all3PNGs and contributor/roadmap/license resources200/exact bytes. Evidence in
+.local/public-beta/live-readme/. These captures are our fixtures/assets only.
 
-Actual local Chromium README preview now succeeds at1440px and390px:3decoded
-images per viewport, no page errors or document horizontal overflow. Root visually
-inspected desktop/narrow top and narrow implementation table; the table scrolls
-within its container. Ignored .local/public-beta/readme-browser/ retains captures
-and browser-check.json. This is a GitHub-like HTML approximation, not live GitHub
-rendering. The earlier file-URL attempt failed relative image decoding; the
-successful intercepted-origin renderer resolves genuine local images correctly.
-
-### Workflow and release configuration
-
-Desktop matrix builds Linuxx64 deb/AppImage, Windowsx64 NSIS and universalmacOS
-app/DMG on native runners. Includes locked install, JS/testTS, Rust default/legacy,
-Cargo lock flag after Tauri's required separator, explicit Linux prerequisites,
-macOS targets/ad-hoc signing and source-path remapping. ci-build.py verifies
-architecture, executable-only private-path patterns, package structure and hashes;
-JSON reports explicitly mark native GUI validation FALSE. No installers uploaded.
-Ubuntu UI separately fetches Cargo before offline host, chooses installed Chromium,
-and uses a600s suite watchdog without weakening individual assertions.
-
-Exact beta tag release job requires all3platform builds plus UbuntuUI, receives
-contents-write only there, and publishes source/checksums/3build reports. Shell
-publisher pushes without force then watches the exact tag/commit workflow; it
-cannot race/bypass CI with local release creation. Initial illegal Tauri --locked
-position and old immediate-release race were found and corrected before export.
-Configuration/permissions/CLI-help/path-remap/shell checks pass; actual hosted
-results are still REQUIRED. DATA and release audits live at
-research/PUBLIC-BETA-{CI-DATA,RELEASE-AUDIT}.md; docs/PUBLICATION.md explains scope.
-
-Current allowlisted candidate is .local/public-beta/current/: repository on main,
-local v0.9.4-beta.1 tag, manifest/source archive/SHA256SUMS. Earlier source-only
-candidate and clean-install probe remain separate ignored evidence; use CURRENT,
-not the older v0.9.4-beta.1 directory. Archives exclude original materials, personal
-projects/raw research, historical instruction archives, tools/configs/caches/builds;
-include required numeric test fixtures. Content equality, neutral ownership and
-source hashes must be rechecked after changes. Root empty/read-only .git untouched.
-
-### PUBLIC repository; hosted validation in progress
-
-User completed official GitHub CLI device authorization as Malasuerte94.
-Project-local credentials stay ignored in .local/github-auth; no token in source.
-Created PUBLIC https://github.com/Malasuerte94/FBones via gh and pushed main
-7efc2f18c066900735d1d61828c3f1315e3226a6 over existing SSH. MIT recognized;
-issues enabled, default branch main and relevant editor/stack topics configured.
-Independent DATA/release audits match all471 remote Git blobs to reviewed source;
-no excluded original/private material found. Candidate remains clean.
-
-LIVE main workflow41202180924 runs exact7efc2f1:3native platform builds plusUbuntuUI.
-Watch process exec54556 owns gh run watch; do not restart jobs on timeout.
-No beta tag or release existed at the initial main checkpoint; see the final
-verification-only/tag strategy below.
-First macOS job124539994268 passed install/JS/testTS/Rust default+legacy and
-frontend, then Tauri failed main-binary discovery. Paired DATA/UI finding recorded
-before a manifest-only default-run=fbones fix; no editor runtime change. Cargo
-metadata confirms the intended executable; hosted rebuild still required.
-All3 first-run platforms confirmed the same default-run defect. First UbuntuUI
-completed85pass/3timeoutfail/7notrun with600s suite errors; paired trace audits
-show85matched passes median5.77x local, progressing constraints/Physics and frame
-backlog before an undispatched Undo, without numeric mismatch. CI-only1worker,
-90s test/20s action/15s expect/30s navigation/30min suite/45min job is now a
-controlled resource-profile change; all95/assertions/no retries remain.
-
-After default-run fix, run41202581221 on27342ec built real Linux/macOS editors
-but Tauri bundling tried missing e2e_host. Exact pinned CLI source proves it
-re-adds src/bin files after feature filtering. Paired DATA/UI gate preceded moving
-the identical wrapper to src/e2e_host_main.rs; explicit name/feature preserved.
-Local Debian build now completes; package inventory includes usr/bin/fbones and
-NO testhost. Cargo metadata and explicit opt-in host build pass. Focused3 prior
-UI failures now pass locally under the CI profile (17.5s), with unchanged exact
-assertions; new full hosted validation is still required.
-Current public main is65787704daa797c9ae72be42362b3f987c33feee after packaging2
-and calibrated CI fixes. Actual run41203936898 is live; root watch exec86642.
-Linuxx64 job124545089909 SUCCESS: deb/AppImage and report validation pass.
-On main6578770, Linux+Windows jobs and full95UI are now GREEN; UI reports95passed
-in9.6m with zero skips/retries/failures. All3 prior timed-out cases pass unchanged.
-macOS compiled both target builds, signed and produced app+DMG, then the verifier
-failed its lipo argument order. Primary Apple manual/parser proves input must
-precede -verify_arch (the remaining args are parsed as architectures). Paired
-DATA/UI finding precedes correcting only verifier order/diagnostics and recording
-actual lipo -archs output. Both-architecture/codesign/path/DMG gates stay mandatory.
-
-The final verification-only candidate and beta tag may be pushed together: the
-tag workflow owns publication and still requires all3builds+95UI at that exact
-commit. No local/manual release bypass. This replaces the earlier precaution of
-waiting for a separate main run before triggering identical tag checks; it does
-not weaken any release gate. The initial local beta tag has never been pushed.
-The tracked public source/manifest are frozen separately from this local access
-checkpoint; avoid creating extra source commits just to restate waiting status.
-Receipts .local/public-beta/current/publication-progress.json,
-.local/public-beta/live-ci-data/ and live-release/. Actual job results still pending.
-
-Actual LIVE GitHub README at1440px and390px was rendered/visually inspected in own
-Chromium. Three images decode1440x900, six headings/two code blocks, no JS errors
-or document overflow. Desktop table fits; narrow table scrolls within container.
-Evidence .local/public-beta/live-readme/browser-check.json and captures. Raw/API
-checks returned200 with exact reviewed bytes for CONTRIBUTING/ROADMAP/LICENSE
-and all3PNG resources, complementing transient429 on some blob-page requests.
-
-Next: inspect existing main run, resolve actual failures with paired reference
-findings first, verify final source/readme/license, then push v0.9.4-beta.1 tag
-and observe all required jobs plus source prerelease/assets. The full goal is
-ACTIVE/incomplete until all3platform builds and beta release are verified.
-No native GUI parity claim follows from builds; public installer acceptance stays
-separate. No original editor, protected user windows or internal builds touched.
+Beta.2 keeps source-only scope and all3native+full95UI gating before publication.
+Next: export/reconcile reviewed source into .local/public-beta/current/repository,
+commit and atomically push main plus NEW v0.9.4-beta.2; observe final tag gates,
+then reconcile all3reports and public prerelease5assets/source archive/checksums.
+Use a fresh candidate archive; historical current/*.tar.gz does not match edits.
+Full publication/build/README goal remains ACTIVE until those final gates pass.
 
 
 ## Priority and current delivery
@@ -268,8 +179,8 @@ Geometry/Slots/Demo/Controls and audio remain available. Nothing to copy/build.
 
 ## Next reproducible action
 
-Finish the authorized public beta publication when GitHub CLI/network access is
-available, using the prepared source snapshot and publisher above. Product work
+Finish the authorized beta.2 publication and final hosted gates using the
+reviewed allowlisted source snapshot and publisher above. Product work
 then continues F105 with paired DATA/UI reference audits before dependent implementation.
 Next open scope: global Physics targets/reset-all, separate RGB/alpha/TintBlack,
 advanced timing/Graph controls, animation mixing and onion skin. Reuse exact4.3.26

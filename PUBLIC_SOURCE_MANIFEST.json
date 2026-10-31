@@ -1,5 +1,5 @@
 {
-  "release": "v0.9.4-beta.1",
+  "release": "v0.9.4-beta.2",
   "kind": "source-only",
   "files": [
     {
@@ -15,7 +15,7 @@
     {
       "path": "README.md",
       "bytes": 7766,
-      "sha256": "b4ebfe8c46f13517c30fd55816b707eeaec8ac3335a277ee3a4a25dcf612ac6c"
+      "sha256": "829be1f67c3568030c997ca16bba832c7d54719fdcdedb92279529439046682a"
     },
     {
       "path": "CONTRIBUTING.md",
@@ -105,7 +105,7 @@
     {
       "path": ".github/workflows/desktop.yml",
       "bytes": 5091,
-      "sha256": "e300e8f4b5811d122ebb6142ba18377f1e462e6f2207e64d2f74ed47c24c51ec"
+      "sha256": "f0b6bebca4a1c34126205987c8ea82491c6a3362858ee4d7128ecd45d3f5eed7"
     },
     {
       "path": "src/App.vue",
@@ -1159,8 +1159,8 @@
     },
     {
       "path": "tests/e2e/animation-physics-preview.native.spec.ts",
-      "bytes": 16417,
-      "sha256": "6658230184f7c4db7175aa0c9564428ae57c6740e21c3006228b06d5eabd26ac"
+      "bytes": 16779,
+      "sha256": "e3e90ae6b52f72564e63ea14451dffa78b3a82b7171470304a43200b55d688b4"
     },
     {
       "path": "tests/e2e/animation-vertex-selection.native.spec.ts",
@@ -1234,8 +1234,8 @@
     },
     {
       "path": "tests/e2e/physics-live.native.spec.ts",
-      "bytes": 11060,
-      "sha256": "e77d52c6013d439dbf669ae8caa7e58795761fef406a5bec8880969eef7b4cff"
+      "bytes": 11227,
+      "sha256": "b863f40cffd102c3d446fd57a88f967885ae07bd38e5d2d27c2565817fde262e"
     },
     {
       "path": "tests/e2e/readonly-scene.spec.ts",
@@ -1484,8 +1484,8 @@
     },
     {
       "path": "scripts/prepare-public-release.py",
-      "bytes": 7035,
-      "sha256": "31a9e72dce6737911af958301f2536e0484a78c9973786d3c70f0aea59b51f5b"
+      "bytes": 7051,
+      "sha256": "6ed14ad385b3993075009f97b3839ad1f8895a6864a21914366df76a230ddbf7"
     },
     {
       "path": "scripts/prepare-windows-test.py",
@@ -1495,7 +1495,7 @@
     {
       "path": "scripts/publish-public-beta.sh",
       "bytes": 3369,
-      "sha256": "0b67ff24dd2b86b55b34592a6453df2773bbb5859a3f866a0291192bfbed8ae0"
+      "sha256": "62df396ac601bb25464846d0cb71c8521906be365846931718dd23b338ab5d7c"
     },
     {
       "path": "scripts/run-ui-tests.mjs",
@@ -1579,8 +1579,8 @@
     },
     {
       "path": "docs/PUBLICATION.md",
-      "bytes": 7929,
-      "sha256": "742beff7bfca57fddae087b3ecd00028dc6fab65a50d24bf8b29a0f1de8e1b8f"
+      "bytes": 8539,
+      "sha256": "32abd80102dade888df8df31a489f3290bec64a5f2b1757a7de822748ce297e9"
     },
     {
       "path": "docs/REFERENCE-WORKFLOW-4.3.26.md",
@@ -1599,13 +1599,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 18761,
-      "sha256": "e73969970f015eea7b7196c9b341d92be97f5e8f6cd2d49ae4c2e75fb969f51f"
+      "bytes": 12764,
+      "sha256": "21814df57b98ac6cc1d8276d1df55775c851e9002f39d38c41ad48b650bade66"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 18564,
-      "sha256": "0a6af09bc5a6ef43d3ac9ed9a1d8f74bcd94f47c05da6fd1035181807f967c6a"
+      "bytes": 17809,
+      "sha256": "9cfdd69c53066bfe9965d78bed9f32821d4c12d4cdd998779f164afd82b19e3a"
     },
     {
       "path": "docs/TESTING.md",
@@ -1631,6 +1631,11 @@
       "path": "docs/releases/v0.9.4-beta.1.md",
       "bytes": 3416,
       "sha256": "edefaaca61829a6762b90437ef9e12f5c14197339740b43b1231d01b2e16dfb3"
+    },
+    {
+      "path": "docs/releases/v0.9.4-beta.2.md",
+      "bytes": 3819,
+      "sha256": "280407385cb8b4abbe3b4d657449b5a4b104b4de99cdf12cf7d199ee9653df81"
     },
     {
       "path": "docs/research/ANIMATION-CONSTRAINT-EVENT-CODEC-CONTRACT.md",

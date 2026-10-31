@@ -50,7 +50,7 @@ Unsupported structures remain inspection-only rather than being discarded to mak
 
 ## Getting started
 
-The first beta is **source-only**, tagged **`v0.9.4-beta.1`**; the application displays **0.9.4**. Prebuilt installers are not included. See [beta release notes](docs/releases/v0.9.4-beta.1.md) for scope and platform limits.
+The first beta is **source-only**, tagged **`v0.9.4-beta.2`**; the application displays **0.9.4**. Prebuilt installers are not included. See [beta release notes](docs/releases/v0.9.4-beta.2.md) for scope and platform limits.
 
 To build from source, install **Node.js 22.12+**, **pnpm 11.1.0**, **Rust 1.93+**, and the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/).
 

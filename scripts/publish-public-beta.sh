@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Publish only the reviewed source snapshot, never the private working directory.
 set -euo pipefail
-release_tag=v0.9.4-beta.1
+release_tag=v0.9.4-beta.2
 release_repo=Malasuerte94/FBones
 script_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 release_dir=${1:-"$script_root/.local/public-beta/current"}
@@ -43,7 +43,7 @@ for attempt in {1..30}; do
   release_run=$(gh run list --repo "$release_repo" --workflow desktop.yml \
     --commit "$release_commit" --event push --limit 30 \
     --json databaseId,headBranch \
-    --jq 'map(select(.headBranch == "v0.9.4-beta.1")) | .[0].databaseId // empty')
+    --jq 'map(select(.headBranch == "v0.9.4-beta.2")) | .[0].databaseId // empty')
   [[ -n "$release_run" ]] && break
   sleep 2
 done

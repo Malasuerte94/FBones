@@ -60,7 +60,7 @@ These automated checks supplement the source and visual review; they are not a
 proof of complete provenance or an exhaustive secret scanner.
 
 Initialize the exported `repository/` as a new Git repository on `main`, commit
-its reviewed files, and tag that commit `v0.9.4-beta.1`. The release archive
+its reviewed files, and tag that commit `v0.9.4-beta.2`. The release archive
 contains the same source and manifest, without Git metadata. Do not initialize
 or publish the private workspace as a whole.
 
@@ -126,3 +126,13 @@ signature, executable path checks and DMG verification remain mandatory.
 A source beta tag starts the gated release workflow; it is not itself a claim
 that the builds have passed. The repository and source tag can be pushed
 together, but only successful exact-commit jobs can publish the prerelease.
+
+
+The first published source beta is targeted as `v0.9.4-beta.2`. The earlier
+beta.1 tag is retained as an unpublished candidate; its UI gate caught an invalid
+pre-Reset/post-Reset comparison in one test. The corrected test samples the
+paused post-Reset/Step pose, keeps the same0.01 motion requirement and adds an
+explicit Off assertion before resume. All other intent, native snapshot,
+geometry/history and non-baking checks remain. No Physics algorithm changes.
+Historical source archives use their own manifest release value for prefix
+verification, so creating beta.2 does not invalidate beta.1 evidence.

@@ -9,7 +9,7 @@ import shutil
 import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
-TAG = 'v0.9.4-beta.1'
+TAG = 'v0.9.4-beta.2'
 FILES = (
     '.gitignore', 'AGENTS.md', 'README.md', 'CONTRIBUTING.md', 'LICENSE',
     'THIRD_PARTY_NOTICES.md', 'Cargo.toml', 'Cargo.lock', 'package.json',
@@ -81,7 +81,7 @@ def verify_archive(repository, archive):
     manifest = json.loads((repository / 'PUBLIC_SOURCE_MANIFEST.json').read_text())
     expected = {row['path']: row['sha256'] for row in manifest['files']}
     expected['PUBLIC_SOURCE_MANIFEST.json'] = digest((repository / 'PUBLIC_SOURCE_MANIFEST.json').read_bytes())
-    prefix = f'FBones-{TAG}'
+    prefix = f'FBones-{manifest["release"]}'
     actual = set()
     with tarfile.open(archive, 'r:gz') as bundle:
         for member in bundle:

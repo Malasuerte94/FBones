@@ -43,10 +43,12 @@ test('@native Setup gravity is live by default during an actual parent drag and 
 });
 
 test('@native Simulate off, Reset and temporary geometry holds preserve intent and do not bake gravity',async({page,native})=>{
- const f=await fixture(page,native);await page.getByTestId('physics-simulate').uncheck();const frozen=(await rendered(page,f.child))!,before=(await native.snapshot())!;
+ const f=await fixture(page,native);await page.getByTestId('physics-simulate').uncheck();const before=(await native.snapshot())!;
  await page.getByTestId('physics-preview-reset').click();await expect(page.getByTestId('physics-simulate')).not.toBeChecked();await expect(page.getByTestId('physics-preview-time')).toHaveText('0.000 s');
  await page.getByTestId('physics-preview-step').click();await expect(page.getByTestId('physics-preview-time')).not.toHaveText('0.000 s');expect(await native.snapshot()).toEqual(before);
- await page.getByTestId('physics-simulate').check();await expect.poll(async()=>(await rendered(page,f.child))!.y).toBeLessThan(frozen.y-.01);
+ // Reset starts a new preview epoch; compare resumed motion with its paused Step pose.
+ await expect(page.getByTestId('physics-simulate')).not.toBeChecked();const stepped=(await rendered(page,f.child))!;
+ await page.getByTestId('physics-simulate').check();await expect.poll(async()=>(await rendered(page,f.child))!.y).toBeLessThan(stepped.y-.01);
  // An Images geometry gesture freezes exactly one authoritative native pose.
  await native.queueDialog('folder','images');await page.getByRole('button',{name:'Choose images folder…',exact:true}).click();await expect.poll(async()=>(await native.snapshot())?.library?.images.length).toBe(5);
  const canvas=page.getByTestId('viewport').locator('canvas'),box=(await canvas.boundingBox())!,start=native.calls.length;
