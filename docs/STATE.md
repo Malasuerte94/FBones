@@ -3,7 +3,7 @@
 ## Public beta and platform CI — current user goal
 
 Goal: publish public Malasuerte94/FBones, observe successful Windows/Linux/macOS
-GitHub workflows, and verify README presentation. This goal is ACTIVE and is NOT
+GitHub workflows, and verify README presentation. This goal has a public repository and awaits hosted validation/release; it is NOT
 complete. Source-only beta v0.9.4-beta.1 is prepared; no public repository, hosted
 workflow run or release has been observed. Internal Windows delivery below is
 separate and unchanged.
@@ -32,7 +32,19 @@ build and product/test TypeScript pass; Rust workspace254native+46format+7resear
 pass (2native ignored), legacy93pass/1ignored. Logs .local/public-beta/ci-{js,
 frontend,rust,rust-legacy}.log; isolated import/install logs use ci-isolated-*.
 No runtime/editor/codec source changed. Existing95UI remains historical evidence;
-no new full browser run or platform launch is claimed.
+no new full editor UI run or platform launch is claimed. After full access was
+granted, the same previously blocked dependency install completed successfully
+with esbuild postinstall, followed by263JS/1knownskip, production build and testTS
+in the isolated checkout. Log clean-install-test/fresh-checks.log under
+.local/public-beta/. This supersedes the sandbox install blocker only.
+
+Actual local Chromium README preview now succeeds at1440px and390px:3decoded
+images per viewport, no page errors or document horizontal overflow. Root visually
+inspected desktop/narrow top and narrow implementation table; the table scrolls
+within its container. Ignored .local/public-beta/readme-browser/ retains captures
+and browser-check.json. This is a GitHub-like HTML approximation, not live GitHub
+rendering. The earlier file-URL attempt failed relative image decoding; the
+successful intercepted-origin renderer resolves genuine local images correctly.
 
 ### Workflow and release configuration
 
@@ -62,27 +74,41 @@ projects/raw research, historical instruction archives, tools/configs/caches/bui
 include required numeric test fixtures. Content equality, neutral ownership and
 source hashes must be rechecked after changes. Root empty/read-only .git untouched.
 
-### External blocker and next action
+### PUBLIC repository; hosted validation in progress
 
-Connected GitHub profile Malasuerte94 confirmed; exact FBones lookup still404.
-Connector has no repository/release creation mutation. Terminal still lacks gh
-and direct GitHub DNS fails. New browser route is available, but its Default
-profile has NO recorded GitHub sign-in. Secure sign-in choice was requested via
-async input and is unanswered; no browser mutation or credential access attempted.
-No automatic approval rejection occurred. User already authorizes publication.
+User completed official GitHub CLI device authorization as Malasuerte94.
+Project-local credentials stay ignored in .local/github-auth; no token in source.
+Created PUBLIC https://github.com/Malasuerte94/FBones via gh and pushed main
+7efc2f18c066900735d1d61828c3f1315e3226a6 over existing SSH. MIT recognized;
+issues enabled, default branch main and relevant editor/stack topics configured.
+Independent DATA/release audits match all471 remote Git blobs to reviewed source;
+no excluded original/private material found. Candidate remains clean.
 
-Next: finish the pending secure GitHub browser sign-in (or provide networked,
-authenticated gh). Create only the intended public repository, push CURRENT
-source/tag, observe all exact-commit jobs, fix actual failures and verify release
-assets/hashes and real README desktop/narrow rendering. If using gh, run
-`bash scripts/publish-public-beta.sh`; the tag workflow owns release creation.
-Do not claim success from YAML or these local checks. Do not mark the goal complete
-until the public repository/release, successful3platform jobs and real README
-presentation have been observed. Binaries additionally require full notices,
-package-wide checks and separate native acceptance before public downloads.
-The old internal Windows429e image retains246absolute path occurrences and stays
-excluded/protected. This is infrastructure/test/documentation work only; no new
-editor launch, original editor probe or protected user-window action is needed.
+LIVE main workflow41202180924 runs exact7efc2f1:3native platform builds plusUbuntuUI.
+Watch process exec54556 owns gh run watch; do not restart jobs on timeout.
+No beta tag pushed or release created yet; tag only the green final source commit.
+First macOS job124539994268 passed install/JS/testTS/Rust default+legacy and
+frontend, then Tauri failed main-binary discovery. Paired DATA/UI finding recorded
+before a manifest-only default-run=fbones fix; no editor runtime change. Cargo
+metadata confirms the intended executable; hosted rebuild still required.
+Linux also failed and its exact cause is being read; Windows/UI still active.
+Receipts .local/public-beta/current/publication-progress.json,
+.local/public-beta/live-ci-data/ and live-release/. Actual job results still pending.
+
+Actual LIVE GitHub README at1440px and390px was rendered/visually inspected in own
+Chromium. Three images decode1440x900, six headings/two code blocks, no JS errors
+or document overflow. Desktop table fits; narrow table scrolls within container.
+Evidence .local/public-beta/live-readme/browser-check.json and captures. Raw/API
+checks returned200 with exact reviewed bytes for CONTRIBUTING/ROADMAP/LICENSE
+and all3PNG resources, complementing transient429 on some blob-page requests.
+
+Next: inspect existing main run, resolve actual failures with paired reference
+findings first, verify final source/readme/license, then push v0.9.4-beta.1 tag
+and observe all required jobs plus source prerelease/assets. The full goal is
+ACTIVE/incomplete until all3platform builds and beta release are verified.
+No native GUI parity claim follows from builds; public installer acceptance stays
+separate. No original editor, protected user windows or internal builds touched.
+
 
 ## Priority and current delivery
 

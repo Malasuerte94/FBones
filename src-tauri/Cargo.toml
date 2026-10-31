@@ -1,5 +1,6 @@
 [package]
 name = "fbones-desktop"
+default-run = "fbones"
 version.workspace = true
 license.workspace = true
 edition.workspace = true

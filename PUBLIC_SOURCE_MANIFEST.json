@@ -559,8 +559,8 @@
     },
     {
       "path": "src-tauri/Cargo.toml",
-      "bytes": 908,
-      "sha256": "e13975aa4194033344982f340c20934ddb1cf21eceb5d3480bf5ce5e4e62f69a"
+      "bytes": 931,
+      "sha256": "087ac2a2cb6cb92e83444040da17a096492f760c0f5bb3d5762e5b2702cc623e"
     },
     {
       "path": "src-tauri/build.rs",
@@ -1599,13 +1599,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 14536,
-      "sha256": "e49529bfb3791bc61e02c2bca5d76749fbb5c49cd63955775cc8600d41b7a015"
+      "bytes": 16358,
+      "sha256": "c2f06165fb72036bdc5b8eb8376ec55b54622ddf72a31d235a89a179e511bf2a"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 17913,
-      "sha256": "375117d5d759b6e5dded0749ffd58644d3664c7ed8cc48632c484283ccca8f15"
+      "bytes": 17945,
+      "sha256": "98235a053f33ed23d608e8dd428254afc2578c09c6db8da398b4c63b59c10f2e"
     },
     {
       "path": "docs/TESTING.md",

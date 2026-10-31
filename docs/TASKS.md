@@ -2,7 +2,8 @@
 
 Latest user goal: publish the open-source beta, observe successful GitHub builds
 on all three platforms, and verify README presentation. F000-public remains
-WAITING on GitHub authentication/network; local CI/test fixes and source prep
+ACTIVE with public Malasuerte94/FBones and main workflow41202180924 running.
+Local CI/test fixes and source prep
 are complete, hosted builds/publication/live README checks are not observed. The product priority remains **F105 Animate/timeline/keyframes ACTIVE**. The user
 confirmed Physics and meshes work and explicitly deferred remaining F307/F308
 fidelity work as PENDING. Do not block animation on those old probes. Published
@@ -20,7 +21,7 @@ belong to their named delivery, not to a new combined test run.
 
 | ID | Status | Dependencies | Acceptance |
 | --- | --- | --- | --- |
-| F000-public | WAITING | Current0.9.4 | README/3screenshots/MIT/contributor kit and allowlisted current source beta prepared. Paired DATA/UI audits led to Vue compiler import +Windows dirname test fixes, actual isolated resolution proof; JS263+1skip, Rust254/46/7 and legacy93, frontend/testTS pass. Native3platform matrix +UbuntuUI +tag-gated source prerelease configured; Tauri lock flag/release race corrected, structural checks pass. No hosted runs/public repo/release/live README observed: connector cannot create repos/releases, terminal gh/DNS unavailable, browser profile lacks GitHub signin; secure setup question pending. Use .local/public-beta/current and scripts/publish-public-beta.sh after auth. Goal remains ACTIVE/incomplete; see STATE/PUBLICATION. |
+| F000-public | ACTIVE | Current0.9.4 | PUBLIC Malasuerte94/FBones created after official gh OAuth; reviewed main7efc2f1 pushed via SSH. Independent audits match471remote blobs; MIT/main/issues/topics confirmed. Live GitHub README desktop1440/narrow390 visually passes with3decoded images/contained table. Actual main CI41202180924 in_progress; macOS packaging found missing default-run after prior checks passed; paired-gated manifest fix/Cargo metadata accepted, hosted rebuild pending. Linux failure being inspected; no tag/release yet. Root watch exec54556. Next fix actual failures,tag green source then verify gated beta assets. Local263JS+skip,Rust254/46/7+legacy93,frontend/TS and fresh install retained. Full goal incomplete; see STATE/progress receipt. |
 | F001 | DONE | — | Instructions, continuation notes, ignored research data; remove exactly the three obsolete editor packages and update inventory. |
 | F002 | WAITING | F001 | Shell/viewport implemented; Windows user-confirmed and current Linux debug GTK/X11/WebGL startup observed. macOS launch remains unverified. |
 | F003a | DONE | F001 | Reproducible 4.3.26 corpus inspection; distinguish proven format facts from unknowns. |
