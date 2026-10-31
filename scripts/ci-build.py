@@ -17,7 +17,11 @@ TARGETS = {
 
 
 def run(*args):
-    return subprocess.check_output(args, text=True, stderr=subprocess.STDOUT).strip()
+    try:
+        return subprocess.check_output(args, text=True, stderr=subprocess.STDOUT).strip()
+    except subprocess.CalledProcessError as error:
+        # Preserve the validator's diagnostic instead of showing only its exit code.
+        raise ValueError(f'{args[0]} failed ({error.returncode}): {error.output.strip()}') from error
 
 
 def configure():
@@ -60,6 +64,7 @@ def verify(target):
     if target == 'universal-apple-darwin':
         executable = app / 'Contents' / 'MacOS' / 'fbones'
     data = executable.read_bytes()
+    architectures = ['x86_64']
     if target == 'x86_64-pc-windows-msvc':
         if data[:2] != b'MZ':
             raise ValueError('Windows application is not a PE file.')
@@ -72,7 +77,9 @@ def verify(target):
         if data[:5] != b'\x7fELF\x02' or struct.unpack_from('<H', data, 18)[0] != 62:
             raise ValueError('Linux application is not an x64 ELF.')
     else:
-        run('lipo', '-verify_arch', 'x86_64', 'arm64', str(executable))
+        # Apple lipo consumes every argument after -verify_arch as an architecture.
+        run('lipo', str(executable), '-verify_arch', 'x86_64', 'arm64')
+        architectures = run('lipo', '-archs', str(executable)).split()
         run('codesign', '--verify', '--deep', '--strict', str(app))
     check_private_paths(data)
     packages = []
@@ -95,6 +102,7 @@ def verify(target):
                          'bytes': len(payload), 'sha256': hashlib.sha256(payload).hexdigest()})
     report = {
         'source_commit': os.environ.get('GITHUB_SHA'), 'target': target,
+        'architectures': architectures,
         'version': json.loads(Path('package.json').read_text())['version'],
         'rustc': run('rustc', '--version'), 'node': run('node', '--version'),
         'executable_sha256': hashlib.sha256(data).hexdigest(),

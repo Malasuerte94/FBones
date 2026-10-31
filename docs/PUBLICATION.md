@@ -114,3 +114,15 @@ headless host wrapper is outside `src/bin`; pinned Tauri CLI2.10.1 otherwise
 rediscovers it after filtering its feature-gated Cargo target, causing packages
 to expect a nonexistent `e2e_host` executable. Relocating the identical wrapper
 preserves the explicit host feature/name and keeps it out of normal bundles.
+
+
+Apple's `lipo` requires the input before `-verify_arch`; every remaining argument
+is parsed as an architecture name. The verifier uses
+`lipo <executable> -verify_arch x86_64 arm64`, records `lipo -archs` output,
+and retains full failing subprocess diagnostics. Both architectures, code
+signature, executable path checks and DMG verification remain mandatory.
+[Apple lipo manual source](https://github.com/apple-oss-distributions/cctools/blob/main/man/lipo.1).
+
+A source beta tag starts the gated release workflow; it is not itself a claim
+that the builds have passed. The repository and source tag can be pushed
+together, but only successful exact-commit jobs can publish the prerelease.

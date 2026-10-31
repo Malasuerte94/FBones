@@ -86,7 +86,8 @@ no excluded original/private material found. Candidate remains clean.
 
 LIVE main workflow41202180924 runs exact7efc2f1:3native platform builds plusUbuntuUI.
 Watch process exec54556 owns gh run watch; do not restart jobs on timeout.
-No beta tag pushed or release created yet; tag only the green final source commit.
+No beta tag or release existed at the initial main checkpoint; see the final
+verification-only/tag strategy below.
 First macOS job124539994268 passed install/JS/testTS/Rust default+legacy and
 frontend, then Tauri failed main-binary discovery. Paired DATA/UI finding recorded
 before a manifest-only default-run=fbones fix; no editor runtime change. Cargo
@@ -106,6 +107,24 @@ Local Debian build now completes; package inventory includes usr/bin/fbones and
 NO testhost. Cargo metadata and explicit opt-in host build pass. Focused3 prior
 UI failures now pass locally under the CI profile (17.5s), with unchanged exact
 assertions; new full hosted validation is still required.
+Current public main is65787704daa797c9ae72be42362b3f987c33feee after packaging2
+and calibrated CI fixes. Actual run41203936898 is live; root watch exec86642.
+Linuxx64 job124545089909 SUCCESS: deb/AppImage and report validation pass.
+On main6578770, Linux+Windows jobs and full95UI are now GREEN; UI reports95passed
+in9.6m with zero skips/retries/failures. All3 prior timed-out cases pass unchanged.
+macOS compiled both target builds, signed and produced app+DMG, then the verifier
+failed its lipo argument order. Primary Apple manual/parser proves input must
+precede -verify_arch (the remaining args are parsed as architectures). Paired
+DATA/UI finding precedes correcting only verifier order/diagnostics and recording
+actual lipo -archs output. Both-architecture/codesign/path/DMG gates stay mandatory.
+
+The final verification-only candidate and beta tag may be pushed together: the
+tag workflow owns publication and still requires all3builds+95UI at that exact
+commit. No local/manual release bypass. This replaces the earlier precaution of
+waiting for a separate main run before triggering identical tag checks; it does
+not weaken any release gate. The initial local beta tag has never been pushed.
+The tracked public source/manifest are frozen separately from this local access
+checkpoint; avoid creating extra source commits just to restate waiting status.
 Receipts .local/public-beta/current/publication-progress.json,
 .local/public-beta/live-ci-data/ and live-release/. Actual job results still pending.
 

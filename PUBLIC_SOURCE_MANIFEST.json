@@ -1449,8 +1449,8 @@
     },
     {
       "path": "scripts/ci-build.py",
-      "bytes": 5742,
-      "sha256": "b7636d1621baa9b5959646a755e0327dbe495cf99df83f57b5e4b387bf85d3af"
+      "bytes": 6219,
+      "sha256": "7337677fc017b8c32b9d70bd2d8f40ac487b952a12150a25b06b07b303ba26df"
     },
     {
       "path": "scripts/dev-local.sh",
@@ -1579,8 +1579,8 @@
     },
     {
       "path": "docs/PUBLICATION.md",
-      "bytes": 7239,
-      "sha256": "387577b58455cfb39b260984966723c64c9d06384569a658bcc286857e537a05"
+      "bytes": 7929,
+      "sha256": "742beff7bfca57fddae087b3ecd00028dc6fab65a50d24bf8b29a0f1de8e1b8f"
     },
     {
       "path": "docs/REFERENCE-WORKFLOW-4.3.26.md",
@@ -1599,13 +1599,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 17367,
-      "sha256": "2691360c02c102b17aa0bb9167fbfd61426ff234e2bc63a3059ee9d1362d7a13"
+      "bytes": 18761,
+      "sha256": "e73969970f015eea7b7196c9b341d92be97f5e8f6cd2d49ae4c2e75fb969f51f"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 18263,
-      "sha256": "141a42be90af745c58c0ed2a632b6054ed2df9b8eced52afd7ee6bd6171fb8c1"
+      "bytes": 18564,
+      "sha256": "0a6af09bc5a6ef43d3ac9ed9a1d8f74bcd94f47c05da6fd1035181807f967c6a"
     },
     {
       "path": "docs/TESTING.md",
