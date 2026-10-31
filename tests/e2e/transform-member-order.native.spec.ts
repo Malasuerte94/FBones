@@ -1,0 +1,22 @@
+import {test,expect,openNativeEditor,type NativeSession} from './fixtures/native-session';
+import type {ProjectSummary} from '../../src/domain/project';
+import {copyFile,mkdir,writeFile} from 'node:fs/promises';
+import {join} from 'node:path';
+async function edit(native:NativeSession,p:ProjectSummary,edit:unknown){return native.invoke<ProjectSummary>('edit_rig',{expectedRevision:p.revision,edit});}
+test('@native Transform membership retains reversed target order through real select edits, no-op, Undo/Redo and binary save/reopen',async({page,native},info)=>{
+ let p=await native.invoke<ProjectSummary>('create_project',{name:'Retained Transform targets',discardChanges:true});const ids:number[]=[];
+ for(const[name,x]of [['First target',10],['Second target',-10],['New target',30],['Source',50]] as const){p=await edit(native,p,{type:'create',parent:p.bones[0]!.id,x,y:0,rotation:0,length:20});ids.push(p.editedBone!);p=await edit(native,p,{type:'update',id:p.editedBone!,name,x,y:0,rotation:0,length:20});}
+ const [first,second,added,source]=ids as [number,number,number,number];p=await edit(native,p,{type:'addConstraint',constraint:{type:'transform',name:'Ordered Transform targets',bones:[second,first],source,localSource:true,localTarget:true,additive:false,clamp:false,offsets:[0,0,0,0,0,0],mix:[0,0,0,0,0,0],properties:[{property:'x',offset:0,to:[{property:'x',offset:0,max:1,scale:1}]}]}});const id=p.constraints!.at(-1)!.id;
+ const current=async()=>{const c=(await native.snapshot())!.constraints!.find(c=>c.id===id);if(c?.type!=='transform')throw Error('Transform target disappeared');return c;};
+ await openNativeEditor(page);await page.locator(`[data-tree-kind="constraint"][data-tree-id="${id}"]`).getByRole('treeitem').click();const members=page.getByTestId('constraint-members');await expect(members).toHaveValues([String(first),String(second)]);
+ const unchanged=(await current()).properties,before=(await native.snapshot())!;await members.selectOption([String(first),String(second)]);await expect(members).toHaveValues([String(first),String(second)]);expect(await native.snapshot()).toEqual(before);
+ const callStart=native.calls.length;await members.selectOption([String(first),String(second),String(added)]);await expect.poll(async()=>(await current()).bones).toEqual([second,first,added]);
+ expect((await native.snapshot())!.revision).toBe(before.revision+1);expect(native.calls.slice(callStart).filter(c=>c.command==='edit_rig')).toHaveLength(1);
+ const addedState=(await native.snapshot())!;expect((await current()).properties).toEqual(unchanged);expect(addedState.bones).toEqual(before.bones);
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await expect.poll(async()=>(await current()).bones).toEqual([second,first]);await page.getByRole('button',{name:'Redo',exact:true}).click();await expect.poll(async()=>(await current()).bones).toEqual([second,first,added]);
+ await page.locator(`[data-tree-kind="constraint"][data-tree-id="${id}"]`).getByRole('treeitem').click();await members.selectOption([String(second),String(added)]);await expect.poll(async()=>(await current()).bones).toEqual([second,added]);await page.getByRole('button',{name:'Undo',exact:true}).click();await expect.poll(async()=>(await current()).bones).toEqual([second,first,added]);
+ await native.queueDialog('save','ordered-transform.fbones');await page.getByRole('button',{name:'Save',exact:true}).click();await expect.poll(async()=>(await native.snapshot())?.dirty).toBe(false);const saved=(await native.snapshot())!;
+ const output=info.outputPath('transform-order-comparison');await mkdir(output,{recursive:true});await copyFile(saved.path!,join(output,'accepted-ui.fbones'));await writeFile(join(output,'authored.json'),JSON.stringify({before,added:addedState,saved},null,2));
+ const file=page.locator('header details').filter({has:page.locator('summary').filter({hasText:/^File$/})});await file.locator('summary').click();await file.getByRole('button',{name:/^Close project/}).click();await expect.poll(()=>native.snapshot()).toBeNull();await native.queueDialog('open','ordered-transform.fbones');await page.getByRole('button',{name:'Open project',exact:true}).first().click();await expect.poll(()=>native.snapshot()).not.toBeNull();
+ expect((await native.snapshot())!.constraints).toEqual(saved.constraints);expect((await native.snapshot())!.bones).toEqual(saved.bones);expect((await current()).bones).toEqual([second,first,added]);
+});

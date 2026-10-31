@@ -1,0 +1,96 @@
+# FBones tasks
+
+Latest user goal: publish the open-source beta, observe successful GitHub builds
+on all three platforms, and verify README presentation. F000-public remains
+WAITING on GitHub authentication/network; local CI/test fixes and source prep
+are complete, hosted builds/publication/live README checks are not observed. The product priority remains **F105 Animate/timeline/keyframes ACTIVE**. The user
+confirmed Physics and meshes work and explicitly deferred remaining F307/F308
+fidelity work as PENDING. Do not block animation on those old probes. Published
+0.9.4/429e4c4f retains bone/slot/draw/deform/constraint/Event tracks, portable WAV
+and the shared Setup/Animate transform HUD, and adds bounded Animate Physics
+preview. Full animation
+scope includes multiple animations, key authoring/editing, interpolation/curves,
+Dopesheet/Graph, playback, looping, slots/deform/constraint tracks and native
+compatible persistence; see docs/tasks/F105-animation.md for staged coverage.
+UI must closely follow `animare/` references, changing the color theme.
+
+Statuses: TODO, ACTIVE, WAITING, DONE. External checks remain WAITING until
+observed. Spine reference: **4.3.26 only**. Historical acceptance counts below
+belong to their named delivery, not to a new combined test run.
+
+| ID | Status | Dependencies | Acceptance |
+| --- | --- | --- | --- |
+| F000-public | WAITING | Current0.9.4 | README/3screenshots/MIT/contributor kit and allowlisted current source beta prepared. Paired DATA/UI audits led to Vue compiler import +Windows dirname test fixes, actual isolated resolution proof; JS263+1skip, Rust254/46/7 and legacy93, frontend/testTS pass. Native3platform matrix +UbuntuUI +tag-gated source prerelease configured; Tauri lock flag/release race corrected, structural checks pass. No hosted runs/public repo/release/live README observed: connector cannot create repos/releases, terminal gh/DNS unavailable, browser profile lacks GitHub signin; secure setup question pending. Use .local/public-beta/current and scripts/publish-public-beta.sh after auth. Goal remains ACTIVE/incomplete; see STATE/PUBLICATION. |
+| F001 | DONE | — | Instructions, continuation notes, ignored research data; remove exactly the three obsolete editor packages and update inventory. |
+| F002 | WAITING | F001 | Shell/viewport implemented; Windows user-confirmed and current Linux debug GTK/X11/WebGL startup observed. macOS launch remains unverified. |
+| F003a | DONE | F001 | Reproducible 4.3.26 corpus inspection; distinguish proven format facts from unknowns. |
+| F003a-golden | DONE | F003a | User supplied a controlled empty 4.3.26 project; framing, internal version and CRC64 verified. |
+| F003b | DONE | F003a, F003a-golden | Independent minimal-profile writer and bounded canonical reader integrated in fbones-format; both match the 16 returned fixtures. General project compatibility remains future scope. |
+| F003b-reference | DONE | F003a-golden | All eight Windows original-Spine cases returned successfully. Independently verified envelopes, reported checksums, exported bone changes and repacked payload/JSON equality. Envelope accepted by original Spine; semantic encoder remains pending. |
+| F003b-candidate | DONE | F003b-reference | Eight independent generations accepted/exported by original Spine; artifacts independently verified and interactive opening confirmed by user. Do not repeat tests. |
+| F003c | DONE | F003b | User confirmed generated .spine copy opens correctly in original Windows Spine 4.3.26. Minimal-profile compatibility only. |
+| F004a | DONE | F002 | Windows native new/save/open dialogs and lifecycle confirmed by user. Linux/macOS verification stays tracked separately under F005. |
+| F004b | DONE | F003b, F004a | User confirmed Windows 0.2.0 New → Save .fbones → Close → Open. Safe writes, revision guards and filesystem roundtrip tests pass. |
+| F005a | WAITING | F002 | Checks, historical Linux executable/.deb and CI matrix exist. Current debug Linux GTK/X11/WebGL startup now passes F005-linux-smoke; current packaged-release and native-dialog lifecycle checks remain. Earlier GTK startup failure is historical. |
+| F005b | WAITING | F004b, F005a | Native Windows/macOS launch and lifecycle checks; Spine roundtrip verified. |
+| F005-win | DONE | F001 | Actual Windows x64 release executable built using LLD, cached SDK and a strict resource writer. Portable WINDOWS_TEST folder assembled; PE/resources/imports checked. Native Windows launch with an active FBones window is now observed through W:. |
+| F005-csp | DONE | F005-win | Strict-CSP failure reproduced and fixed; actual viewport entry passes the restriction, renderer/IPC errors separated, Windows 0.1.1 rebuilt. User confirmed application opens successfully. |
+| F005-ui-linux | DONE | F005-csp | Routine UI regression moved to Ubuntu Playwright:16 real Chromium tests pass, including isolated production Rust Session authoring/history/binary Save/Close/Open, clipping/IK/Transform/Physics frozen placement; exact production CSP and strict test TypeScript. Snapshot in analysis/playwright-linux-check.json. Native OS checks remain distinct. |
+| F005-linux-smoke | DONE | F005-ui-linux | Actual current0.8.2 debug Linux GTK/X11 window observed viewable with frontend renderer=webgl, PID829352/window0x600003, then handed to user. This is startup only; packaged-release and native-dialog lifecycle acceptance remains open under F005a/F005b. |
+| F005-shared | DONE | F005-win | Desktop app/folder shortcut targets independently parsed; user confirmed app launch via shared UNC workspace. Builds/results no longer need copying. |
+| F101 | DONE | F004b | User confirmed Windows creation, dragging and parenting; all four extended cases accepted/exported in original Spine. Independent artifact checks and canonical equality pass. Undo/redo and persistence pass automated tests; scale/shear remain outside scope. |
+| F102 | DONE | F101 | 0.4.0 PNG import, slot binding/visibility/transforms, draw order, viewport sprites, history and resource-safe persistence implemented. Eight codec cases and the actual native Windows import/save/close/reopen flow pass; the UI-saved project is accepted/exported by original Spine. |
+| F102-codec | DONE | F101 | Eight regions-v1 cases accepted/exported by original Spine; decoded payloads match controlled original imports outside identity. Slots, hidden regions, transforms, bone binding, independent inventory/draw order and Unicode covered. |
+| F102-assets | DONE | F102-codec | Native PNG validation/cache; safe relative image resources, missing images, collision protection and Save As copying; include failure tests. |
+| F102-ui | DONE | F102-assets | Import PNG, slot hierarchy/inspector, binding, visibility, draw order and viewport sprites; integrated history/save/reopen tests. |
+| F103 | DONE | F102 | Vertex/edge editing, constrained triangulation, soft selection, mesh rendering, history and persistence. Fourteen original-Spine cases and actual Windows UI save/reopen passed. |
+| F104 | DONE | F103 | Multi-bone binding, auto/normalized/numeric weights, brush modes and skinning. Windows stroke/drag undo, posed save/reopen and original-Spine export of the UI-created file passed. |
+| F104-ui | DONE | F104 | Compact gray Setup workspace matching the supplied layout; resizable Weights/Mesh Tools, combined Tree/Properties, draw-order tab and Views controls. Actual Windows screenshot inspected. |
+| F005-images | DONE | F005-win | Immutable per-build Windows image path and launcher without anonymous stream pipes; separate build paths keep previous running images intact. Two Python delivery tests, two native-bootstrap tests and actual launch/lifecycle passed. The stable root launcher preserves existing EXE shortcuts without Desktop writes. |
+| F200 | DONE | F104 | Folder-backed Images tree with subfolders, browsing creates no slots, drag into viewport/bone creates slot+attachment; no Import PNG toolbar; persistence and safe Save As. |
+| F201 | DONE | F103 | Contextual bottom Mesh Modify/Create/Remove toolbar, connected point/edge creation by click/drag, setup-vs-deformed semantics and live preview. |
+| F202 | DONE | F201 | Smart outer alpha contour trace with shadow-ignore threshold, tolerance, spacing, budget, preview/apply/cancel and persistence. |
+| F203 | DONE | F202 | Inner trace: image detail/straight structure and surface points, threshold/tolerance/spacing controls, bounded constraints and transparent areas. |
+| F204 | DONE | F201 | Metric-aware constrained triangle quality; avoid gratuitously long/slender edges, recalculate while defining setup geometry. |
+| F205 | DONE | F101 | B creates; click existing bone selects creation parent; empty click creates small bone; dragging draws; Escape cancels/selects translation. |
+| F206 | DONE | F101 | Bottom Translate/Rotate/Scale/Shear/Pose/Length tools with full affine persistence and image/skinning transforms. |
+| F207 | DONE | F101 | Explicit Enter property commits, blur dedup, invalid fields block save; Escape discards a staged edit. |
+| F208 | DONE | F206 | Ctrl/Shift/marquee bone selection; hierarchy-aware atomic group translate/rotate and other transforms. |
+| F209 | DONE | F206 | Pose changes orientation without stretching; length edit is a distinct setup tool. |
+| F210 | DONE | F206 | Saved bone/slot colors and optional automatic related child hues, no invented binary auto-color tag. |
+| F211 | DONE | F207 | Rename bones via Name, F2 or tree double-click with persistence/history. |
+| F212 | DONE | F208 | Tree drag-and-drop bone reparent and slot reassignment preserving world appearance and preventing cycles. |
+| F213 | DONE | F104 | Draw-order drag-and-drop, front/back semantics and persistence. |
+| F214 | DONE | F200–F213 | Focused tests, new controlled 4.3.26 comparisons, actual Windows interactions/save/reopen, final current app opened and continuation docs updated. |
+| F215 | DONE | F214 | Images Ctrl/Cmd toggle and Shift range selection; drag selected assets together, preserve destination bone, atomic batch placement/history/save. |
+| F216 | DONE | F215 | Fix actual Windows HTML5 mouse drag/drop; verify real mouse gestures, not just constructed DOM DataTransfer events. |
+| F217 | DONE | F214 | Explicit Individual/Group multi-bone rotation with equal angular delta, stable hierarchy/world math, undo and persistence. |
+| F218 | DONE | F217 | Interactive constant-screen-size rotate radius/ring, independent local Scale axes and explicit World Shear handles with hover/drag feedback. |
+| F219 | DONE | F217 | Compact X/Y/rotation/length/scale/shear fields centered at viewport bottom; explicit Enter/blur/save/Escape and responsive layout. |
+| F220 | DONE | F215–F219 | Focused tests, actual Windows interactions/save/reopen, build delivery, visual inspection, final app launch and updated continuation notes. |
+| F221 | DONE | F214 | Two reference audits: three new original-4.3.26 A/B/none cases prove two attachments owned by one slot and one nullable active reference; primary documentation/UI evidence classified separately. Current codec safely rejects the broader profile. |
+| F222 | DONE | F220, F221 | Bounded canonical Scene inventory/active A/B/none, ownership, existing-slot placement and direct Region/Mesh raw image-path editing accepted; empty fallback, exact loaded PNG keys, inactive alternatives, stored geometry/bindings and portable history retained. Linux39/39,150native/93legacy and Windowsa067 three WebView2/native-dialog groups pass. New source537d passes original JSON structure and stored96×96 current-pose PNG rendering; differing runtime JSON dimensions remain explicit, original GUI swap semantics unproven. Unknown structures remain inspection-only; see analysis/f222-path-original-check.json and paired size reports. |
+| F300 | DONE | F220 | White transient Tree/Weights hover, retained cyan influence, guarded lifecycle/focus and no history/RPC; actual Windows pixels/interactions plus original4.3.26 reference checked. Evidence in docs/tasks/F300-hover-highlight.md and analysis/qol-blend-ui-check.json. |
+| F301 | DONE | F222 inventory | Visible/inactive/hidden Region/Mesh/Clipping groups, real inventory previews/gizmos, movable pivot, atomic transforms/history; five new Windows groups plus ScaleY annex and fresh original export accepted. See docs/tasks/F301-scene-image-multiselect.md. |
+| F302 | DONE | F220 | Bounded topology Auto, selected vertex/influence scopes, group Direct/transient locks/new-row binding policy accepted. Scoped UI e346 passed one new original export and independent binding checks, Linux27+saved-artifact test and Windows83e5 four groups; retained in finalF30935-test suite/currentbe1bc. Proprietary numeric/brush/insertion parity remains explicitly unknown; see docs/tasks/F302-auto-weights.md. |
+| F303 | DONE | F222 | Combined Tree category/search/collapse projection, latent selection and source-aware hover cleanup; no native mutation. Actual Windows filters and cleanup pass; see docs/tasks/F303-tree-filters.md. |
+| F304 | DONE | F220 | Four exact blend enums and independent RGBA, Sprite/weighted Mesh GPU pixels, Undo/Redo/native reopen, final original4.3.26 export independently checked. Evidence in docs/tasks/F304-slot-blending.md and analysis/qol-blend-ui-check.json. |
+| F305 | DONE | F222 inventory | Canonical clipping range/polygon/whole transforms plus real dense weighted authoring, inactive editing, Direct/brush/history/save and deformed concave-mask comparison accepted in0.8.2; seven Windows groups and1,082,200 pixels, zero mismatches. See docs/tasks/F305-clipping.md for profile/limits. |
+| F306 | DONE | F220 | One/two-link IK, separate authored/evaluated pose, target dragging/skinning, controls, ordering/persistence; self/descendant targets rejected atomically at every boundary. Supported profile verified numerically and on Windows; see docs/tasks/F306-ik.md. |
+| F307 | WAITING | F220 | Default-live Setup/parent motion and non-baked saving delivered. Exact moving-parent/export phase remains unknown. Actual loaded JVM matches prior negative probes; own class-buffer experiment failed0hits, with guarded forced cleanup of only its disposable toy. No solver change. See docs/tasks/F307-physics.md and research/PHYSICS-CLASS-BUFFER-OWN-TOY-RESULT-2026-10-30.md. |
+| F308 | WAITING | F220 |0eedc946 makes both Match actions sample before their own effect. One NEW original Offset action verifies6bits exactly; previous48Properties scalars retained.65/65LinuxUI,200native/93legacy and2Windows groups/native SaveCloseOpen pass. New UI/Windows binaries match full typed original graph; extra UI-source CLI export now passes once after resume (79 represented decimal scalars; sparse unmapped omissions remain explicit). Suffix/World/additive/Physics sampling remain unmeasured; own suffix source81292, full graph/native prediction proof, paired adaptercb8c69 and Windows compile-only checks are ready. New canonical Save/source2d785 passes full graph; terminal code unknown due monitor helper casefold defect. Minimal v2 correction passes actual own cmd-exit7 retained-handle test. One Offset fork precreate-stopped on NEW personal67284; clarification pending, no Match/input/product edit. See docs/tasks/F308-transform-constraint.md and analysis/active-offset-delivery-check.json. |
+| F309 | DONE | F222 inventory | P group picking via Tree/viewport, usable New, parent-tip guides, no Project metadata, tapered bone icon/projected hierarchy, explicit constraint Views and movable/two-axis-resizable docks. Linux35/35, native145/93, one original P-source comparison and five Windowsbe1bc groups; actual normal user82772 opened. Authored-space/slot-isolation/dock policies explicit; docs/tasks/F309-parenting-tree-docking.md. |
+| F310 | DONE | F220, F309 | Product delivered2688a874: selected B/C/D create3 independent Physics in one history action without Target modal; generated names follow bone rename/custom names persist. Active preset, colored sliders+precise fields, live Setup A-drag reaction/settling before Save/Reset and explicit Off/non-baking persistence pass63/63 LinuxUI,200native/93legacy/28Scene,225JS+1knownskip and5actualWindows groups/native OS SaveCloseOpen. ONE new sourceab9e now passes exact original4.3.26 export and independent105Physics/32bone/24child-bit comparison; original gestures/phase remain outside this bounded authoring scope. See docs/tasks/F310-physics-authoring.md and analysis/physics-batch-delivery-check.json. |
+| F105 | ACTIVE | F222 |0.9.4/429e4c4f publishes animatedPhysics Main/Preview/Replayfreeze, timelineclock/Reset/Simulate/Rebuild and bounded120s errors, retaining sharedSetup/AnimateHUD and priorbone/slot/draw/deform/constraint/Event/audio.95/95LinuxUI,263JS+knownskip,254native/93legacy/strict3 and3actualWindows groups/OSSaveCloseOpen pass. ONEnew9eff original81984export independently verifies13keys/72numbers max1.91e-6;112ownTS/Rust comparisons pass. Normal113788 visiblyopened/frontendready/protected;37priorimages/442helpers preserved. Fullanimation ACTIVE for globalPhysics/resetall, RGB/alpha/TintBlack, advancedtiming/mixing/onion; F307/F308 fidelity user-deferred. SeeSTATE/F105. |
+| F106 | TODO | F105 | IK/transform/path constraints, then gravity/inertia/damping; numerical comparison. |
+| F107 | TODO | F106 | Full 4.3.26 compatibility matrix with explicit passing coverage. |
+| F108 | TODO | F107 | Additional tool modules using shared project/viewport. |
+
+
+F002 may proceed while F003 is researched. Copying existing original bytes is
+not completion of independent encoding/lifecycle compatibility.
+
+Historical task rows retain their named acceptance evidence. Prior session
+narratives and delivery checks are retained in the
+[TASKS archive](research/archive/TASKS-2026-10-30-before-workflow-review.md).
+Current state/next steps live in STATE rather than duplicated delivery logs.

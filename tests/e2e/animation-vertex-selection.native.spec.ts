@@ -1,0 +1,44 @@
+import {test,expect,openNativeEditor,type NativeSession} from './fixtures/native-session';
+import type {ProjectSummary,RigEdit,EvaluationSnapshot} from '../../src/domain/project';
+import {writeFile} from 'node:fs/promises';
+
+test('@native reopened Animate Mesh keeps the actual picked vertex through drag manual key and Undo Redo independently of native focus',async({page,native},info)=>{
+ const edit=async(edit:RigEdit)=>native.invoke<ProjectSummary>('edit_rig',{expectedRevision:(await native.snapshot())!.revision,edit});
+ let p=await native.invoke<ProjectSummary>('create_project',{name:'Own reopened vertex selection',discardChanges:true});
+ const root=p.bones[0]!.id;p=await edit({type:'create',parent:root,x:0,y:0,rotation:0,length:25});const child=p.editedBone!;
+ p=await edit({type:'createSlot',bone:child,name:'Selected mesh'});const slot=p.editedSlot!;
+ await native.queueDialog('folder','images');p=await native.invoke<ProjectSummary>('choose_images_folder',{expectedRevision:p.revision});
+ p=await native.invoke<ProjectSummary>('place_attachments',{expectedRevision:p.revision,slot,keys:['green']});const attachment=p.editedAttachment!;
+ p=await edit({type:'updateAttachment',id:attachment,x:-80,y:55,rotation:0,scaleX:1,scaleY:1});
+ p=await edit({type:'attachmentEdit',id:attachment,edit:{type:'convertMesh',id:slot}});
+ p=await edit({type:'bindAttachment',id:attachment,bones:[root,child]});
+ for(let vertex=0;vertex<4;vertex++)p=await edit({type:'setAttachmentWeight',id:attachment,vertex,bone:child,value:1});
+ expect(p.editedVertex).toBe(3); // Historical construction focus must not become the UI selection.
+ p=await edit({type:'createAnimation',name:'Vertex selection'});const animation=p.editedAnimation!;
+ p=await edit({type:'setAnimationDeformKeys',animation,keys:[{attachment,frame:0,offsets:Array(16).fill(0),curve:'linear'}]});
+ await openNativeEditor(page);await native.queueDialog('save','vertex-selection.fbones');await page.getByRole('button',{name:'Save',exact:true}).click();await expect.poll(async()=>(await native.snapshot())!.dirty).toBe(false);
+ const file=page.locator('header details').filter({has:page.locator('summary').filter({hasText:/^File$/})});
+ await file.locator('summary').click();await file.getByRole('button',{name:/^Close project/}).click();await expect.poll(()=>native.snapshot()).toBeNull();
+ await native.queueDialog('open','vertex-selection.fbones');await page.getByRole('button',{name:'Open project',exact:true}).first().click();await expect.poll(()=>native.snapshot()).not.toBeNull();
+ const reopened=(await native.snapshot())!;expect(reopened.editedVertex).toBeNull();const setup={bones:reopened.bones,slots:reopened.slots};
+ await page.getByTestId('editor-mode-animate').click();await page.getByTestId('animation-select').selectOption(String(animation));
+ await page.getByRole('button',{name:'Tree',exact:true}).click();await page.locator(`[data-tree-kind="attachment"][data-tree-id="${attachment}"]`).getByRole('treeitem').click();await page.getByRole('group',{name:'Editing mode',exact:true}).getByRole('button',{name:'Meshes',exact:true}).click();
+ const seek=async(frame:number)=>{await page.getByTestId('timeline-current').fill(String(frame));await page.getByTestId('timeline-current').press('Enter');await expect(page.getByTestId('timeline-current')).toHaveValue(String(frame));};
+ await seek(24);
+ const snap=await native.invoke<EvaluationSnapshot>('evaluate_project',{expectedRevision:reopened.revision,request:{mode:'none',time:24/Math.fround(reopened.animationFps??30),animationId:animation,deformTargets:[attachment]}});
+ const points=snap.deformPose!.find(p=>p.attachment===attachment)!.worldVertices!;
+ const index=points.reduce((best,point,i)=>point[0]<points[best]![0]-1e-6||Math.abs(point[0]-points[best]![0])<1e-6&&point[1]>points[best]![1]?i:best,0),corner=points[index]!;expect(index).not.toBe(3);
+ const box=(await page.getByTestId('viewport').locator('canvas').boundingBox())!,from={x:box.x+box.width/2+corner[0],y:box.y+box.height/2-corner[1]},delta=[-16,11]as const,start=native.calls.length;
+ await page.mouse.move(from.x,from.y);await page.mouse.down();await expect.poll(()=>native.calls.slice(start).filter(c=>c.command==='evaluate_project'&&c.result!==undefined).length).toBe(1);await page.mouse.move(from.x+delta[0],from.y-delta[1],{steps:6});expect(await native.snapshot()).toEqual(reopened);await page.mouse.up();
+ const authored=()=>native.calls.slice(start).filter(c=>c.command==='edit_rig');await expect.poll(()=>authored().length).toBe(1);expect((authored()[0]!.args.edit as RigEdit).type).toBe('setAnimationDeformVertices');
+ const x=page.getByRole('spinbutton',{name:'Vertex X',exact:true}),y=page.getByRole('spinbutton',{name:'Vertex Y',exact:true});
+ const selection=async()=>{await expect(x).toBeEnabled();await expect(y).toBeEnabled();await expect.poll(async()=>Number(await x.inputValue())).toBeCloseTo(corner[0]+delta[0],3);await expect.poll(async()=>Number(await y.inputValue())).toBeCloseTo(corner[1]+delta[1],3);};
+ await selection();const dragged=(await native.snapshot())!;expect(dragged.editedVertex).toBeNull();expect({bones:dragged.bones,slots:dragged.slots}).toEqual(setup);
+ await seek(36);await selection();await page.getByTestId('viewport-deform-key').click();
+ const frames=async()=>(await native.snapshot())!.animations!.find(a=>a.id===animation)!.deformTracks!.find(t=>t.attachment===attachment)!.keys.map(k=>k.frame);
+ await expect.poll(frames).toEqual([0,24,36]);await selection();
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await expect.poll(frames).toEqual([0,24]);await selection();
+ await page.getByRole('button',{name:'Redo',exact:true}).click();await expect.poll(frames).toEqual([0,24,36]);await selection();
+ const final=(await native.snapshot())!;expect({bones:final.bones,slots:final.slots}).toEqual(setup);expect(final.editedVertex).toBeNull();
+ await writeFile(info.outputPath('reopened-vertex-selection.json'),JSON.stringify({reopened,pickedIndex:index,corner,delta,dragged,final},null,2));
+});

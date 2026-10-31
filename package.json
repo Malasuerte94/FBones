@@ -1,0 +1,42 @@
+{
+  "name": "fbones",
+  "private": true,
+  "description": "Free, open-source offline 2D skeletal animation editor",
+  "license": "MIT",
+  "version": "0.9.4",
+  "type": "module",
+  "packageManager": "pnpm@11.1.0",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "tauri dev",
+    "dev:web": "vite --host 127.0.0.1",
+    "build": "tauri build",
+    "build:web": "vue-tsc --noEmit && vite build",
+    "typecheck": "vue-tsc --noEmit",
+    "typecheck:ui": "vue-tsc --noEmit -p tsconfig.e2e.json",
+    "test": "node tests/run.mjs",
+    "test:ui": "node scripts/run-ui-tests.mjs",
+    "test:ui:report": "playwright show-report .local/playwright/report",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "pinia": "3.0.4",
+    "pixi.js": "8.8.1",
+    "vue": "3.5.40",
+    "vue-i18n": "11.1.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@tailwindcss/vite": "4.3.3",
+    "@tauri-apps/cli": "2.10.1",
+    "@types/node": "24.10.0",
+    "@vitejs/plugin-vue": "6.0.8",
+    "esbuild": "0.28.2",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3",
+    "vite": "7.3.6",
+    "vue-tsc": "3.3.8"
+  }
+}

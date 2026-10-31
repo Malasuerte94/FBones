@@ -1,0 +1,14 @@
+[workspace]
+members = ["crates/fbones-format", "crates/fbones-research", "src-tauri"]
+resolver = "2"
+
+[workspace.package]
+license = "MIT"
+edition = "2021"
+version = "0.9.4"
+rust-version = "1.93"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true

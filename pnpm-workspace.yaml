@@ -1,0 +1,8 @@
+packages:
+  - '.'
+verifyDepsBeforeRun: false
+updateNotifier: false
+storeDir: .tools/pnpm-store
+cacheDir: .tools/pnpm-cache
+allowBuilds:
+  esbuild@0.28.2: true

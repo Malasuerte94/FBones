@@ -1,0 +1,551 @@
+{
+  "schema": "fbones-own-transform-active-properties-reference-v1",
+  "referenceVersion": "4.3.26",
+  "provenance": "One isolated original Properties Match+Save on an own generated four-bone/two-constraint scene. Semantic numeric data only; no proprietary code, binary, asset or private path.",
+  "name": "Own Active Sampling Match",
+  "section": "properties",
+  "selectedConstraint": "active-sampling-match",
+  "bones": [
+    {
+      "name": "root",
+      "length": 0.0,
+      "x": 11.0,
+      "y": -9.0,
+      "rotation": 23.0,
+      "scaleX": -1.2999999523162842,
+      "scaleY": 0.800000011920929,
+      "shearX": 7.0,
+      "shearY": -12.0
+    },
+    {
+      "name": "source",
+      "length": 35.0,
+      "x": 13.0,
+      "y": -7.0,
+      "rotation": 31.0,
+      "scaleX": 1.2000000476837158,
+      "scaleY": 0.800000011920929,
+      "shearX": 0.0,
+      "shearY": 17.0,
+      "parent": "root"
+    },
+    {
+      "name": "firstTarget",
+      "length": 45.0,
+      "x": 70.0,
+      "y": 35.0,
+      "rotation": -25.0,
+      "scaleX": 0.8999999761581421,
+      "scaleY": 1.2999999523162842,
+      "shearX": 0.0,
+      "shearY": -11.0,
+      "parent": "root"
+    },
+    {
+      "name": "secondTarget",
+      "length": 30.0,
+      "x": -40.0,
+      "y": 15.0,
+      "rotation": 80.0,
+      "scaleX": 1.5,
+      "scaleY": 0.6000000238418579,
+      "shearX": 0.0,
+      "shearY": 9.0,
+      "parent": "root"
+    }
+  ],
+  "constraintsBefore": [
+    {
+      "name": "drive-source-x",
+      "source": "root",
+      "bones": [
+        "source"
+      ],
+      "localSource": true,
+      "localTarget": true,
+      "additive": false,
+      "clamp": false,
+      "offsets": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mix": [
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "properties": [
+        {
+          "property": "x",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "x",
+              "offset": 39.0,
+              "max": 40.0,
+              "scale": 1.0
+            }
+          ]
+        }
+      ],
+      "rangeCache": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "name": "active-sampling-match",
+      "source": "source",
+      "bones": [
+        "firstTarget",
+        "secondTarget"
+      ],
+      "localSource": true,
+      "localTarget": true,
+      "additive": false,
+      "clamp": false,
+      "offsets": [
+        7.0,
+        11.0,
+        -13.0,
+        0.20000000298023224,
+        -0.10000000149011612,
+        19.0
+      ],
+      "mix": [
+        0.0,
+        0.5,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "properties": [
+        {
+          "property": "rotate",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "rotate",
+              "offset": 0.0,
+              "max": 1.0,
+              "scale": 1.0
+            }
+          ]
+        },
+        {
+          "property": "scaleX",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "scaleX",
+              "offset": 0.0,
+              "max": 1.0,
+              "scale": 1.0
+            }
+          ]
+        },
+        {
+          "property": "scaleY",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "scaleY",
+              "offset": 0.0,
+              "max": 1.0,
+              "scale": 1.0
+            }
+          ]
+        },
+        {
+          "property": "shearY",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "shearY",
+              "offset": 0.0,
+              "max": 1.0,
+              "scale": 1.0
+            }
+          ]
+        },
+        {
+          "property": "x",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "x",
+              "offset": 0.0,
+              "max": 1.0,
+              "scale": 1.0
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "y",
+              "offset": 0.0,
+              "max": 1.0,
+              "scale": 1.0
+            }
+          ]
+        }
+      ],
+      "rangeCache": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  ],
+  "expectedPrimaryAfter": {
+    "name": "active-sampling-match",
+    "source": "source",
+    "bones": [
+      "firstTarget",
+      "secondTarget"
+    ],
+    "localSource": true,
+    "localTarget": true,
+    "additive": false,
+    "clamp": false,
+    "offsets": [
+      7.0,
+      11.0,
+      -13.0,
+      0.20000000298023224,
+      -0.10000000149011612,
+      19.0
+    ],
+    "mix": [
+      0.0,
+      0.5,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "properties": [
+      {
+        "property": "rotate",
+        "offset": 31.0,
+        "to": [
+          {
+            "property": "rotate",
+            "offset": -25.0,
+            "max": -24.0,
+            "scale": 1.0
+          }
+        ]
+      },
+      {
+        "property": "scaleX",
+        "offset": 1.2000000476837158,
+        "to": [
+          {
+            "property": "scaleX",
+            "offset": 0.8999999761581421,
+            "max": 1.899999976158142,
+            "scale": 1.0
+          }
+        ]
+      },
+      {
+        "property": "scaleY",
+        "offset": 0.800000011920929,
+        "to": [
+          {
+            "property": "scaleY",
+            "offset": 1.2999999523162842,
+            "max": 2.299999952316284,
+            "scale": 1.0000001192092896
+          }
+        ]
+      },
+      {
+        "property": "shearY",
+        "offset": -73.0,
+        "to": [
+          {
+            "property": "shearY",
+            "offset": -101.0,
+            "max": -100.0,
+            "scale": 1.0
+          }
+        ]
+      },
+      {
+        "property": "x",
+        "offset": 39.0,
+        "to": [
+          {
+            "property": "x",
+            "offset": 70.0,
+            "max": 71.0,
+            "scale": 1.0
+          }
+        ]
+      },
+      {
+        "property": "y",
+        "offset": 6.0,
+        "to": [
+          {
+            "property": "y",
+            "offset": 35.0,
+            "max": 36.0,
+            "scale": 1.0
+          }
+        ]
+      }
+    ],
+    "rangeCache": [
+      31.0,
+      32.0,
+      -25.0,
+      -24.0,
+      39.0,
+      40.0,
+      70.0,
+      71.0,
+      6.0,
+      7.0,
+      35.0,
+      36.0,
+      1.2000000476837158,
+      2.200000047683716,
+      0.8999999761581421,
+      1.899999976158142,
+      0.800000011920929,
+      1.7999999523162842,
+      1.2999999523162842,
+      2.299999952316284,
+      -73.0,
+      -72.0,
+      -101.0,
+      -100.0
+    ]
+  },
+  "expectedRangeF32Bits": [
+    1106771968,
+    1107296256,
+    3251109888,
+    3250585600,
+    1109131264,
+    1109393408,
+    1116471296,
+    1116602368,
+    1086324736,
+    1088421888,
+    1108082688,
+    1108344832,
+    1067030938,
+    1074580685,
+    1063675494,
+    1072902963,
+    1061997773,
+    1072064102,
+    1067869798,
+    1075000115,
+    3264348160,
+    3264217088,
+    3268018176,
+    3267887104
+  ],
+  "expectedRuntimeScalars": [
+    {
+      "field": "rotate.offset",
+      "value": 31.0,
+      "f32Bits": 1106771968
+    },
+    {
+      "field": "scaleX.offset",
+      "value": 1.2000000476837158,
+      "f32Bits": 1067030938
+    },
+    {
+      "field": "scaleY.offset",
+      "value": 0.800000011920929,
+      "f32Bits": 1061997773
+    },
+    {
+      "field": "shearY.offset",
+      "value": -73.0,
+      "f32Bits": 3264348160
+    },
+    {
+      "field": "x.offset",
+      "value": 39.0,
+      "f32Bits": 1109131264
+    },
+    {
+      "field": "y.offset",
+      "value": 6.0,
+      "f32Bits": 1086324736
+    },
+    {
+      "field": "rotate->rotate.offset",
+      "value": -25.0,
+      "f32Bits": 3251109888
+    },
+    {
+      "field": "rotate->rotate.max",
+      "value": -24.0,
+      "f32Bits": 3250585600
+    },
+    {
+      "field": "rotate->rotate.scale",
+      "value": 1.0,
+      "f32Bits": 1065353216
+    },
+    {
+      "field": "scaleX->scaleX.offset",
+      "value": 0.8999999761581421,
+      "f32Bits": 1063675494
+    },
+    {
+      "field": "scaleX->scaleX.max",
+      "value": 1.899999976158142,
+      "f32Bits": 1072902963
+    },
+    {
+      "field": "scaleX->scaleX.scale",
+      "value": 1.0,
+      "f32Bits": 1065353216
+    },
+    {
+      "field": "scaleY->scaleY.offset",
+      "value": 1.2999999523162842,
+      "f32Bits": 1067869798
+    },
+    {
+      "field": "scaleY->scaleY.max",
+      "value": 2.299999952316284,
+      "f32Bits": 1075000115
+    },
+    {
+      "field": "scaleY->scaleY.scale",
+      "value": 1.0000001192092896,
+      "f32Bits": 1065353217
+    },
+    {
+      "field": "shearY->shearY.offset",
+      "value": -101.0,
+      "f32Bits": 3268018176
+    },
+    {
+      "field": "shearY->shearY.max",
+      "value": -100.0,
+      "f32Bits": 3267887104
+    },
+    {
+      "field": "shearY->shearY.scale",
+      "value": 1.0,
+      "f32Bits": 1065353216
+    },
+    {
+      "field": "x->x.offset",
+      "value": 70.0,
+      "f32Bits": 1116471296
+    },
+    {
+      "field": "x->x.max",
+      "value": 71.0,
+      "f32Bits": 1116602368
+    },
+    {
+      "field": "x->x.scale",
+      "value": 1.0,
+      "f32Bits": 1065353216
+    },
+    {
+      "field": "y->y.offset",
+      "value": 35.0,
+      "f32Bits": 1108082688
+    },
+    {
+      "field": "y->y.max",
+      "value": 36.0,
+      "f32Bits": 1108344832
+    },
+    {
+      "field": "y->y.scale",
+      "value": 1.0,
+      "f32Bits": 1065353216
+    }
+  ],
+  "observedComparison": {
+    "rangeScalars": 24,
+    "runtimeScalars": 24,
+    "all48BitExactToFrozenPrefixPrediction": true,
+    "maximumResidual": 0,
+    "authoredOnlyMaximumResidual": 37,
+    "fullFrameMaximumResidual": 4.5,
+    "sourceStartX": 39,
+    "targetStartX": 70
+  },
+  "sourceHashes": {
+    "ownRecipe": "14743c0ee9e131f6a97a637db0266432b87968ce73bb8ff3186f056fff52faa0",
+    "originalCanonicalBefore": "72b1aac437162894bc88f3d35890a1c58f2edf330d1e05f45c13086fd06a586d",
+    "originalPropertiesAfter": "0c4fadf17c18d4288021afb2946e2f686accd267fb455812db4cc44cb844395f",
+    "frozenPredictions": "ceef46b9f6f0fd658a75eb54736089ee00f156c7311d916892e3e1605d442f17",
+    "independentAllFieldsReport": "845e75658052eff94db139d1e37f362701d170ce0efd038428e8a3366b85d747"
+  },
+  "limits": [
+    "Nonadditive Local/Local with no suffix or Physics; prefix and excluding only the selected constraint cannot be distinguished.",
+    "Offset has no sampling datum. No World/additive/suffix/Physics/general gesture or bit-parity claim follows."
+  ]
+}

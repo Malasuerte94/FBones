@@ -1,0 +1,33 @@
+node_modules/
+dist/
+target/
+src-tauri/gen/
+.tools/
+.local/
+artifacts/
+WINDOWS_TEST/
+test-results/
+playwright-report/
+*.log
+Spine.tar.gz
+spin_windows/
+updates/
+analysis/
+!analysis/.gitkeep
+.DS_Store
+Thumbs.db
+
+# User-provided original-editor screenshot: local reference only.
+/interface.png
+/spine_pictures/
+__pycache__/
+ci-reports/
+
+# Reference-only screenshots and private agent configuration.
+/animare/
+/.agents/
+/.codex/
+/.aws/
+.env
+.env.*
+!.env.example

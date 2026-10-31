@@ -1,0 +1,134 @@
+name: Desktop checks and builds
+on:
+  push:
+    branches: [main]
+    tags: [v0.9.4-beta.1]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    name: Build ${{ matrix.target }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            bundles: deb,appimage
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundles: nsis
+          - os: macos-latest
+            target: universal-apple-darwin
+            bundles: app,dmg
+    runs-on: ${{ matrix.os }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '13.0'
+      # Explicit ad-hoc signing; this is not Developer ID signing or notarization.
+      APPLE_SIGNING_IDENTITY: '-'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Linux prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev build-essential libssl-dev libxdo-dev libayatana-appindicator3-dev librsvg2-dev patchelf file wget curl
+      - name: macOS targets
+        if: runner.os == 'macOS'
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - name: Remap private build paths
+        run: python scripts/ci-build.py configure
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: pnpm typecheck:ui
+      - run: cargo test --workspace --locked
+      - run: cargo test -p fbones-desktop --no-default-features --locked
+      - name: Build platform installers
+        run: pnpm tauri build --ci --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} -- --locked
+      - name: Verify executable and package structures
+        run: python scripts/ci-build.py verify --target ${{ matrix.target }}
+      # First public release is source-only. Keep reports, not unvalidated installers.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-report-${{ matrix.target }}
+          path: ci-reports/${{ matrix.target }}.json
+          if-no-files-found: error
+
+  linux-ui:
+    name: Ubuntu UI and README
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@stable
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev build-essential libssl-dev
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Select installed Playwright Chromium
+        run: node --input-type=module -e 'import {chromium} from "@playwright/test"; import {appendFileSync} from "node:fs"; appendFileSync(process.env.GITHUB_ENV, "CHROME_BINARY=" + chromium.executablePath() + "\n")'
+      # The UI runner deliberately builds its Rust host offline.
+      - run: cargo fetch --locked
+      - run: pnpm test:ui --global-timeout=600000
+      - name: Validate README links and screenshot integrity
+        run: python scripts/check-public-readme.py
+      - name: Retain UI failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-ui-failures
+          path: |
+            .local/playwright/results.json
+            .local/playwright/test-results/
+          include-hidden-files: true
+          if-no-files-found: ignore
+
+  release:
+    name: Publish source beta after all checks
+    needs: [desktop, linux-ui]
+    if: github.repository == 'Malasuerte94/FBones' && github.ref == 'refs/tags/v0.9.4-beta.1'
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prepare and verify source release
+        run: python scripts/prepare-public-release.py --output .local/ci-source-release
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: build-report-*
+          path: .local/platform-build-reports
+          merge-multiple: true
+      - name: Publish prerelease source, checksums, and build reports
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create v0.9.4-beta.1 .local/ci-source-release/fbones-v0.9.4-beta.1-source.tar.gz .local/ci-source-release/SHA256SUMS .local/platform-build-reports/*.json --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease --latest=false --title 'FBones 0.9.4 Beta 1 — source preview' --notes-file docs/releases/v0.9.4-beta.1.md

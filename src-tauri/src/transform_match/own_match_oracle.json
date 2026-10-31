@@ -1,0 +1,2953 @@
+{
+  "referenceVersion": "4.3.26",
+  "provenance": "Ten accepted own original Match actions; numeric AFTER fields independently parsed from saved original outputs. No original binary, code, asset or private path. Computed candidates are not oracle values.",
+  "bounds": {
+    "worldOrigin": 0.25,
+    "worldBasis": 0.009,
+    "worldSixteenUnitPatchEndpoint": 0.25
+  },
+  "cases": [
+    {
+      "name": "offset-local",
+      "section": "offsets",
+      "bones": [
+        {
+          "name": "root",
+          "length": 0.0,
+          "x": 11.0,
+          "y": -9.0,
+          "rotation": 23.0,
+          "scaleX": 1.2999999523162842,
+          "scaleY": 0.800000011920929,
+          "shearX": 7.0,
+          "shearY": -12.0
+        },
+        {
+          "name": "source",
+          "parent": "root",
+          "length": 35.0,
+          "x": 13.0,
+          "y": -7.0,
+          "rotation": 31.0,
+          "scaleX": 1.2000000476837158,
+          "scaleY": 0.800000011920929,
+          "shearX": 0.0,
+          "shearY": 17.0
+        },
+        {
+          "name": "firstTarget",
+          "parent": "root",
+          "length": 45.0,
+          "x": 70.0,
+          "y": 35.0,
+          "rotation": -25.0,
+          "scaleX": 0.8999999761581421,
+          "scaleY": 1.2999999523162842,
+          "shearX": 0.0,
+          "shearY": -11.0
+        },
+        {
+          "name": "secondTarget",
+          "parent": "root",
+          "length": 30.0,
+          "x": -40.0,
+          "y": 15.0,
+          "rotation": 80.0,
+          "scaleX": 1.5,
+          "scaleY": 0.6000000238418579,
+          "shearX": 0.0,
+          "shearY": 9.0
+        }
+      ],
+      "before": {
+        "name": "match-probe",
+        "source": "source",
+        "bones": [
+          "firstTarget",
+          "secondTarget"
+        ],
+        "localSource": true,
+        "localTarget": true,
+        "additive": false,
+        "clamp": false,
+        "offsets": [
+          7.0,
+          11.0,
+          -13.0,
+          0.20000000298023224,
+          -0.10000000149011612,
+          19.0
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "rotate",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleX",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "shearY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "shearY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "x",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "y",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "y",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "originalAfter": {
+        "name": "match-probe",
+        "source": "source",
+        "bones": [
+          "firstTarget",
+          "secondTarget"
+        ],
+        "localSource": true,
+        "localTarget": true,
+        "additive": false,
+        "clamp": false,
+        "offsets": [
+          -56.0,
+          57.0,
+          42.0,
+          -0.30000007152557373,
+          0.4999999403953552,
+          -28.0
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "rotate",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleX",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "shearY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "shearY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "x",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "y",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "y",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "beforeSha256": "00cbec4e4758c2118c58814e3ed98cd6097c41d829be3d0a3ffe10a0063a3b36",
+      "afterSha256": "7e669c43d59f7f570ec2696f8ad21a948d9ce7a21f416b6ebba6b5360bb34f5b"
+    },
+    {
+      "name": "properties-local",
+      "section": "properties",
+      "bones": [
+        {
+          "name": "root",
+          "length": 0.0,
+          "x": 11.0,
+          "y": -9.0,
+          "rotation": 23.0,
+          "scaleX": 1.2999999523162842,
+          "scaleY": 0.800000011920929,
+          "shearX": 7.0,
+          "shearY": -12.0
+        },
+        {
+          "name": "source",
+          "parent": "root",
+          "length": 35.0,
+          "x": 13.0,
+          "y": -7.0,
+          "rotation": 31.0,
+          "scaleX": 1.2000000476837158,
+          "scaleY": 0.800000011920929,
+          "shearX": 0.0,
+          "shearY": 17.0
+        },
+        {
+          "name": "firstTarget",
+          "parent": "root",
+          "length": 45.0,
+          "x": 70.0,
+          "y": 35.0,
+          "rotation": -25.0,
+          "scaleX": 0.8999999761581421,
+          "scaleY": 1.2999999523162842,
+          "shearX": 0.0,
+          "shearY": -11.0
+        },
+        {
+          "name": "secondTarget",
+          "parent": "root",
+          "length": 30.0,
+          "x": -40.0,
+          "y": 15.0,
+          "rotation": 80.0,
+          "scaleX": 1.5,
+          "scaleY": 0.6000000238418579,
+          "shearX": 0.0,
+          "shearY": 9.0
+        }
+      ],
+      "before": {
+        "name": "match-probe",
+        "source": "source",
+        "bones": [
+          "firstTarget",
+          "secondTarget"
+        ],
+        "localSource": true,
+        "localTarget": true,
+        "additive": false,
+        "clamp": false,
+        "offsets": [
+          7.0,
+          11.0,
+          -13.0,
+          0.20000000298023224,
+          -0.10000000149011612,
+          19.0
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "rotate",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleX",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "shearY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "shearY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "x",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "y",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "y",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "originalAfter": {
+        "name": "match-probe",
+        "source": "source",
+        "bones": [
+          "firstTarget",
+          "secondTarget"
+        ],
+        "localSource": true,
+        "localTarget": true,
+        "additive": false,
+        "clamp": false,
+        "offsets": [
+          7.0,
+          11.0,
+          -13.0,
+          0.20000000298023224,
+          -0.10000000149011612,
+          19.0
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "rotate",
+            "offset": 31.0,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": -25.0,
+                "max": -24.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleX",
+            "offset": 1.2000000476837158,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": 0.8999999761581421,
+                "max": 1.899999976158142,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleY",
+            "offset": 0.800000011920929,
+            "to": [
+              {
+                "property": "scaleY",
+                "offset": 1.2999999523162842,
+                "max": 2.299999952316284,
+                "scale": 1.0000001192092896
+              }
+            ]
+          },
+          {
+            "property": "shearY",
+            "offset": -73.0,
+            "to": [
+              {
+                "property": "shearY",
+                "offset": -101.0,
+                "max": -100.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 2.0,
+            "to": [
+              {
+                "property": "x",
+                "offset": 70.0,
+                "max": 71.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "y",
+            "offset": 6.0,
+            "to": [
+              {
+                "property": "y",
+                "offset": 35.0,
+                "max": 36.0,
+                "scale": 1.0
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          31.0,
+          32.0,
+          -25.0,
+          -24.0,
+          2.0,
+          3.0,
+          70.0,
+          71.0,
+          6.0,
+          7.0,
+          35.0,
+          36.0,
+          1.2000000476837158,
+          2.200000047683716,
+          0.8999999761581421,
+          1.899999976158142,
+          0.800000011920929,
+          1.7999999523162842,
+          1.2999999523162842,
+          2.299999952316284,
+          -73.0,
+          -72.0,
+          -101.0,
+          -100.0
+        ]
+      },
+      "beforeSha256": "d14a11498c9b163407fc32e5698a8b08d78c31a7de95b39dfdaad893b95b8079",
+      "afterSha256": "8cc9c9ce6f3c60d337606fed2a73b6347823200d237b9c357c7e1cc698310efb"
+    },
+    {
+      "name": "offset-world",
+      "section": "offsets",
+      "bones": [
+        {
+          "name": "root",
+          "length": 0.0,
+          "x": 11.0,
+          "y": -9.0,
+          "rotation": 23.0,
+          "scaleX": -1.2999999523162842,
+          "scaleY": 0.800000011920929,
+          "shearX": 7.0,
+          "shearY": -12.0
+        },
+        {
+          "name": "source",
+          "parent": "root",
+          "length": 35.0,
+          "x": 13.0,
+          "y": -7.0,
+          "rotation": 31.0,
+          "scaleX": 1.2000000476837158,
+          "scaleY": 0.800000011920929,
+          "shearX": 0.0,
+          "shearY": 17.0
+        },
+        {
+          "name": "firstTarget",
+          "parent": "root",
+          "length": 45.0,
+          "x": 70.0,
+          "y": 35.0,
+          "rotation": -25.0,
+          "scaleX": 0.8999999761581421,
+          "scaleY": 1.2999999523162842,
+          "shearX": 0.0,
+          "shearY": -11.0
+        },
+        {
+          "name": "secondTarget",
+          "parent": "root",
+          "length": 30.0,
+          "x": -40.0,
+          "y": 15.0,
+          "rotation": 80.0,
+          "scaleX": 1.5,
+          "scaleY": 0.6000000238418579,
+          "shearX": 0.0,
+          "shearY": 9.0
+        }
+      ],
+      "before": {
+        "name": "match-probe",
+        "source": "source",
+        "bones": [
+          "firstTarget",
+          "secondTarget"
+        ],
+        "localSource": false,
+        "localTarget": false,
+        "additive": false,
+        "clamp": false,
+        "offsets": [
+          7.0,
+          11.0,
+          -13.0,
+          0.20000000298023224,
+          -0.10000000149011612,
+          19.0
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "rotate",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleX",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "shearY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "shearY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "x",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "y",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "y",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "originalAfter": {
+        "name": "match-probe",
+        "source": "source",
+        "bones": [
+          "firstTarget",
+          "secondTarget"
+        ],
+        "localSource": false,
+        "localTarget": false,
+        "additive": false,
+        "clamp": false,
+        "offsets": [
+          35.61198425292969,
+          60.43446350097656,
+          8.684280395507812,
+          0.07110118865966797,
+          0.0744815468788147,
+          72.5790023803711
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "rotate",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleX",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "shearY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "shearY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "x",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "y",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "y",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "beforeSha256": "69878904ea353241592923ebe66681c28a70b6a30ba5d7e705e63456826cb701",
+      "afterSha256": "8ec9cefd32761844fc5ab78f9f5f0f5708ac597940b77c3540b3d3f3283ee656"
+    },
+    {
+      "name": "properties-world",
+      "section": "properties",
+      "bones": [
+        {
+          "name": "root",
+          "length": 0.0,
+          "x": 11.0,
+          "y": -9.0,
+          "rotation": 23.0,
+          "scaleX": -1.2999999523162842,
+          "scaleY": 0.800000011920929,
+          "shearX": 7.0,
+          "shearY": -12.0
+        },
+        {
+          "name": "source",
+          "parent": "root",
+          "length": 35.0,
+          "x": 13.0,
+          "y": -7.0,
+          "rotation": 31.0,
+          "scaleX": 1.2000000476837158,
+          "scaleY": 0.800000011920929,
+          "shearX": 0.0,
+          "shearY": 17.0
+        },
+        {
+          "name": "firstTarget",
+          "parent": "root",
+          "length": 45.0,
+          "x": 70.0,
+          "y": 35.0,
+          "rotation": -25.0,
+          "scaleX": 0.8999999761581421,
+          "scaleY": 1.2999999523162842,
+          "shearX": 0.0,
+          "shearY": -11.0
+        },
+        {
+          "name": "secondTarget",
+          "parent": "root",
+          "length": 30.0,
+          "x": -40.0,
+          "y": 15.0,
+          "rotation": 80.0,
+          "scaleX": 1.5,
+          "scaleY": 0.6000000238418579,
+          "shearX": 0.0,
+          "shearY": 9.0
+        }
+      ],
+      "before": {
+        "name": "match-probe",
+        "source": "source",
+        "bones": [
+          "firstTarget",
+          "secondTarget"
+        ],
+        "localSource": false,
+        "localTarget": false,
+        "additive": false,
+        "clamp": false,
+        "offsets": [
+          7.0,
+          11.0,
+          -13.0,
+          0.20000000298023224,
+          -0.10000000149011612,
+          19.0
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "rotate",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleX",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "shearY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "shearY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "x",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "y",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "y",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "originalAfter": {
+        "name": "match-probe",
+        "source": "source",
+        "bones": [
+          "firstTarget",
+          "secondTarget"
+        ],
+        "localSource": false,
+        "localTarget": false,
+        "additive": false,
+        "clamp": false,
+        "offsets": [
+          7.0,
+          11.0,
+          -13.0,
+          0.20000000298023224,
+          -0.10000000149011612,
+          19.0
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "rotate",
+            "offset": -171.67599487304688,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": -136.06399536132812,
+                "max": -135.06399536132812,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleX",
+            "offset": -1.2657099962234497,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": -1.1946099996566772,
+                "max": -0.19460999965667725,
+                "scale": 0.9999899864196777
+              }
+            ]
+          },
+          {
+            "property": "scaleY",
+            "offset": 0.9981099963188171,
+            "to": [
+              {
+                "property": "scaleY",
+                "offset": 1.07260000705719,
+                "max": 2.0725998878479004,
+                "scale": 1.0000098943710327
+              }
+            ]
+          },
+          {
+            "property": "shearY",
+            "offset": 135.6095428466797,
+            "to": [
+              {
+                "property": "shearY",
+                "offset": 208.18804931640625,
+                "max": 209.18804931640625,
+                "scale": 1.0000457763671875
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": -13.567299842834473,
+            "to": [
+              {
+                "property": "x",
+                "offset": -73.15096282958984,
+                "max": -72.15096282958984,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "y",
+            "offset": -9.947110176086426,
+            "to": [
+              {
+                "property": "y",
+                "offset": -27.014440536499023,
+                "max": -26.014440536499023,
+                "scale": 0.9999895095825195
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          -171.67599487304688,
+          -170.67599487304688,
+          -136.06399536132812,
+          -135.06399536132812,
+          -13.567299842834473,
+          -12.567299842834473,
+          -73.15096282958984,
+          -72.15096282958984,
+          -9.947110176086426,
+          -8.947099685668945,
+          -27.014440536499023,
+          -26.014440536499023,
+          -1.2657099962234497,
+          -0.26570001244544983,
+          -1.1946099996566772,
+          -0.19460999965667725,
+          0.9981099963188171,
+          1.9981000423431396,
+          1.07260000705719,
+          2.0725998878479004,
+          135.6095428466797,
+          136.6094970703125,
+          208.18804931640625,
+          209.18804931640625
+        ]
+      },
+      "beforeSha256": "12dbc0c881bc7bf5e20b65bedad9c3ea17367b26f0dceb3406067ca67a50c1dc",
+      "afterSha256": "1cab596b662171a1aa9bf38ab61680f4036db3d2eec331a02e7cead4ebfd69d4"
+    },
+    {
+      "name": "offset-reversed",
+      "section": "offsets",
+      "bones": [
+        {
+          "name": "root",
+          "length": 0.0,
+          "x": 11.0,
+          "y": -9.0,
+          "rotation": 23.0,
+          "scaleX": 1.2999999523162842,
+          "scaleY": 0.800000011920929,
+          "shearX": 7.0,
+          "shearY": -12.0
+        },
+        {
+          "name": "source",
+          "parent": "root",
+          "length": 35.0,
+          "x": 13.0,
+          "y": -7.0,
+          "rotation": 31.0,
+          "scaleX": 1.2000000476837158,
+          "scaleY": 0.800000011920929,
+          "shearX": 0.0,
+          "shearY": 17.0
+        },
+        {
+          "name": "firstTarget",
+          "parent": "root",
+          "length": 45.0,
+          "x": 70.0,
+          "y": 35.0,
+          "rotation": -25.0,
+          "scaleX": 0.8999999761581421,
+          "scaleY": 1.2999999523162842,
+          "shearX": 0.0,
+          "shearY": -11.0
+        },
+        {
+          "name": "secondTarget",
+          "parent": "root",
+          "length": 30.0,
+          "x": -40.0,
+          "y": 15.0,
+          "rotation": 80.0,
+          "scaleX": 1.5,
+          "scaleY": 0.6000000238418579,
+          "shearX": 0.0,
+          "shearY": 9.0
+        }
+      ],
+      "before": {
+        "name": "match-probe",
+        "source": "source",
+        "bones": [
+          "secondTarget",
+          "firstTarget"
+        ],
+        "localSource": true,
+        "localTarget": true,
+        "additive": false,
+        "clamp": false,
+        "offsets": [
+          7.0,
+          11.0,
+          -13.0,
+          0.20000000298023224,
+          -0.10000000149011612,
+          19.0
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "rotate",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleX",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "shearY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "shearY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "x",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "y",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "y",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "originalAfter": {
+        "name": "match-probe",
+        "source": "source",
+        "bones": [
+          "secondTarget",
+          "firstTarget"
+        ],
+        "localSource": true,
+        "localTarget": true,
+        "additive": false,
+        "clamp": false,
+        "offsets": [
+          49.0,
+          -53.0,
+          22.0,
+          0.2999999523162842,
+          -0.19999998807907104,
+          -8.0
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "rotate",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleX",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "shearY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "shearY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "x",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "y",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "y",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "beforeSha256": "4cfc15b0ed82c0ab5d9ac9240f744ecd250aa75a69984446290041fa1c7b866e",
+      "afterSha256": "2aeebd66c3ce275765639602ddf252a3f4648d48ac86ba486b430491e2e549ac"
+    },
+    {
+      "name": "properties-reversed",
+      "section": "properties",
+      "bones": [
+        {
+          "name": "root",
+          "length": 0.0,
+          "x": 11.0,
+          "y": -9.0,
+          "rotation": 23.0,
+          "scaleX": 1.2999999523162842,
+          "scaleY": 0.800000011920929,
+          "shearX": 7.0,
+          "shearY": -12.0
+        },
+        {
+          "name": "source",
+          "parent": "root",
+          "length": 35.0,
+          "x": 13.0,
+          "y": -7.0,
+          "rotation": 31.0,
+          "scaleX": 1.2000000476837158,
+          "scaleY": 0.800000011920929,
+          "shearX": 0.0,
+          "shearY": 17.0
+        },
+        {
+          "name": "firstTarget",
+          "parent": "root",
+          "length": 45.0,
+          "x": 70.0,
+          "y": 35.0,
+          "rotation": -25.0,
+          "scaleX": 0.8999999761581421,
+          "scaleY": 1.2999999523162842,
+          "shearX": 0.0,
+          "shearY": -11.0
+        },
+        {
+          "name": "secondTarget",
+          "parent": "root",
+          "length": 30.0,
+          "x": -40.0,
+          "y": 15.0,
+          "rotation": 80.0,
+          "scaleX": 1.5,
+          "scaleY": 0.6000000238418579,
+          "shearX": 0.0,
+          "shearY": 9.0
+        }
+      ],
+      "before": {
+        "name": "match-probe",
+        "source": "source",
+        "bones": [
+          "secondTarget",
+          "firstTarget"
+        ],
+        "localSource": true,
+        "localTarget": true,
+        "additive": false,
+        "clamp": false,
+        "offsets": [
+          7.0,
+          11.0,
+          -13.0,
+          0.20000000298023224,
+          -0.10000000149011612,
+          19.0
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "rotate",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleX",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "shearY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "shearY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "x",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "y",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "y",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "originalAfter": {
+        "name": "match-probe",
+        "source": "source",
+        "bones": [
+          "secondTarget",
+          "firstTarget"
+        ],
+        "localSource": true,
+        "localTarget": true,
+        "additive": false,
+        "clamp": false,
+        "offsets": [
+          7.0,
+          11.0,
+          -13.0,
+          0.20000000298023224,
+          -0.10000000149011612,
+          19.0
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "rotate",
+            "offset": 31.0,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": 80.0,
+                "max": 81.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleX",
+            "offset": 1.2000000476837158,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": 1.5,
+                "max": 2.5,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleY",
+            "offset": 0.800000011920929,
+            "to": [
+              {
+                "property": "scaleY",
+                "offset": 0.6000000238418579,
+                "max": 1.600000023841858,
+                "scale": 1.0000001192092896
+              }
+            ]
+          },
+          {
+            "property": "shearY",
+            "offset": -73.0,
+            "to": [
+              {
+                "property": "shearY",
+                "offset": -81.0,
+                "max": -80.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 2.0,
+            "to": [
+              {
+                "property": "x",
+                "offset": -40.0,
+                "max": -39.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "y",
+            "offset": 6.0,
+            "to": [
+              {
+                "property": "y",
+                "offset": 15.0,
+                "max": 16.0,
+                "scale": 1.0
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          31.0,
+          32.0,
+          80.0,
+          81.0,
+          2.0,
+          3.0,
+          -40.0,
+          -39.0,
+          6.0,
+          7.0,
+          15.0,
+          16.0,
+          1.2000000476837158,
+          2.200000047683716,
+          1.5,
+          2.5,
+          0.800000011920929,
+          1.7999999523162842,
+          0.6000000238418579,
+          1.600000023841858,
+          -73.0,
+          -72.0,
+          -81.0,
+          -80.0
+        ]
+      },
+      "beforeSha256": "4cfc15b0ed82c0ab5d9ac9240f744ecd250aa75a69984446290041fa1c7b866e",
+      "afterSha256": "3bf196dd0bfa717d5a12eaada2c081f148a8c26c1436b429ece62f8cad469ad2"
+    },
+    {
+      "name": "offset-mixed",
+      "section": "offsets",
+      "bones": [
+        {
+          "name": "root",
+          "length": 0.0,
+          "x": 11.0,
+          "y": -9.0,
+          "rotation": 23.0,
+          "scaleX": 1.2999999523162842,
+          "scaleY": 0.800000011920929,
+          "shearX": 7.0,
+          "shearY": -12.0
+        },
+        {
+          "name": "source",
+          "parent": "root",
+          "length": 35.0,
+          "x": 13.0,
+          "y": -7.0,
+          "rotation": 31.0,
+          "scaleX": 1.2000000476837158,
+          "scaleY": 0.800000011920929,
+          "shearX": 0.0,
+          "shearY": 17.0
+        },
+        {
+          "name": "firstTarget",
+          "parent": "root",
+          "length": 45.0,
+          "x": 70.0,
+          "y": 35.0,
+          "rotation": -25.0,
+          "scaleX": 0.8999999761581421,
+          "scaleY": 1.2999999523162842,
+          "shearX": 0.0,
+          "shearY": -11.0
+        },
+        {
+          "name": "secondTarget",
+          "parent": "root",
+          "length": 30.0,
+          "x": -40.0,
+          "y": 15.0,
+          "rotation": 80.0,
+          "scaleX": 1.5,
+          "scaleY": 0.6000000238418579,
+          "shearX": 0.0,
+          "shearY": 9.0
+        }
+      ],
+      "before": {
+        "name": "match-probe",
+        "source": "source",
+        "bones": [
+          "firstTarget",
+          "secondTarget"
+        ],
+        "localSource": false,
+        "localTarget": true,
+        "additive": false,
+        "clamp": true,
+        "offsets": [
+          7.0,
+          11.0,
+          -13.0,
+          0.20000000298023224,
+          -0.10000000149011612,
+          19.0
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "scaleY",
+            "offset": 0.6000000238418579,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": 1.399999976158142,
+                "max": 3.700000047683716,
+                "scale": -0.75
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 3.700000047683716,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": 17.0,
+                "max": 120.0,
+                "scale": 2.299999952316284
+              },
+              {
+                "property": "y",
+                "offset": -23.0,
+                "max": 47.0,
+                "scale": -0.4000000059604645
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "originalAfter": {
+        "name": "match-probe",
+        "source": "source",
+        "bones": [
+          "firstTarget",
+          "secondTarget"
+        ],
+        "localSource": false,
+        "localTarget": true,
+        "additive": false,
+        "clamp": true,
+        "offsets": [
+          -72.33053588867188,
+          43.29563903808594,
+          41.04711151123047,
+          -0.6694011688232422,
+          0.5481951236724854,
+          -141.08200073242188
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "scaleY",
+            "offset": 0.6000000238418579,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": 1.399999976158142,
+                "max": 3.700000047683716,
+                "scale": -0.75
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 3.700000047683716,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": 17.0,
+                "max": 120.0,
+                "scale": 2.299999952316284
+              },
+              {
+                "property": "y",
+                "offset": -23.0,
+                "max": 47.0,
+                "scale": -0.4000000059604645
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "beforeSha256": "4d2a11816f2480908c0bbe68f341e13ef720a99a221648840db2223e29db3703",
+      "afterSha256": "846283a2e6a5094847f3e53ff75f76268c315af305060ed7b170c8c90785581d"
+    },
+    {
+      "name": "properties-mixed",
+      "section": "properties",
+      "bones": [
+        {
+          "name": "root",
+          "length": 0.0,
+          "x": 11.0,
+          "y": -9.0,
+          "rotation": 23.0,
+          "scaleX": 1.2999999523162842,
+          "scaleY": 0.800000011920929,
+          "shearX": 7.0,
+          "shearY": -12.0
+        },
+        {
+          "name": "source",
+          "parent": "root",
+          "length": 35.0,
+          "x": 13.0,
+          "y": -7.0,
+          "rotation": 31.0,
+          "scaleX": 1.2000000476837158,
+          "scaleY": 0.800000011920929,
+          "shearX": 0.0,
+          "shearY": 17.0
+        },
+        {
+          "name": "firstTarget",
+          "parent": "root",
+          "length": 45.0,
+          "x": 70.0,
+          "y": 35.0,
+          "rotation": -25.0,
+          "scaleX": 0.8999999761581421,
+          "scaleY": 1.2999999523162842,
+          "shearX": 0.0,
+          "shearY": -11.0
+        },
+        {
+          "name": "secondTarget",
+          "parent": "root",
+          "length": 30.0,
+          "x": -40.0,
+          "y": 15.0,
+          "rotation": 80.0,
+          "scaleX": 1.5,
+          "scaleY": 0.6000000238418579,
+          "shearX": 0.0,
+          "shearY": 9.0
+        }
+      ],
+      "before": {
+        "name": "match-probe",
+        "source": "source",
+        "bones": [
+          "firstTarget",
+          "secondTarget"
+        ],
+        "localSource": false,
+        "localTarget": true,
+        "additive": false,
+        "clamp": true,
+        "offsets": [
+          7.0,
+          11.0,
+          -13.0,
+          0.20000000298023224,
+          -0.10000000149011612,
+          19.0
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "scaleY",
+            "offset": 0.6000000238418579,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": 1.399999976158142,
+                "max": 3.700000047683716,
+                "scale": -0.75
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 3.700000047683716,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": 17.0,
+                "max": 120.0,
+                "scale": 2.299999952316284
+              },
+              {
+                "property": "y",
+                "offset": -23.0,
+                "max": 47.0,
+                "scale": -0.4000000059604645
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "originalAfter": {
+        "name": "match-probe",
+        "source": "source",
+        "bones": [
+          "firstTarget",
+          "secondTarget"
+        ],
+        "localSource": false,
+        "localTarget": true,
+        "additive": false,
+        "clamp": true,
+        "offsets": [
+          7.0,
+          11.0,
+          -13.0,
+          0.20000000298023224,
+          -0.10000000149011612,
+          19.0
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "scaleY",
+            "offset": 0.751800000667572,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": 0.8999999761581421,
+                "max": 3.200000047683716,
+                "scale": -0.7499918937683105
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 15.704360008239746,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": -25.0,
+                "max": 78.0,
+                "scale": 2.2999985218048096
+              },
+              {
+                "property": "y",
+                "offset": 35.0,
+                "max": 105.0,
+                "scale": 1.5631057024002075
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          null,
+          null,
+          -25.0,
+          78.0,
+          15.704360008239746,
+          60.48699951171875,
+          null,
+          null,
+          null,
+          null,
+          35.0,
+          105.0,
+          null,
+          null,
+          0.8999999761581421,
+          3.200000047683716,
+          0.751800000667572,
+          -2.3148999214172363,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "beforeSha256": "4d2a11816f2480908c0bbe68f341e13ef720a99a221648840db2223e29db3703",
+      "afterSha256": "d51ce3118b31f25c26ce9a3d690290d1655ad7a66978612d1a6bafeb1b4db7dd"
+    },
+    {
+      "name": "offset-local-world",
+      "section": "offsets",
+      "bones": [
+        {
+          "name": "root",
+          "length": 0.0,
+          "x": 11.0,
+          "y": -9.0,
+          "rotation": 23.0,
+          "scaleX": -1.2999999523162842,
+          "scaleY": 0.800000011920929,
+          "shearX": 7.0,
+          "shearY": -12.0
+        },
+        {
+          "name": "source",
+          "parent": "root",
+          "length": 35.0,
+          "x": 13.0,
+          "y": -7.0,
+          "rotation": 31.0,
+          "scaleX": 1.2000000476837158,
+          "scaleY": 0.800000011920929,
+          "shearX": 0.0,
+          "shearY": 17.0
+        },
+        {
+          "name": "firstTarget",
+          "parent": "root",
+          "length": 45.0,
+          "x": 70.0,
+          "y": 35.0,
+          "rotation": -25.0,
+          "scaleX": 0.8999999761581421,
+          "scaleY": 1.2999999523162842,
+          "shearX": 0.0,
+          "shearY": -11.0
+        },
+        {
+          "name": "secondTarget",
+          "parent": "root",
+          "length": 30.0,
+          "x": -40.0,
+          "y": 15.0,
+          "rotation": 80.0,
+          "scaleX": 1.5,
+          "scaleY": 0.6000000238418579,
+          "shearX": 0.0,
+          "shearY": 9.0
+        }
+      ],
+      "before": {
+        "name": "match-local-world",
+        "source": "source",
+        "bones": [
+          "firstTarget",
+          "secondTarget"
+        ],
+        "localSource": true,
+        "localTarget": false,
+        "additive": false,
+        "clamp": false,
+        "offsets": [
+          7.0,
+          11.0,
+          -13.0,
+          0.20000000298023224,
+          -0.10000000149011612,
+          19.0
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "rotate",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleX",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "shearY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "shearY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "x",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "y",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "y",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "originalAfter": {
+        "name": "match-local-world",
+        "source": "source",
+        "bones": [
+          "firstTarget",
+          "secondTarget"
+        ],
+        "localSource": true,
+        "localTarget": false,
+        "additive": false,
+        "clamp": false,
+        "offsets": [
+          -167.06399536132812,
+          -86.15096282958984,
+          -20.014436721801758,
+          -2.394608497619629,
+          0.2725960612297058,
+          -78.81201171875
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "rotate",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleX",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "shearY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "shearY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "x",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "y",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "y",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "beforeSha256": "63944f61b5941e4f8c92e000db50d9918eea58ed03f5239043f553ab81e6a1bb",
+      "afterSha256": "ee2e9413b17b855950297f1adeb47bbe3210cd72350da55de515adb3dbbb7d8b"
+    },
+    {
+      "name": "properties-local-world",
+      "section": "properties",
+      "bones": [
+        {
+          "name": "root",
+          "length": 0.0,
+          "x": 11.0,
+          "y": -9.0,
+          "rotation": 23.0,
+          "scaleX": -1.2999999523162842,
+          "scaleY": 0.800000011920929,
+          "shearX": 7.0,
+          "shearY": -12.0
+        },
+        {
+          "name": "source",
+          "parent": "root",
+          "length": 35.0,
+          "x": 13.0,
+          "y": -7.0,
+          "rotation": 31.0,
+          "scaleX": 1.2000000476837158,
+          "scaleY": 0.800000011920929,
+          "shearX": 0.0,
+          "shearY": 17.0
+        },
+        {
+          "name": "firstTarget",
+          "parent": "root",
+          "length": 45.0,
+          "x": 70.0,
+          "y": 35.0,
+          "rotation": -25.0,
+          "scaleX": 0.8999999761581421,
+          "scaleY": 1.2999999523162842,
+          "shearX": 0.0,
+          "shearY": -11.0
+        },
+        {
+          "name": "secondTarget",
+          "parent": "root",
+          "length": 30.0,
+          "x": -40.0,
+          "y": 15.0,
+          "rotation": 80.0,
+          "scaleX": 1.5,
+          "scaleY": 0.6000000238418579,
+          "shearX": 0.0,
+          "shearY": 9.0
+        }
+      ],
+      "before": {
+        "name": "match-local-world",
+        "source": "source",
+        "bones": [
+          "firstTarget",
+          "secondTarget"
+        ],
+        "localSource": true,
+        "localTarget": false,
+        "additive": false,
+        "clamp": false,
+        "offsets": [
+          7.0,
+          11.0,
+          -13.0,
+          0.20000000298023224,
+          -0.10000000149011612,
+          19.0
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "rotate",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleX",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "scaleY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "shearY",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "shearY",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "x",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "y",
+            "offset": 0.0,
+            "to": [
+              {
+                "property": "y",
+                "offset": 0.0,
+                "max": 1.0,
+                "scale": 1.0
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "originalAfter": {
+        "name": "match-local-world",
+        "source": "source",
+        "bones": [
+          "firstTarget",
+          "secondTarget"
+        ],
+        "localSource": true,
+        "localTarget": false,
+        "additive": false,
+        "clamp": false,
+        "offsets": [
+          7.0,
+          11.0,
+          -13.0,
+          0.20000000298023224,
+          -0.10000000149011612,
+          19.0
+        ],
+        "mix": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "properties": [
+          {
+            "property": "rotate",
+            "offset": 31.0,
+            "to": [
+              {
+                "property": "rotate",
+                "offset": -136.06399536132812,
+                "max": -135.06399536132812,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleX",
+            "offset": 1.2000000476837158,
+            "to": [
+              {
+                "property": "scaleX",
+                "offset": -1.1946099996566772,
+                "max": -0.19460999965667725,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "scaleY",
+            "offset": 0.800000011920929,
+            "to": [
+              {
+                "property": "scaleY",
+                "offset": 1.07260000705719,
+                "max": 2.0725998878479004,
+                "scale": 0.9999999403953552
+              }
+            ]
+          },
+          {
+            "property": "shearY",
+            "offset": -73.0,
+            "to": [
+              {
+                "property": "shearY",
+                "offset": 208.18804931640625,
+                "max": 209.18804931640625,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "x",
+            "offset": 2.0,
+            "to": [
+              {
+                "property": "x",
+                "offset": -73.15096282958984,
+                "max": -72.15096282958984,
+                "scale": 1.0
+              }
+            ]
+          },
+          {
+            "property": "y",
+            "offset": 6.0,
+            "to": [
+              {
+                "property": "y",
+                "offset": -27.014440536499023,
+                "max": -26.014440536499023,
+                "scale": 1.0
+              }
+            ]
+          }
+        ],
+        "rangeCache": [
+          31.0,
+          32.0,
+          -136.06399536132812,
+          -135.06399536132812,
+          2.0,
+          3.0,
+          -73.15096282958984,
+          -72.15096282958984,
+          6.0,
+          7.0,
+          -27.014440536499023,
+          -26.014440536499023,
+          1.2000000476837158,
+          2.200000047683716,
+          -1.1946099996566772,
+          -0.19460999965667725,
+          0.800000011920929,
+          1.7999999523162842,
+          1.07260000705719,
+          2.0725998878479004,
+          -73.0,
+          -72.0,
+          208.18804931640625,
+          209.18804931640625
+        ]
+      },
+      "beforeSha256": "63944f61b5941e4f8c92e000db50d9918eea58ed03f5239043f553ab81e6a1bb",
+      "afterSha256": "3f6e8d57239bc3d75ee988427131f3f7e0766caf066b6b6e8b7acdf08c7881ee"
+    }
+  ]
+}

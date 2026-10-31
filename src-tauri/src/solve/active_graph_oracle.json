@@ -1,0 +1,384 @@
+{
+  "reference": "Spine4.3.26 Professional, originalWindows owned-fixture current-pose PNGexport",
+  "scalePercent": 400,
+  "matrixConvention": "x,y,a,b,c,d; columnsX=(a,b),Y=(c,d)",
+  "provenance": "Own canonical recipes and own marker artwork; expected arrays contain actual original PNG centroid measurements only, independently reproduced by two measurement implementations. No original assets/code/paths or analytic expected arrays.",
+  "bounds": {
+    "worldOrigin": 0.25,
+    "worldBasis": 0.009,
+    "worldSixteenUnitPatchEndpoint": 0.25
+  },
+  "referenceEvidence": {
+    "sourceCheckSha256": "8b091d19a92950b1bd3e02c313cc0f54b4de903e74cf19c8603cee0bc59577dd",
+    "independentDataImageCheckSha256": "309309133ab252fa1abb928a841697508cd8babeaa60077384224628c14919cf",
+    "collectionSha256": "f814ccb81c9398a0a47c2c935cf9288605b8ee22fd40b4817940a466600eb76c",
+    "originalCommands": 2,
+    "originalVersion": "4.3.26 Professional"
+  },
+  "cases": [
+    {
+      "name": "transform-active-graph-multi-target",
+      "sourceSha256": "7cd6c8f4175c5c09331ad7e88cfbf039f842c9fce2a49b28b53f27069ab18559",
+      "pngSha256": "13f1531333527151d08da92451905eec3384a7ecf948bf4e18f61ca32a39d921",
+      "bones": [
+        {
+          "name": "root",
+          "length": 0.0,
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "scaleX": 1.0,
+          "scaleY": 1.0,
+          "shearX": 0.0,
+          "shearY": 0.0
+        },
+        {
+          "name": "affineParent",
+          "parent": "root",
+          "length": 0.0,
+          "x": 11.0,
+          "y": -9.0,
+          "rotation": 23.0,
+          "scaleX": -1.2999999523162842,
+          "scaleY": 0.800000011920929,
+          "shearX": 7.0,
+          "shearY": -12.0
+        },
+        {
+          "name": "source",
+          "parent": "affineParent",
+          "length": 35.0,
+          "x": 13.0,
+          "y": -7.0,
+          "rotation": 31.0,
+          "scaleX": 1.2000000476837158,
+          "scaleY": 0.800000011920929,
+          "shearX": 0.0,
+          "shearY": 17.0
+        },
+        {
+          "name": "firstTarget",
+          "parent": "affineParent",
+          "length": 45.0,
+          "x": 70.0,
+          "y": 35.0,
+          "rotation": -25.0,
+          "scaleX": 0.8999999761581421,
+          "scaleY": 1.2999999523162842,
+          "shearX": 0.0,
+          "shearY": -11.0
+        },
+        {
+          "name": "secondTarget",
+          "parent": "affineParent",
+          "length": 30.0,
+          "x": -40.0,
+          "y": 15.0,
+          "rotation": 80.0,
+          "scaleX": 1.5,
+          "scaleY": 0.6000000238418579,
+          "shearX": 0.0,
+          "shearY": 9.0
+        }
+      ],
+      "constraints": [
+        {
+          "type": "transform",
+          "name": "active-graph",
+          "source": "source",
+          "bones": [
+            "firstTarget",
+            "secondTarget"
+          ],
+          "localSource": true,
+          "localTarget": true,
+          "additive": false,
+          "clamp": false,
+          "rotation": 7.0,
+          "x": 11.0,
+          "y": -13.0,
+          "scaleX": 0.20000000298023224,
+          "scaleY": -0.10000000149011612,
+          "shearY": 19.0,
+          "mixRotate": 0.5,
+          "mixX": 0.0,
+          "mixY": 0.25,
+          "mixScaleX": 0.75,
+          "mixScaleY": 0.0,
+          "mixShearY": 0.0,
+          "properties": [
+            {
+              "property": "x",
+              "offset": 2.0,
+              "to": [
+                {
+                  "property": "rotate",
+                  "offset": 20.0,
+                  "max": 28.0,
+                  "scale": 2.0
+                },
+                {
+                  "property": "y",
+                  "offset": 35.0,
+                  "max": 47.0,
+                  "scale": 3.0
+                }
+              ]
+            },
+            {
+              "property": "scaleY",
+              "offset": 0.5,
+              "to": [
+                {
+                  "property": "scaleX",
+                  "offset": 1.0,
+                  "max": 3.0,
+                  "scale": 2.0
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "sequence": "current",
+          "time": 0.0,
+          "bones": {
+            "firstTarget": [
+              -75.70296852646638,
+              -14.071173104434934,
+              -1.4148129034789818,
+              -0.4456890558834665,
+              0.02351573676680907,
+              1.135908440629473
+            ],
+            "secondTarget": [
+              50.45338397790056,
+              45.66919889502762,
+              -0.7029162399980962,
+              0.777647051819395,
+              0.6537184256236408,
+              0.45884225225636577
+            ]
+          },
+          "patches": {
+            "firstTarget": [
+              [
+                -75.70296852646638,
+                -14.071173104434934
+              ],
+              [
+                -98.33997498213009,
+                -21.202197998570398
+              ],
+              [
+                -75.32671673819743,
+                4.103361945636635
+              ]
+            ],
+            "secondTarget": [
+              [
+                50.45338397790056,
+                45.66919889502762
+              ],
+              [
+                39.20672413793102,
+                58.11155172413794
+              ],
+              [
+                60.91287878787881,
+                53.01067493112947
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "transform-active-graph-fan-in",
+      "sourceSha256": "4d6a9d02d30357e7b0e1c050f90bf5109c78cf455d408167cb671444231a32c2",
+      "pngSha256": "9786c608f35dc97007d6112cc3fde2693c937f51f0079058ff476c5a5c4bb2f6",
+      "bones": [
+        {
+          "name": "root",
+          "length": 0.0,
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "scaleX": 1.0,
+          "scaleY": 1.0,
+          "shearX": 0.0,
+          "shearY": 0.0
+        },
+        {
+          "name": "affineParent",
+          "parent": "root",
+          "length": 0.0,
+          "x": 11.0,
+          "y": -9.0,
+          "rotation": 23.0,
+          "scaleX": -1.2999999523162842,
+          "scaleY": 0.800000011920929,
+          "shearX": 7.0,
+          "shearY": -12.0
+        },
+        {
+          "name": "source",
+          "parent": "affineParent",
+          "length": 35.0,
+          "x": 13.0,
+          "y": -7.0,
+          "rotation": 31.0,
+          "scaleX": 1.2000000476837158,
+          "scaleY": 0.800000011920929,
+          "shearX": 0.0,
+          "shearY": 17.0
+        },
+        {
+          "name": "firstTarget",
+          "parent": "affineParent",
+          "length": 45.0,
+          "x": 70.0,
+          "y": 35.0,
+          "rotation": -25.0,
+          "scaleX": 0.8999999761581421,
+          "scaleY": 1.2999999523162842,
+          "shearX": 0.0,
+          "shearY": -11.0
+        },
+        {
+          "name": "secondTarget",
+          "parent": "affineParent",
+          "length": 30.0,
+          "x": -40.0,
+          "y": 15.0,
+          "rotation": 80.0,
+          "scaleX": 1.5,
+          "scaleY": 0.6000000238418579,
+          "shearX": 0.0,
+          "shearY": 9.0
+        }
+      ],
+      "constraints": [
+        {
+          "type": "transform",
+          "name": "active-graph",
+          "source": "source",
+          "bones": [
+            "firstTarget",
+            "secondTarget"
+          ],
+          "localSource": true,
+          "localTarget": true,
+          "additive": false,
+          "clamp": false,
+          "rotation": 7.0,
+          "x": 11.0,
+          "y": -13.0,
+          "scaleX": 0.20000000298023224,
+          "scaleY": -0.10000000149011612,
+          "shearY": 19.0,
+          "mixRotate": 0.5,
+          "mixX": 0.0,
+          "mixY": 0.25,
+          "mixScaleX": 0.75,
+          "mixScaleY": 0.0,
+          "mixShearY": 0.0,
+          "properties": [
+            {
+              "property": "x",
+              "offset": 2.0,
+              "to": [
+                {
+                  "property": "rotate",
+                  "offset": 20.0,
+                  "max": 28.0,
+                  "scale": 2.0
+                },
+                {
+                  "property": "y",
+                  "offset": 35.0,
+                  "max": 47.0,
+                  "scale": 3.0
+                }
+              ]
+            },
+            {
+              "property": "scaleY",
+              "offset": 0.5,
+              "to": [
+                {
+                  "property": "scaleX",
+                  "offset": 1.0,
+                  "max": 3.0,
+                  "scale": 2.0
+                },
+                {
+                  "property": "rotate",
+                  "offset": 20.0,
+                  "max": 28.0,
+                  "scale": 8.0
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "sequence": "current",
+          "time": 0.0,
+          "bones": {
+            "firstTarget": [
+              -75.65877412437456,
+              -14.064778413152226,
+              -1.4134872162222862,
+              -0.42409204143049806,
+              0.04711088277340991,
+              1.146861150822014
+            ],
+            "secondTarget": [
+              50.44544198895028,
+              45.66091160220995,
+              -1.2549845208611181,
+              0.18133311106877414,
+              0.5088614553609361,
+              0.5871056278838562
+            ]
+          },
+          "patches": {
+            "firstTarget": [
+              [
+                -75.65877412437456,
+                -14.064778413152226
+              ],
+              [
+                -98.27456958393114,
+                -20.850251076040195
+              ],
+              [
+                -74.905,
+                4.284999999999997
+              ]
+            ],
+            "secondTarget": [
+              [
+                50.44544198895028,
+                45.66091160220995
+              ],
+              [
+                30.36568965517239,
+                48.562241379310336
+              ],
+              [
+                58.587225274725256,
+                55.05460164835165
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "schema": "fbones-own-transform-active-offset-reference-v1",
+  "referenceVersion": "4.3.26",
+  "provenance": "One isolated original Offset Match+Save on the same own four-bone/two-constraint graph as the Properties reference. Semantic numbers only; no proprietary binary/code/asset/private path.",
+  "sceneReference": "transform-match-active-properties-reference.json",
+  "selectedConstraint": "active-sampling-match",
+  "expectedOffsetF32Bits": [
+    3261071360,
+    1101004800,
+    1109917696,
+    3197737372,
+    1056964606,
+    3252682752
+  ],
+  "expectedOffsetValues": [
+    -56.0,
+    20.0,
+    42.0,
+    -0.30000007152557373,
+    0.4999999403953552,
+    -28.0
+  ],
+  "fieldOrder": [
+    "rotate",
+    "x",
+    "y",
+    "scaleX",
+    "scaleY",
+    "shearY"
+  ],
+  "all32AuthoredBoneBitsAndUnrelatedFieldsPreserved": true,
+  "samplingLimit": "Nonadditive Local/Local, preceding Transform, no suffix/Physics. Prefix and all-except-selected are indistinguishable. Broader uniform prefix remains explicit FBones policy."
+}

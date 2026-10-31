@@ -1,0 +1,25 @@
+name: Feature request
+description: Discuss a focused improvement or an item on the roadmap.
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: "Please check docs/ROADMAP.md and existing issues first. Animation and timeline coverage are the current priority."
+  - type: textarea
+    id: problem
+    attributes:
+      label: What workflow or problem would this improve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the interaction and how you would know it works.
+    validations:
+      required: true
+  - type: textarea
+    id: contribution
+    attributes:
+      label: Examples or contribution interest
+      description: Only attach material you have permission to share.

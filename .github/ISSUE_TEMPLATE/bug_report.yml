@@ -1,0 +1,45 @@
+name: Bug report
+description: Report a reproducible problem in FBones.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: "Use a minimal project and artwork you can share. Do not attach private projects, proprietary editor files, activation information, or reference screenshots."
+  - type: input
+    id: version
+    attributes:
+      label: FBones version or commit
+      placeholder: "0.9.4 / v0.9.4-beta.1"
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system and how you run FBones
+      placeholder: "Windows 11 / native build, Ubuntu 24.04 / browser preview, etc."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the selected workspace, tool, and any relevant keys or settings.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Shareable example, screenshot, or log
+      description: Remove personal paths and information. Say whether this also happens in a new project.

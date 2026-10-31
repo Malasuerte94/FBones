@@ -1,0 +1,29 @@
+{
+  "purpose": "Owned FBones native/frontend setup-preview replay agreement; not an original Spine oracle.",
+  "scene": {
+    "bones": [
+      {"id":0,"parent":null,"name":"root","x":0,"y":0,"rotation":0,"length":0,"scaleX":1,"scaleY":1,"shearX":0,"shearY":0},
+      {"id":1,"parent":0,"name":"springbone","x":0,"y":0,"rotation":0,"length":80,"scaleX":1,"scaleY":1,"shearX":0,"shearY":0}
+    ],
+    "constraints": [
+      {"id":0,"order":0,"type":"physics","name":"spring","bone":1,"x":1,"y":0,"scaleX":0,"rotate":null,"shearX":0,"step":0.01666666753590107,"inertia":0.5,"strength":20,"damping":0.8500000238418579,"mass":1,"wind":0,"gravity":0,"mix":1,"limit":5000,"globals":{"inertia":false,"strength":false,"damping":false,"mass":false,"wind":false,"gravity":false,"mix":false}}
+    ]
+  },
+  "motion": {
+    "initial":[
+      {"x":0,"y":0,"rotation":0,"scaleX":1,"scaleY":1,"shearX":0,"shearY":0},
+      {"x":0,"y":0,"rotation":0,"scaleX":1,"scaleY":1,"shearX":0,"shearY":0}
+    ],
+    "changes":[
+      {"tick":11,"poses":[
+        {"x":80,"y":0,"rotation":0,"scaleX":1,"scaleY":1,"shearX":0,"shearY":0},
+        {"x":0,"y":0,"rotation":0,"scaleX":1,"scaleY":1,"shearX":0,"shearY":0}
+      ]}
+    ]
+  },
+  "freezeTick":21,
+  "pausedCurrentRootX":90,
+  "expectedFreezeX":57.69695731415108,
+  "expectedNextTickX":53.79421415138012,
+  "positionTolerance":0.00001
+}

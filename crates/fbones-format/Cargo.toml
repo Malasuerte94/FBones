@@ -1,0 +1,18 @@
+[package]
+name = "fbones-format"
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[features]
+# Temporary internal migration gate; the desktop opts in when its state model
+# can retain every scene object. Legacy entry points remain conservative.
+scene-codec = []
+
+[dependencies]
+flate2 = "=1.1.9"
+thiserror = "=2.0.19"
+
+[dev-dependencies]
+tempfile = "=3.27.0"
