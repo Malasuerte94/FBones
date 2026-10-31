@@ -16,7 +16,7 @@ path = "src/main.rs"
 
 [[bin]]
 name = "fbones-e2e-host"
-path = "src/bin/e2e_host.rs"
+path = "src/e2e_host_main.rs"
 required-features = ["e2e-host"]
 
 [build-dependencies]

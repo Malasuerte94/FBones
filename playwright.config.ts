@@ -2,16 +2,19 @@ import {defineConfig} from '@playwright/test';
 
 const port=process.env.FBONES_E2E_PORT??'4173';
 const baseURL=process.env.FBONES_E2E_BASE_URL??`http://127.0.0.1:${port}`;
+// 85 hosted UI cases ran ~5.8x slower than local, with frame-presentation backlog.
+// Keep exact assertions and zero retries; allow CI rendering time with one worker.
+const hostedCI=!!process.env.CI;
 
 export default defineConfig({
   testDir:'./tests/e2e',
   fullyParallel:true,
-  forbidOnly:!!process.env.CI,
+  forbidOnly:hostedCI,
   retries:0,
-  workers:2,
-  timeout:30_000,
-  globalTimeout:120_000,
-  expect:{timeout:7_500},
+  workers:hostedCI?1:2,
+  timeout:hostedCI?90_000:30_000,
+  globalTimeout:hostedCI?1_800_000:120_000,
+  expect:{timeout:hostedCI?15_000:7_500},
   outputDir:'.local/playwright/test-results',
   reporter:[['list'],['html',{outputFolder:'.local/playwright/report',open:'never'}],['json',{outputFile:'.local/playwright/results.json'}]],
   use:{
@@ -22,8 +25,8 @@ export default defineConfig({
     headless:true,
     trace:'retain-on-failure',
     screenshot:'only-on-failure',
-    actionTimeout:7_500,
-    navigationTimeout:15_000,
+    actionTimeout:hostedCI?20_000:7_500,
+    navigationTimeout:hostedCI?30_000:15_000,
   },
   projects:[{name:'linux-chromium',use:{
     browserName:'chromium',

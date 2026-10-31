@@ -27,6 +27,27 @@ Chromium with explicit SwiftShader software WebGL, two isolated workers,
 automatic locator waits and zero retries. This software GPU configuration
 proves rendering correctness within its tests, not hardware performance.
 
+## Hosted CI execution profile
+
+The first hosted95-case attempt was slower than the local baseline:85 matched
+passing cases had a median5.77x duration ratio, and traces showed presentation
+backlog while native replies remained quick. Its30-second per-test watchdog and
+600-second suite budget expired during progressing work. No reported failure
+was a numerical mismatch. Precise CPU/GPU causality remains unproven.
+
+With `CI=1`, Playwright uses one software-rendered Chromium worker,90seconds per
+test,20seconds for actions,15seconds for assertion waits,30seconds for navigation,
+and a30-minute suite watchdog. The job allows45minutes including dependency/host
+builds. Local defaults remain two workers and their existing budgets. All95
+cases, exact/numeric conditions, production CSP, real Rust operations and zero
+retries remain unchanged. These execution allowances require an observed complete
+hosted run; changing configuration alone is not a passing result.
+
+The opt-in host wrapper lives at `src-tauri/src/e2e_host_main.rs`, outside Tauri's
+`src/bin` auto-discovery. Its explicit Cargo binary name `fbones-e2e-host` and
+required feature `e2e-host` are retained. Normal app bundles must contain only
+the editor. The package declares `default-run = "fbones"` for Tauri discovery.
+
 ## Real Rust authoring without a desktop window
 
 `scripts/serve-e2e.mjs` serves the actual `dist/` frontend on loopback and sends

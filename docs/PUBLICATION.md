@@ -96,11 +96,21 @@ executable architecture and private-path patterns, inspects package structures,
 and records package hashes in `ci-reports/`. Its path scan covers the executable,
 not all compressed installer/resources. Only reports are uploaded; installer
 acceptance/notices remain separate. The Ubuntu UI job fetches Cargo dependencies
-before its offline test host build, selects installed Chromium, and allows a
-600-second suite watchdog while preserving individual test/action assertions.
+before its offline test host build, selects installed Chromium, and uses a
+trace-calibrated CI execution profile: one worker,90-second tests,20-second
+actions,15-second assertion waits,30-second navigation and30-minute suite budget.
+All95cases, semantic/numeric assertions and zero retries remain unchanged.
+See TESTING.md for the observed slowdown and evidence limits.
 
 The exact first beta tag can publish only in the intended repository after all
 jobs succeed. Pull request checks keep read-only permissions; only the gated
 release job receives contents-write permission. Do not confuse this checked
 configuration with observed hosted build results. Read the actual run and all
 three reports before declaring the platform builds verified.
+
+
+The desktop Cargo package explicitly selects `fbones` as default-run. The opt-in
+headless host wrapper is outside `src/bin`; pinned Tauri CLI2.10.1 otherwise
+rediscovers it after filtering its feature-gated Cargo target, causing packages
+to expect a nonexistent `e2e_host` executable. Relocating the identical wrapper
+preserves the explicit host feature/name and keeps it out of normal bundles.

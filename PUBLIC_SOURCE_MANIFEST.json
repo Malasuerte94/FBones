@@ -79,8 +79,8 @@
     },
     {
       "path": "playwright.config.ts",
-      "bytes": 1554,
-      "sha256": "f2113abb719bd275dd3bd9ff13cf67f953c1a6e3d9a97a9da7cd6f9c64fb086f"
+      "bytes": 1841,
+      "sha256": "6a61e90471bd28dd7295bee92d761560d436ca87a2811afeda819bb07ecfde2f"
     },
     {
       "path": ".github/ISSUE_TEMPLATE/bug_report.yml",
@@ -104,8 +104,8 @@
     },
     {
       "path": ".github/workflows/desktop.yml",
-      "bytes": 5115,
-      "sha256": "e7f604a995ebdb4e98df0f1e8f8d0037d9c78c2198c76007905c750684b66b10"
+      "bytes": 5091,
+      "sha256": "e300e8f4b5811d122ebb6142ba18377f1e462e6f2207e64d2f74ed47c24c51ec"
     },
     {
       "path": "src/App.vue",
@@ -559,8 +559,8 @@
     },
     {
       "path": "src-tauri/Cargo.toml",
-      "bytes": 931,
-      "sha256": "087ac2a2cb6cb92e83444040da17a096492f760c0f5bb3d5762e5b2702cc623e"
+      "bytes": 932,
+      "sha256": "d18f571dd4506af30495b3b9a5d8499a830e856633bd0928c2609bfc368e4708"
     },
     {
       "path": "src-tauri/build.rs",
@@ -658,11 +658,6 @@
       "sha256": "eb5bcb2c52a493937ae137381bdad5ab34cf93ecc16f0296d6cb8380cbfdc65a"
     },
     {
-      "path": "src-tauri/src/bin/e2e_host.rs",
-      "bytes": 165,
-      "sha256": "e3a7a09c5d74380541deb2003c276b871231437f8c1b974a2bc762a1c5d9d6ae"
-    },
-    {
       "path": "src-tauri/src/binding.rs",
       "bytes": 34292,
       "sha256": "d7b2493d03ee3430e8e4db8b13c705a1163d36982f099dd7140032b34fe2abec"
@@ -681,6 +676,11 @@
       "path": "src-tauri/src/e2e_host.rs",
       "bytes": 28791,
       "sha256": "1933ffc868fa5c089b2d19b934db9ea02ca969eb5a2a90469dfbf2ac25a0a8ac"
+    },
+    {
+      "path": "src-tauri/src/e2e_host_main.rs",
+      "bytes": 165,
+      "sha256": "e3a7a09c5d74380541deb2003c276b871231437f8c1b974a2bc762a1c5d9d6ae"
     },
     {
       "path": "src-tauri/src/evaluation.rs",
@@ -1579,8 +1579,8 @@
     },
     {
       "path": "docs/PUBLICATION.md",
-      "bytes": 6627,
-      "sha256": "b1a7eb8c6543ed4f6ebd884f3c9a2779d0c5cdbea259375af2999213759abdf7"
+      "bytes": 7239,
+      "sha256": "387577b58455cfb39b260984966723c64c9d06384569a658bcc286857e537a05"
     },
     {
       "path": "docs/REFERENCE-WORKFLOW-4.3.26.md",
@@ -1599,18 +1599,18 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 16358,
-      "sha256": "c2f06165fb72036bdc5b8eb8376ec55b54622ddf72a31d235a89a179e511bf2a"
+      "bytes": 17367,
+      "sha256": "2691360c02c102b17aa0bb9167fbfd61426ff234e2bc63a3059ee9d1362d7a13"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 17945,
-      "sha256": "98235a053f33ed23d608e8dd428254afc2578c09c6db8da398b4c63b59c10f2e"
+      "bytes": 18263,
+      "sha256": "141a42be90af745c58c0ed2a632b6054ed2df9b8eced52afd7ee6bd6171fb8c1"
     },
     {
       "path": "docs/TESTING.md",
-      "bytes": 4837,
-      "sha256": "fdf58b0ceefe53c3b77dfe729ff8a6649956efb28cf7dba96d1dbc7c500e8af1"
+      "bytes": 6124,
+      "sha256": "acd60b21182f69b6fe6dcfb20a203d06a133ecf27e9915180031db104fcae707"
     },
     {
       "path": "docs/TRACE-IMPLEMENTATION.md",

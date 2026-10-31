@@ -91,7 +91,21 @@ First macOS job124539994268 passed install/JS/testTS/Rust default+legacy and
 frontend, then Tauri failed main-binary discovery. Paired DATA/UI finding recorded
 before a manifest-only default-run=fbones fix; no editor runtime change. Cargo
 metadata confirms the intended executable; hosted rebuild still required.
-Linux also failed and its exact cause is being read; Windows/UI still active.
+All3 first-run platforms confirmed the same default-run defect. First UbuntuUI
+completed85pass/3timeoutfail/7notrun with600s suite errors; paired trace audits
+show85matched passes median5.77x local, progressing constraints/Physics and frame
+backlog before an undispatched Undo, without numeric mismatch. CI-only1worker,
+90s test/20s action/15s expect/30s navigation/30min suite/45min job is now a
+controlled resource-profile change; all95/assertions/no retries remain.
+
+After default-run fix, run41202581221 on27342ec built real Linux/macOS editors
+but Tauri bundling tried missing e2e_host. Exact pinned CLI source proves it
+re-adds src/bin files after feature filtering. Paired DATA/UI gate preceded moving
+the identical wrapper to src/e2e_host_main.rs; explicit name/feature preserved.
+Local Debian build now completes; package inventory includes usr/bin/fbones and
+NO testhost. Cargo metadata and explicit opt-in host build pass. Focused3 prior
+UI failures now pass locally under the CI profile (17.5s), with unchanged exact
+assertions; new full hosted validation is still required.
 Receipts .local/public-beta/current/publication-progress.json,
 .local/public-beta/live-ci-data/ and live-release/. Actual job results still pending.
 
