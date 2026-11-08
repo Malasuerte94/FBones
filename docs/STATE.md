@@ -49,7 +49,7 @@ windows untouched. This proves the named own image, not installed-app upgrading.
 Normalcurrent94293013Windows0.9.5 launch passed frontend/WebGL/visible/version/
 no-debugger checks; new53988window ownership transferred to user and protected.
 Sharedbootstrap unchanged; rootmanifest/pointer select the tested immutable image.
-OwnQA normallyclosed, profile removed. Cleanup recovered205,806,219bytes from
+OwnQA normallyclosed, profile removed. Initialcleanup recovered205,806,219bytes from
 ownobsolete firstcandidate, obsoleteTauri2.11.5 compiler artifacts, duplicateQAimage
 and profile. Currentprofiles/dependencies/citedevidence and signingidentity retained.
 
@@ -63,10 +63,32 @@ change leaves the tested editor image unchanged. Bothfirsttag/mainCIruns cancele
 no releasepublished and beta1tagremains immutable. Candidate isv0.9.5-beta.2,
 app0.9.5 unchanged because no0.9.5 updater package was published.
 
-Next: publish correctedbeta2 through all hosted gates, independently verify
-remoteCI/assets/manifest. Nativeinstalled update acceptance on eachOS remains
-unobserved; no proof of an actual installed-app upgrade is claimed. Publicbeta6
-below remains historical; keep current signingidentity and protectedwindows.
+PublishedLatestv0.9.5-beta.2 at1913f20e477caa73b6a5e08441661ba04332760b,
+release438536371 on2026-11-08T21:32:57Z. Tag42524571053 andmain42524571125 both
+passed; all3platforms, hosted120/120UI(9.9minutes),runtime16+24samples andall
+signature/assembly/versiongates pass. All16downloaded GitHubdigests,15checksums,
+3sourcecommitreports/4signedpayloads/5bundlemanifestentries,711sourcefiles+manifest
+and32runtimefiles pass. Published40,803-byte runtime exactly matches localoffline
+packageSHA2565f8e171bff34384e7219e8adfe345ea49e92632962bf1965b95b644d49954544.
+Independent pinnedRustminisign verifies all4actualpublishedpayloads+signedversions.
+ExactLatestHTTPSendpoint matches downloadedmanifest0.9.5 andLatestAPIresolvesbeta2.
+The realversiongate now correctly rejects anotherapp0.9.5 publication.
+
+Requested implementation/delivery is complete within the stated supportedprofile.
+Remaining acceptance: controlledactualinstalled-app upgrade onWindows/Linux/macOS
+when the first genuinely higherappversion is published; no suchOSupgrade is claimed.
+Firstinstalled0.9.5package is required forolder0.9.4/workspacecopies. NativeOS
+publisher signing/notarization andfullSpine/runtimeparity remainoutside this result.
+Keep protected53988userwindow andallpersonal/originalinstances untouched.
+
+Finalcleanup removed approximately226MB ofownobsoleteTauri/compiler/candidate/QA
+andone-offverificationoutputs, preservingconciseevidence/currentdeliveries andthe
+durableprivate signingidentity. Finalfree:827GiBLinux/88,539,729,920bytesWindowsC;
+7.4GiBdebugdependencies retained forcurrentprofiles/uncertainhistoricalownership.
+Nextreproducibleaction forfutureupdateracceptance: installpublicbeta2 in a dedicated
+owninstallation, publish agenuinelyhigher appversion through thesamegates, and
+observe check/download/SaveCancel/install/relaunch while protectinguserinstances.
+Do not republishbeta2 or restart deferredF307/F308probes.
 
 The latest user clarified the exact target: the repository RIGHT sidebar
 Releases card, rather than README/release-body Download tables. This is fixed
@@ -123,7 +145,7 @@ is user-reported command acceptance, not a fresh original-format equivalence
 check. No automation of that user window is authorized. Do not resume unrelated E/B/F/G or user-deferred
 F307/F308 fidelity research.
 
-Current selected immutable Windows0.9.4:
+Historical beta5 selected immutable Windows0.9.4:
 `39efc9c1c8bb370811fe827dc9a0a378fdf6210eb3e2a2efa0a95becb5d03a58`
 (13,301,760bytes), selected by unchanged bootstrap/shortcuts in `WINDOWS_TEST`.
 Fresh normal visible launch90656 reached frontend ready without a debugger port;
@@ -171,9 +193,9 @@ assets or dependency. Usage/support/limits are in
 [packages/runtime/README.md](../packages/runtime/README.md).
 
 Published installable archive:
-[fbones-runtime-0.1.0-beta.1.tgz](https://github.com/Malasuerte94/FBones/releases/download/v0.9.4-beta.5/fbones-runtime-0.1.0-beta.1.tgz),
-40,373bytes/31files, SHA256
-`655df42b7db85508a1a718904b3ed44b615631b8178145e1bcb72328ac7b510a`.
+[fbones-runtime-0.1.0-beta.1.tgz](https://github.com/Malasuerte94/FBones/releases/download/v0.9.5-beta.2/fbones-runtime-0.1.0-beta.1.tgz),
+40,803bytes/32files, SHA256
+`5f8e171bff34384e7219e8adfe345ea49e92632962bf1965b95b644d49954544`.
 The downloaded package matches current locally tested source/dist byte for byte.
 Earlier offline standalone Node/strict NodeNext checks remain named evidence;
 headless use needs neither Pixi nor the editor. The historical local40,353-byte

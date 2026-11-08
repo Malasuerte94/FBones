@@ -2214,13 +2214,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 17798,
-      "sha256": "e50265e95c1b3af293c749202960a77eed4f6bf5d8b6dc39e0e17ee33924c253"
+      "bytes": 19420,
+      "sha256": "6d9e337ae150ba99d4dcea3d4c5152ad127755b9c5b5e6fac78bfc97ba29c8d3"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 20147,
-      "sha256": "a5f0aafbd33beaab5561d06616f899ba678d0ef76dbc8df56200f20aaab2319b"
+      "bytes": 20489,
+      "sha256": "861541b63d7468cb899859f08cec82e1d6d129ff46dcd2698c1df0bb894ad975"
     },
     {
       "path": "docs/TESTING.md",
@@ -2284,8 +2284,8 @@
     },
     {
       "path": "docs/releases/v0.9.5-beta.2.md",
-      "bytes": 5841,
-      "sha256": "12378eeaf3a1f0c634649ca20f377bde44e427255830006eb8bba1819745cd71"
+      "bytes": 6564,
+      "sha256": "7a0ea5fa557d13e6ef001bb6b6eaa757edcf0fa71c9780fa5f8859367e3ced01"
     },
     {
       "path": "docs/research/ANIMATION-BONE-BEZIER-UI-2026-11-06.md",

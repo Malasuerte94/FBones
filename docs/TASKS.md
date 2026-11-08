@@ -1,9 +1,9 @@
 # FBones tasks
 
-Active user task: app0.9.5 updater and constraint multi-edit are implemented;
-local120UI/442JS/native/runtime/signature checks pass. OwnWindows94293013fourgroups pass; signed
-publication/remote verification remain;normalcurrent0.9.5launchpassed. STATE owns current results and boundaries.
-Earlier English289wordannouncement remains completed.
+Currentuserrequest completed in0.9.5: signedupdater,distinctconstrainticons and
+atomiccohortfields/keys. PublishedLatestbeta2/1913f20,alllocal+hostedchecks and16asset
+verificationpass; normalWindows0.9.5available. Actualinstalledupgrade remains a
+separateWAITINGacceptance; STATEowns bounds/receipts/cleanup.
 
 Statuses: TODO, ACTIVE, WAITING, DONE. External checks remain WAITING until
 observed. Spine reference: **4.3.26 only**. Historical acceptance counts below
@@ -11,8 +11,9 @@ belong to their named delivery, not to a new combined test run.
 
 | ID | Status | Dependencies | Acceptance |
 | --- | --- | --- | --- |
-| F005-updater | ACTIVE | Publishedinstallerpipeline | Strictsignedversion/HTTPS/nativeownedTauriupdates;quietstartup/backgrounddownload/progress/manualcheck/disable;Save/Discard/Cancel+cleanrevisionmutex. Native6+guard,13controller/6Pinia/3UI,realCLI/Node/Rustsignature andclosed16assetpipelinechecks pass. Failedbeta1withheld;CLIaliasbugfixed/realregressionspass;beta2signedrelease/nativeinstalled-upgradeacceptancepending;0.9.4requiresoneinitialinstaller. |
-| F311-constraint-multiedit | DONE | F309,F310,F105 | DistinctIK/Transform/Physicsglyphs;Ctrl/Cmd/Shiftcohorts;Mixed/rawf32/nullpreservation;typedatomic42fieldhomogeneousSetup+supportedAnimatekeys/drafts,oneUndo. Native7/JS5/UI3passwithfull120UIregressions. OwnWindows94293013native4groupspass;normalcurrent0.9.5launchverified;originalgestureparityunknown. |
+| F005-updater | DONE | Publishedinstallerpipeline | Strictsignedversion/HTTPS/nativeownedupdates;quietstartup/backgrounddownload/progress/manualcheck/disable;Save/Discard/Cancel+cleanrevisionmutex. Native6+guard,13controller/6Pinia/3UI,independentCLI/Node/Rust4publishedpayloadsignatures and16assetmanifest pass. Beta2Latest438536371/1913f20/tag42524571053+main42524571125success. Old0.9.4needsoneinitialinstaller;actualinstalledupgrade trackedseparately. |
+| F005-updater-native | WAITING | F005-updater,firsthigherappversion | Observeactualdedicatedinstalledbeta2→higherappversion discovery/download/signature/SaveCancel/install/relaunch onWindows/Linux/macOS. Currentpackaging/browser/nativeportablechecks do notproveOSupgrade;noextrauser/originalinstanceoperations. |
+| F311-constraint-multiedit | DONE | F309,F310,F105 | DistinctIK/Transform/Physicsglyphs;Ctrl/Cmd/Shiftcohorts;Mixed/rawf32/nullpreservation;typedatomic42fieldhomogeneousSetup+supportedAnimatekeys/drafts,oneUndo. Native7/JS5/UI3passwithfull120UIregressions. OwnWindows94293013native4groupspass;normalcurrent0.9.5launchverified+publishedbeta2;additionalpointerSlider5cohort/oneUndo passes. Originalgestureparityunknown. |
 | F000-announcement | DONE | Publishedbeta6 | English ready-to-post message in docs/FBONES-ANNOUNCEMENT.md: MIT/community, implementedfeatures,platform/runtime support and bounded Spine4.3.26 compatibility. Shortened peruser from629to289words; checked projectdocs/license/liveLatest; Markdown2links pass. Superseded ownROdraft removed; no external publication/app changes. |
 | F000-public | DONE | Current0.9.4 | Beta6 at57ee1f26 published10assets:4desktop kits+runtime/source/3reports/SHA. Tag42513851453 all5jobsSUCCESS;7policytests,3platform builds and114/114hostedUI/runtime checks pass. All10downloadedGitHubdigests,9checksums,4installer/reportSHA/sourcecommit matches, source686blob equality/runtime31files pass. AnonymousChrome desktop1440/narrow390 Downloadtables/5links/Assets12(10custom+2source) visible,nooverflow. GitHubLatestsidebarcard+APIverified; Earlybeta labels remain; Windowsunsigned/macad-hoc notnotarized/nativeinstall unverified; no updater/npm/fullparity claim. Prior immutable releases retained. |
 | F001 | DONE | — | Instructions, continuation notes, ignored research data; remove exactly the three obsolete editor packages and update inventory. |
