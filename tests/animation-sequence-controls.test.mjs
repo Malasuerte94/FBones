@@ -32,7 +32,21 @@ const clone=value=>JSON.parse(JSON.stringify(value));
 function model(){const region={name:'Own',image:'own/frame',imagePath:'own/frame',x:0,y:0,rotation:0,scaleX:1,scaleY:1,width:32,height:24},settings={start:7,count:3,digits:2,setupIndex:1},attachment={id:9,slot:7,name:'Own frames',type:'region',region,mesh:null,clipping:null,imageAvailable:true,sequence:settings,sequenceAvailableFrames:[0,1,2]};return{...draftSummary('Own Sequence'),documentId:42,revision:1,sceneEditing:true,slots:[{id:7,name:'Own slot',bone:0,visible:true,blend:'normal',region,mesh:null,imageAvailable:true,activeAttachmentId:9,attachments:[attachment]}],animations:[{id:1,name:'Own clip',duration:30,tracks:[],sequenceTracks:[{slot:7,attachment:9,keys:[{id:91,frame:0,mode:0,index:0,delay:.125},{id:92,frame:15,mode:2,index:1,delay:.25}]}]}],animationChannels:['translate','rotate','scale','shear'],animationFps:30};}
 function mount(component,props,pinia=createPinia()){const target=node('root'),app=renderer.createApp({render:()=>h(component,props())});app.use(pinia);app.use(i18n);app.mount(target);return{target,app,find:id=>flatten(target).find(n=>n.props['data-testid']===id)};}
 async function input(e,id,value,key='Enter'){let field=e.find(id);assert.ok(field,id);field.props['onUpdate:modelValue'](value);await nextTick();field=e.find(id);for(const handler of [].concat(field.props.onKeydown??[]))handler(event({key,target:field}));await nextTick();}
-async function inspector(){const pinia=createPinia(),w=useWorkspace(pinia),edits=[];w.project=model();w.selectAttachment(9);w.editRig=async(edit,revision)=>{edits.push({edit:clone(edit),revision});if(edit.type==='setAttachmentSequence'){const next=clone(w.project);next.slots[0].attachments[0].sequence=edit.sequence;next.revision++;w.project=next;}return true;};const e=mount(Inspector,()=>({attachment:w.project.slots[0].attachments[0]}),pinia);await nextTick();return{...e,w,edits};}
+const nativeSettingsOrder=sequence=>sequence?{count:sequence.count,digits:sequence.digits,setupIndex:sequence.setupIndex,start:sequence.start}:null;
+async function inspector(nativeOrder=false){const pinia=createPinia(),w=useWorkspace(pinia),edits=[];w.project=model();if(nativeOrder)w.project.slots[0].attachments[0].sequence=nativeSettingsOrder(w.project.slots[0].attachments[0].sequence);w.selectAttachment(9);w.editRig=async(edit,revision)=>{edits.push({edit:clone(edit),revision});if(edit.type==='setAttachmentSequence'){const next=clone(w.project);next.slots[0].attachments[0].sequence=nativeOrder?nativeSettingsOrder(edit.sequence):edit.sequence;next.revision++;w.project=next;}return true;};const e=mount(Inspector,()=>({attachment:w.project.slots[0].attachments[0]}),pinia);await nextTick();return{...e,w,edits};}
+
+test('compiled Setup Sequence treats native-ordered settings as a semantic no-op before and after Enter',async()=>{
+ const e=await inspector(true);try{
+  const before=clone(e.w.project);let field=e.find('sequence-setupIndex');
+  await field.props.onChange(event({target:field}));await nextTick();
+  assert.deepEqual(e.edits,[],'unchanged native field order cannot start an authoring transaction');assert.deepEqual(e.w.project,before);
+  await input(e,'sequence-setupIndex','2');assert.equal(e.edits.length,1);assert.equal(e.w.project.revision,before.revision+1);
+  assert.deepEqual(Object.keys(e.w.project.slots[0].attachments[0].sequence),['count','digits','setupIndex','start']);
+  const changed=clone(e.w.project);field=e.find('sequence-setupIndex');
+  await field.props.onChange(event({target:field}));await nextTick();
+  assert.equal(e.edits.length,1,'a delayed blur/change after Enter cannot reissue equal settings');assert.deepEqual(e.w.project,changed);assert.equal(e.w.sequenceFieldError,'');
+ }finally{e.app.unmount();}
+});
 
 test('compiled Sequence Setup fields send one current settings transaction and invalid input Escape readonly guards work',async()=>{
  const e=await inspector();try{

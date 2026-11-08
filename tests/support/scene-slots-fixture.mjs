@@ -1,6 +1,7 @@
 // Actual components + production Pinia state; no DOM, renderer or native mutation.
 import {readFileSync,mkdirSync,unlinkSync} from 'node:fs';
 import {dirname,resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {parse,compileScript} from 'vue/compiler-sfc';
 import {h,nextTick} from 'vue';
@@ -12,7 +13,7 @@ export const nativeRequests=[];
 globalThis.__TAURI__={core:{invoke:async(command,args)=>{nativeRequests.push({command,args});throw Error('Unexpected native request '+command);}},window:{getCurrentWindow:()=>({setTitle:async()=>{}})}};
 const {useWorkspace}=await import('../../src/stores/workspace.ts');
 const out=resolve('.local/scene-slots-control-tests');mkdirSync(out,{recursive:true});
-export async function compile(path){const outfile=resolve(out,`${path.split('/').at(-1)}-${process.pid}.mjs`);await build({entryPoints:[path],outfile,bundle:true,format:'esm',platform:'node',packages:'external',plugins:[{name:'actual-sfc',setup(b){b.onLoad({filter:/\.vue$/},({path})=>{const {descriptor}=parse(readFileSync(path,'utf8'),{filename:path});return{contents:compileScript(descriptor,{id:path,inlineTemplate:true}).content,loader:'ts',resolveDir:dirname(path)};});b.onLoad({filter:/\.css$/},()=>({contents:'',loader:'js'}));}}]});const c=(await import(outfile)).default;unlinkSync(outfile);return c;}
+export async function compile(path){const outfile=resolve(out,`${path.split('/').at(-1)}-${process.pid}.mjs`);await build({entryPoints:[path],outfile,bundle:true,format:'esm',platform:'node',packages:'external',plugins:[{name:'actual-sfc',setup(b){b.onLoad({filter:/\.vue$/},({path})=>{const {descriptor}=parse(readFileSync(path,'utf8'),{filename:path});return{contents:compileScript(descriptor,{id:path,inlineTemplate:true}).content,loader:'ts',resolveDir:dirname(path)};});b.onLoad({filter:/\.css$/},()=>({contents:'',loader:'js'}));}}]});const c=(await import(pathToFileURL(outfile).href)).default;unlinkSync(outfile);return c;}
 export const Tree=await compile('src/components/organisms/SceneTree.vue'),Hierarchy=await compile('src/components/organisms/SlotHierarchy.vue'),Timeline=await compile('src/components/organisms/AnimationTimeline.vue');
 export function source(count=512,mixed=false){
  const base=2**32+1000,bone=base-1;

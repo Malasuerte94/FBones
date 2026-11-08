@@ -1,12 +1,13 @@
 # FBones tasks
 
 Latest user request authorizes pushing current work and updating the automatic
-build/release flow. F000-public is active for beta3 source+runtime publication;
+build/release flow. F000-public is active for beta4 source+runtime publication;
 prior beta2 evidence is retained below. Local clean-source installation,416JS,
-16runtime and shippedPixiGPU checks pass. Main/tag/release results must be observed
-before claiming publication. Previous Animate114UI/currentWindows80c71cc0delivery
+16runtime and shippedPixiGPU checks pass. Beta3 main/tag were pushed; gates correctly blocked release on Windows ESM helper
+and hosted Sequence no-op failures. Both diagnosed fixes are verified locally;
+beta4 remote results remain pending. Previous Animate114UI/currentWindows80c71cc0delivery
 remains verified. Full compatibility and F307/F308 deferred scope are unchanged.
-Current publication state/cleanup live in STATE and analysis/public-beta3-check.json.
+Current publication state/cleanup live in STATE and analysis/public-beta4-check.json.
 
 Statuses: TODO, ACTIVE, WAITING, DONE. External checks remain WAITING until
 observed. Spine reference: **4.3.26 only**. Historical acceptance counts below
@@ -14,7 +15,7 @@ belong to their named delivery, not to a new combined test run.
 
 | ID | Status | Dependencies | Acceptance |
 | --- | --- | --- | --- |
-| F000-public | ACTIVE | Current0.9.4 | Beta3 source+runtime publication authorized; generic tag gates/runtime source inclusion/clean CI prerequisites prepared, clean416JS+16runtime+GPU and policy tests pass. Remote result pending. Earlier beta2 evidence: PUBLIC Malasuerte94/FBones/MIT/contributor kit/live desktop+mobile README verified. Source prerelease v0.9.4-beta.2 published atc60d3bb780e1db63c57fd05f0597df68fd546293. Finaltag41207513156/main41207513094 SUCCESS: all3native build/test/package/report jobs and95/95UI each, no skips/retries/fails. Public472blob/sourcehash audit and5downloaded asset digests/checksums/archive equality pass; all3reports exactcommit/architectures/packages. Source-only; no installer/nativeGUI/notarization claim. Earlier beta.1 retained, no gate bypass. See STATE. |
+| F000-public | ACTIVE | Current0.9.4 | Beta3 pushedcc32a9e; Linux/macOS CI pass but Windows bare-drive test import and hosted Sequence no-op comparison block release. Beta4 retains generic gates/runtime source inclusion and corrects both;417JS,6Sequence,actualWindows fileURL probe pass, remote result pending. Earlier beta2 evidence: PUBLIC Malasuerte94/FBones/MIT/contributor kit/live desktop+mobile README verified. Source prerelease v0.9.4-beta.2 published atc60d3bb780e1db63c57fd05f0597df68fd546293. Finaltag41207513156/main41207513094 SUCCESS: all3native build/test/package/report jobs and95/95UI each, no skips/retries/fails. Public472blob/sourcehash audit and5downloaded asset digests/checksums/archive equality pass; all3reports exactcommit/architectures/packages. Source-only; no installer/nativeGUI/notarization claim. Earlier beta.1 retained, no gate bypass. See STATE. |
 | F001 | DONE | — | Instructions, continuation notes, ignored research data; remove exactly the three obsolete editor packages and update inventory. |
 | F002 | WAITING | F001 | Shell/viewport implemented; Windows user-confirmed and current Linux debug GTK/X11/WebGL startup observed. macOS launch remains unverified. |
 | F003a | DONE | F001 | Reproducible 4.3.26 corpus inspection; distinguish proven format facts from unknowns. |

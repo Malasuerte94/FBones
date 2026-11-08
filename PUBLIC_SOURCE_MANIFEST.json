@@ -1,5 +1,5 @@
 {
-  "release": "v0.9.4-beta.3",
+  "release": "v0.9.4-beta.4",
   "kind": "source-only",
   "files": [
     {
@@ -15,7 +15,7 @@
     {
       "path": "README.md",
       "bytes": 10268,
-      "sha256": "5240da4c82b548d3b79ffa8f8402bf4949c0bb52c7f9880a71e94d69262d1814"
+      "sha256": "289031e32a745c77ebfea6debfcca3c610e699af7f6d33f978e860c1e9f96e9e"
     },
     {
       "path": "CONTRIBUTING.md",
@@ -249,8 +249,8 @@
     },
     {
       "path": "src/components/organisms/SequenceInspector.vue",
-      "bytes": 6387,
-      "sha256": "b0859707f913b9aa99541f4423d7f9ce6daccae8505b780597054d08b6e81833"
+      "bytes": 6622,
+      "sha256": "4fe009b577cf1a4285166168644448bcd0b37d52a3849251ec05adf26938eda4"
     },
     {
       "path": "src/components/organisms/SlotHierarchy.vue",
@@ -1409,8 +1409,8 @@
     },
     {
       "path": "tests/animation-sequence-controls.test.mjs",
-      "bytes": 15446,
-      "sha256": "e2fefdd36dc0f747d5181b9d5666f9c23aae32c0a6bea18e13a47092f703689e"
+      "bytes": 16816,
+      "sha256": "2260bac26541698af7055aae890bc1be6e25688b5725347bae31f15694a2632b"
     },
     {
       "path": "tests/animation-sequence-workspace.test.mjs",
@@ -1854,8 +1854,8 @@
     },
     {
       "path": "tests/support/scene-slots-fixture.mjs",
-      "bytes": 4479,
-      "sha256": "3a4abfca4ec5e287ad4da3bea4db5abfd5f0608beb9d6aba585f67ff2f147157"
+      "bytes": 4539,
+      "sha256": "4fcef40b3be83e3b384fb00c25d243f261bb7bbcfdbf4feb9946b19c30258437"
     },
     {
       "path": "tests/support/scene-slots-host.mjs",
@@ -1980,7 +1980,7 @@
     {
       "path": "scripts/prepare-public-release.py",
       "bytes": 7730,
-      "sha256": "644ca16c65d381dad7dfa20ccd378196b914495058fceb4fa81bedd83a591a1c"
+      "sha256": "8a4228aea52d1870ae503a1481dce760d8e8ce7c2790c9d3860c10b7a5b539d2"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -1995,7 +1995,7 @@
     {
       "path": "scripts/publish-public-beta.sh",
       "bytes": 3562,
-      "sha256": "52886fb4bdb9846f307849d71296369097d5708522d8c0f50ff8d07068c7fd39"
+      "sha256": "730e2a2ba0101314fb28177f588308e13a5cd90c1826197a5312fa5b5a682fef"
     },
     {
       "path": "scripts/run-ui-tests.mjs",
@@ -2109,13 +2109,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 8948,
-      "sha256": "ef4f6960077c2fcdffd88bc0d7a9e87206bbfdcf6599f1373b3c3adbdc3a4c93"
+      "bytes": 9526,
+      "sha256": "b7eab24a915c0bc78c33c5cdf2313ec128f78c6fcea148ec179474edd2e33ba1"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 18965,
-      "sha256": "ad11a8508dd024e692cfb4676c3edc69f943f54bf5492d0413fe9446a949682d"
+      "bytes": 19172,
+      "sha256": "86eb86273b90438d0ae88304ffec43681eed3237ed91f1b3e1bdbc18334ce679"
     },
     {
       "path": "docs/TESTING.md",
@@ -2149,8 +2149,13 @@
     },
     {
       "path": "docs/releases/v0.9.4-beta.3.md",
-      "bytes": 5047,
-      "sha256": "b5477f06ccc5a25f5dca1f0171f6464e3191283c401797911bb47a62e2187b52"
+      "bytes": 5498,
+      "sha256": "a02f1beae9e990a04b2a5519d840757aecc5a87285fd3416d1fcd1241725f836"
+    },
+    {
+      "path": "docs/releases/v0.9.4-beta.4.md",
+      "bytes": 5968,
+      "sha256": "9463d4f97d6a70bad37eafddb52e33bf7e40694315a2019703ce2c7cbbb3a146"
     },
     {
       "path": "docs/research/ANIMATION-BONE-BEZIER-UI-2026-11-06.md",
@@ -2909,13 +2914,13 @@
     },
     {
       "path": "docs/research/PUBLIC-UPDATE-DATA-GATE-2026-11-08.md",
-      "bytes": 6058,
-      "sha256": "5aed3f1047d5bd67a789e3379e2d95c2e8c4098735c2d5496adc18afe51055de"
+      "bytes": 7466,
+      "sha256": "16e479dc698a4fa78b596d5f08d61cd4cb0c9184de3ad395d37779986d0ffd30"
     },
     {
       "path": "docs/research/PUBLIC-UPDATE-UI-GATE-2026-11-08.md",
-      "bytes": 1859,
-      "sha256": "cbbd4a3a98eeae767ac4223123f08d290d24cddfcb0e9bbbdfbb8444e7b69a2b"
+      "bytes": 4886,
+      "sha256": "77daf757a3440c31c0b25a7d44e9efc0dd76036478e7e7dd77f4f93d6faaaf82"
     },
     {
       "path": "docs/research/RE-WORKFLOW-REVIEW-2026-10-30.md",
@@ -2926,6 +2931,11 @@
       "path": "docs/research/RUNTIME-DATA-UI-GATE-2026-11-08.md",
       "bytes": 2528,
       "sha256": "ad675335ff3e14b4066f7c1a0d44d0925caf028235572ba92a2e28a65409fcfd"
+    },
+    {
+      "path": "docs/research/SEQUENCE-SETUP-NOOP-DATA-2026-11-08.md",
+      "bytes": 3898,
+      "sha256": "84127bcfc2119c19beea51627a9d41c7ecb015fd8d03c5cc5a8d20c4d7e39ee4"
     },
     {
       "path": "docs/research/TRANSFORM-ACTIVE-GRAPH-BEHAVIOR-PLAN.md",

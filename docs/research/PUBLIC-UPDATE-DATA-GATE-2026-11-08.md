@@ -92,3 +92,26 @@ archive (`3239fd38…d1a61`) and rejected normalized aliases, unreviewed root fi
 private-path payloads and version mismatch. Its own temporary tree was removed.
 This is archive/data verification, not a new native renderer or original-editor
 observation. The coordinator still owns clean-install/CI/public artifact checks.
+
+## Observed first publication-candidate CI failure
+
+The pushed `cc32a9e45edae435268cad4427e5c0ba9d2bea91` beta.3 candidate starts
+the expected main/tag workflows. Both Windows jobs fail in `pnpm test` with
+`ERR_UNSUPPORTED_ESM_URL_SCHEME` (received Windows drive protocol) immediately
+after the seven scene-selection checks. Their runtime build and all16package
+checks already passed. The next sorted suite imports
+`tests/support/scene-slots-fixture.mjs`; its compiler helper passes an absolute
+filesystem string directly to dynamic `import`. That works on Linux but is not
+a Windows ESM module URL. This is test infrastructure, not product behavior.
+
+Before the corrective edit, DATA recommends the standard `pathToFileURL` for
+this known own generated module path, preserving every test/assertion. Other
+current test helpers use relative `new URL` or `data:` URLs; inspect the adjacent
+helpers for the same bare-path pattern. UI reference review is independently
+assigned by the coordinator. No original editor behavior is involved. Preserve
+the failed immutable beta.3 candidate and publish a new candidate identity after
+the diagnosed correction rather than repeating unchanged jobs.
+
+Failure sources: tag run42505383278/job128806765166 and main
+run42505383265/job128806765577, fetched through GitHub job logs; source sequence
+`tests/run.mjs` and the actual compiler helper identify the failing import.

@@ -23,7 +23,11 @@ function commitSetup():Promise<boolean>{
  if(animate.value||disabled.value||!w.project||setupInvalid.value)return Promise.resolve(false);
  failure.value='';publishError('');
  const id=props.attachment.id,documentId=w.project.documentId,revision=w.project.revision,sequence=enabled.value?settings.value:null;
- const current=props.attachment.sequence??null;if(JSON.stringify(sequence)===JSON.stringify(current)){failure.value='';return Promise.resolve(true);}
+ const current=props.attachment.sequence??null;
+ // Native JSON field order can differ from this computed settings object.
+ // A delayed change/blur after Enter must not start a second busy transaction.
+ const unchanged=sequence===null?current===null:current!==null&&fields.every(field=>sequence[field]===current[field]);
+ if(unchanged){failure.value='';return Promise.resolve(true);}
  const signature=`${documentId}:${revision}:${id}:${JSON.stringify(sequence)}`,existing=pending.get(signature);if(existing)return existing;
  const operation=w.editRig({type:'setAttachmentSequence',id,sequence},revision).then(success=>{if(!success&&w.project?.documentId===documentId&&props.attachment.id===id){failure.value=w.notice;publishError(w.notice);}return success;}).finally(()=>pending.delete(signature));pending.set(signature,operation);return operation;
 }

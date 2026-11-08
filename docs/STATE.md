@@ -2,15 +2,23 @@
 
 ## Active goal and priorities
 
-The latest user explicitly authorized Git push and the corresponding automatic
-build/release update. Preparing `v0.9.4-beta.3` source plus developer runtime
-publication. Main push starts CI; validated beta tags publish only after all
+The latest user explicitly authorized Git push and automatic build/release update.
+Main and immutable`v0.9.4-beta.3` were pushed at`cc32a9e45edae435268cad4427e5c0ba9d2bea91`.
+Both beta3/main CI runs passed Linux/universal-macOS native builds, but Windows
+found a test-only bare-drive ESM import and Ubuntu UI found a Sequence no-op
+comparison defect (113/114each). Release was correctly skipped; beta3 is retained
+as a failed candidate, not force-moved or published. Corrected candidate beta4 is
+being verified: file-URL test import plus semantic Sequence field equality. The
+new compiled regression fails under the old comparison and passes6/6 after fix;
+actual Windows Node proves the file-URL correction.417JS now pass/one knownskip.
+
+Main push starts CI; validated beta tags publish source+runtime only after all
 three desktop builds and Ubuntu UI/runtime checks pass. Installed-app auto-update,
-public desktop installers and npm registry publication are separate, unconfigured
-milestones. Current [publication checkpoint](../analysis/public-beta3-check.json)
-and paired [DATA](research/PUBLIC-UPDATE-DATA-GATE-2026-11-08.md)/
-[UI](research/PUBLIC-UPDATE-UI-GATE-2026-11-08.md) audits own this action.
-No main/tag push or beta3 release is claimed before remote observation.
+public desktop installers and npm registry publication remain separate milestones.
+Current [publication checkpoint](../analysis/public-beta4-check.json),
+[Sequence DATA](research/SEQUENCE-SETUP-NOOP-DATA-2026-11-08.md) and paired
+[release DATA](research/PUBLIC-UPDATE-DATA-GATE-2026-11-08.md)/
+[UI](research/PUBLIC-UPDATE-UI-GATE-2026-11-08.md) own the current correction.
 
 The prior Animate X/Y/performance/runtime delivery stays implemented and verified;
 full F105/runtime/Spine compatibility remains open. The user reports mascot import
