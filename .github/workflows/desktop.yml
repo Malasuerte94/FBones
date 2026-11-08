@@ -66,11 +66,14 @@ jobs:
         run: pnpm tauri build --ci --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} -- --locked
       - name: Verify executable and package structures
         run: python scripts/ci-build.py verify --target ${{ matrix.target }}
-      # First public release is source-only. Keep reports, not unvalidated installers.
+      # Stage only report-listed packages; never upload the native build tree.
       - uses: actions/upload-artifact@v4
+        if: github.ref_type == 'tag'
         with:
-          name: build-report-${{ matrix.target }}
-          path: ci-reports/${{ matrix.target }}.json
+          name: installers-${{ matrix.target }}
+          path: ci-installers/${{ matrix.target }}/
+          compression-level: 0
+          retention-days: 7
           if-no-files-found: error
 
   linux-ui:
@@ -126,7 +129,7 @@ jobs:
           if-no-files-found: ignore
 
   release:
-    name: Publish source and runtime beta after all checks
+    name: Publish app installers and runtime beta after all checks
     needs: [desktop, linux-ui]
     if: github.repository == 'Malasuerte94/FBones' && github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     runs-on: ubuntu-22.04
@@ -143,17 +146,18 @@ jobs:
         run: python scripts/prepare-public-release.py --tag "$RELEASE_TAG" --output .local/ci-source-release
       - uses: actions/download-artifact@v4
         with:
-          pattern: build-report-*
-          path: .local/platform-build-reports
-          merge-multiple: true
+          pattern: installers-*
+          path: .local/platform-installers
       - uses: actions/download-artifact@v4
         with:
           name: runtime-package
           path: .local/runtime-release
-      - name: Publish prerelease source, runtime, checksums, and build reports
+      - name: Verify and collect installers, runtime, source, and build reports
+        run: |
+          python scripts/prepare-runtime-release.py .local/runtime-release
+          python scripts/prepare-installer-release.py assemble --installers .local/platform-installers --source .local/ci-source-release --runtime .local/runtime-release --output .local/verified-release --tag "$RELEASE_TAG"
+      - name: Publish prerelease app, runtime, checksums, and build reports
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python scripts/prepare-runtime-release.py .local/runtime-release
-          cat .local/runtime-release/RUNTIME_SHA256SUMS >> .local/ci-source-release/SHA256SUMS
-          gh release create "$RELEASE_TAG" ".local/ci-source-release/fbones-$RELEASE_TAG-source.tar.gz" .local/ci-source-release/SHA256SUMS .local/runtime-release/*.tgz .local/platform-build-reports/*.json --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease --latest=false --title "FBones $RELEASE_TAG — editor source and runtime preview" --notes-file "docs/releases/$RELEASE_TAG.md"
+          gh release create "$RELEASE_TAG" .local/verified-release/* --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease --latest=false --title "FBones $RELEASE_TAG — app installers and runtime preview" --notes-file "docs/releases/$RELEASE_TAG.md"

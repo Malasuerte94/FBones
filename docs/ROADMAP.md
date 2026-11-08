@@ -54,9 +54,10 @@ Animate. Structural edits stay in Setup.
    the existing supported profiles throughout.
 2. **Improve the contributor and beta experience.** Keep installation steps,
    examples, screenshots, reproducible bug reports and native platform checks
-   easy to follow from a clean checkout. Publish versioned source/runtime archives
-   through gated releases; keep desktop installers and installed-app updates as
-   explicit, separately verified distribution milestones.
+   easy to follow from a clean checkout. Publish desktop packages, versioned
+   source and the runtime archive through gated beta releases, with direct
+   platform/runtime download links. Native installation validation, signing/
+   notarization and installed-app updates remain separate milestones.
 3. **Broaden constraints and numerical coverage.** Extend remaining constraint
    families and document measured behavior. The deferred original Physics and
    Transform Match investigations resume only when needed or reprioritized.
@@ -76,7 +77,7 @@ is implemented.
 ## Evidence at the 0.9.4 checkpoint
 
 The current recorded implementation checkpoint reports 114 passing Ubuntu
-Chromium/real-Rust UI cases, 416 passing JavaScript checks with one existing
+Chromium/real-Rust UI cases, 418 passing JavaScript checks with one existing
 Physics skip, and 326 native plus 95 legacy-profile passing checks with existing
 ignored cases kept distinct. Runtime checks add 16 package tests and 24 native-export
 samples, plus shipped-Pixi WebGL pixel/topology/texture-ownership coverage.

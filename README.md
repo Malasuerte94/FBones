@@ -6,11 +6,30 @@
 
 Build rigs, paint weights, and animate offline with an editor built for Windows, macOS, and Linux.
 
-[Getting started](#getting-started) · [Developer runtime](#developer-runtime-preview) · [Implementation status](#implementation-status) · [Contributing](CONTRIBUTING.md) · [Roadmap](docs/ROADMAP.md) · [Builds](https://github.com/Malasuerte94/FBones/actions/workflows/desktop.yml)
+[Download](#download) · [Getting started](#getting-started) · [Developer runtime](#developer-runtime-preview) · [Implementation status](#implementation-status) · [Contributing](CONTRIBUTING.md) · [Roadmap](docs/ROADMAP.md) · [Builds](https://github.com/Malasuerte94/FBones/actions/workflows/desktop.yml)
 
 **0.9.4 · Early beta · MIT licensed**
 
 </div>
+
+## Download
+
+**FBones `v0.9.4-beta.6` — desktop app and developer runtime.** Downloads are published only after the release's build, UI and runtime gates pass. [Release page](https://github.com/Malasuerte94/FBones/releases/tag/v0.9.4-beta.6) · [All published releases](https://github.com/Malasuerte94/FBones/releases).
+
+| Download | Platform / use |
+| --- | --- |
+| [Windows installer (.exe)](https://github.com/Malasuerte94/FBones/releases/download/v0.9.4-beta.6/FBones_0.9.4_x64-setup.exe) | Windows x64 desktop app |
+| [macOS disk image (.dmg)](https://github.com/Malasuerte94/FBones/releases/download/v0.9.4-beta.6/FBones_0.9.4_universal.dmg) | macOS 13+; Intel and Apple Silicon |
+| [Linux AppImage](https://github.com/Malasuerte94/FBones/releases/download/v0.9.4-beta.6/FBones_0.9.4_amd64.AppImage) · [Debian package (.deb)](https://github.com/Malasuerte94/FBones/releases/download/v0.9.4-beta.6/FBones_0.9.4_amd64.deb) | Linux x64 desktop app |
+| [Developer runtime (.tgz)](https://github.com/Malasuerte94/FBones/releases/download/v0.9.4-beta.6/fbones-runtime-0.1.0-beta.1.tgz) | Node/browser player with optional PixiJS 8 view |
+
+Install the downloaded runtime in your game project:
+
+```sh
+npm install ./fbones-runtime-0.1.0-beta.1.tgz
+```
+
+Early beta: Windows installer is unsigned; macOS is ad-hoc signed without Developer ID or notarization. Native installation of these CI packages remains unverified. Builds do not auto-update an installed editor. See [release scope and checks](docs/releases/v0.9.4-beta.6.md).
 
 ![FBones Animate workspace with a rig, animation timeline, and property controls](docs/screenshots/animate-dopesheet.png)
 
@@ -52,7 +71,7 @@ Unsupported structures remain inspection-only rather than being discarded to mak
 
 ## Getting started
 
-The **`v0.9.4-beta.5`** update is a source and developer-runtime preview; the application displays **0.9.4**. Desktop installers remain unpublished. See [beta release notes](docs/releases/v0.9.4-beta.5.md) for scope and platform limits. [Release downloads](https://github.com/Malasuerte94/FBones/releases) appear only after the tag's build, runtime, and Ubuntu UI checks pass.
+Use the [desktop app downloads](#download) for your platform. The application displays **0.9.4**; the release tag is **`v0.9.4-beta.6`**. Its installers and runtime are published together only after the required checks pass. Source code is also included in the [release assets](https://github.com/Malasuerte94/FBones/releases/tag/v0.9.4-beta.6).
 
 To build from source, install **Node.js 22.12+**, **pnpm 11.1.0**, **Rust 1.93+**, and the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/).
 
@@ -63,7 +82,7 @@ pnpm dev
 
 Use `pnpm build` for a native desktop build. `pnpm dev:web` provides a browser preview; native project files and filesystem dialogs require the desktop application.
 
-The [GitHub Actions workflow](https://github.com/Malasuerte94/FBones/actions/workflows/desktop.yml) builds Linux x64 Debian/AppImage packages, a Windows x64 NSIS installer, and a universal Intel/Apple Silicon macOS app/DMG. It checks package structures and records hashes; a configured matrix alone is not evidence of successful builds. Native GUI validation remains separate. A `main` push starts checks; a version tag publishes the source/runtime preview only after its required jobs pass. This workflow does not update an already installed or running editor automatically.
+The [GitHub Actions workflow](https://github.com/Malasuerte94/FBones/actions/workflows/desktop.yml) builds Linux x64 Debian/AppImage packages, a Windows x64 NSIS installer, and a universal Intel/Apple Silicon macOS app/DMG. It checks package structures and records hashes; a configured matrix alone is not evidence of successful builds or native installation. A `main` push starts checks; a version tag publishes desktop packages, source and the runtime only after its required jobs pass. Native GUI validation remains separate.
 
 Start with a new project in **Setup**, create bones with **B**, choose a PNG folder under **Tree → Images**, and drag artwork onto the viewport. Switch to **Animate**, create an animation, select a bone, and use the channel key buttons or **Auto Key**. Press **Space** to play/pause. **Ctrl/Cmd+Z** undoes; **F2** renames; **Escape** cancels the current edit.
 
@@ -73,7 +92,7 @@ The independent **`@fbones/runtime` 0.1.0-beta.1** package plays the supported F
 
 In the desktop editor, choose **File → Export runtime** and select a destination folder. The new bundle contains `skeleton.fbones.runtime.json` and referenced PNG/WAV resources. This separate game export does not replace the binary `.fbones` authoring format or bake temporary poses into saved keys.
 
-Download `fbones-runtime-0.1.0-beta.1.tgz` from the gated [beta release](https://github.com/Malasuerte94/FBones/releases/tag/v0.9.4-beta.5), or build the package from source:
+Download the [runtime archive](https://github.com/Malasuerte94/FBones/releases/download/v0.9.4-beta.6/fbones-runtime-0.1.0-beta.1.tgz) from the gated [beta release](https://github.com/Malasuerte94/FBones/releases/tag/v0.9.4-beta.6), then use the install command above. To build the package from source:
 
 ```sh
 pnpm build:runtime
@@ -100,7 +119,7 @@ cargo test --workspace --locked
 
 For the full browser UI suite, install Chromium or set `CHROME_BINARY`, run `cargo fetch --locked` once, build the runtime with `pnpm build:runtime`, then run `pnpm test:ui`. It uses the production CSP and isolated instances of the real Rust Session, including shipped-runtime GPU checks. See [development](docs/DEVELOPMENT.md) and [testing](docs/TESTING.md).
 
-The current implementation checkpoint records **114 passing Ubuntu UI cases**, **417 passing JavaScript tests with one known skip**, and **326 native / 95 legacy tests** with existing ignored cases tracked separately. The runtime adds 16 package checks and 24 native-export samples. Release CI results belong to the exact source commit reported by its jobs; these engineering results do not claim every platform or Spine feature is verified. The [checkpoint](docs/STATE.md) retains their scope and limitations.
+The current implementation checkpoint records **114 passing Ubuntu UI cases**, **418 passing JavaScript tests with one known skip**, and **326 native / 95 legacy tests** with existing ignored cases tracked separately. The runtime adds 16 package checks and 24 native-export samples. Release CI results belong to the exact source commit reported by its jobs; these engineering results do not claim every platform or Spine feature is verified. The [checkpoint](docs/STATE.md) retains their scope and limitations.
 
 ## License
 

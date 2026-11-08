@@ -1,11 +1,11 @@
 {
-  "release": "v0.9.4-beta.5",
+  "release": "v0.9.4-beta.6",
   "kind": "source-only",
   "files": [
     {
       "path": ".gitignore",
-      "bytes": 457,
-      "sha256": "9211b6fa665711eb6acdcb11db5e709d56a46bd38465f6ad9b984c4c77749b56"
+      "bytes": 472,
+      "sha256": "5d5fee51204de37ab3abea858c82b0f53c225fca259a4b7e66c093bae6031cf3"
     },
     {
       "path": "AGENTS.md",
@@ -14,8 +14,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 10268,
-      "sha256": "d1ce0fcc8fee84708eb35aa100af2023a1547b0c1fc8f434064de53207dd3850"
+      "bytes": 11873,
+      "sha256": "f2fcce68a28662a9064166d33c8dd07bf364025c7aeba8968af08c2e7563aed5"
     },
     {
       "path": "CONTRIBUTING.md",
@@ -104,8 +104,8 @@
     },
     {
       "path": ".github/workflows/desktop.yml",
-      "bytes": 6313,
-      "sha256": "61164f548539adabef1df72f19e14a16c01d7e27b1a430134d8677d4d2d050a3"
+      "bytes": 6455,
+      "sha256": "55d12e38df15bbd23059bc9acd26820f7de29874885f964bb77cc81f954f08d5"
     },
     {
       "path": "src/App.vue",
@@ -1944,8 +1944,8 @@
     },
     {
       "path": "scripts/ci-build.py",
-      "bytes": 6219,
-      "sha256": "7337677fc017b8c32b9d70bd2d8f40ac487b952a12150a25b06b07b303ba26df"
+      "bytes": 6383,
+      "sha256": "259010694477a63937f2b66ddd39717a83b9c7bdc2daf0d31a34c5b4ff1f91ca"
     },
     {
       "path": "scripts/dev-local.sh",
@@ -1978,9 +1978,14 @@
       "sha256": "93e2370ad15b26a92a33c7557992cac0adfe462d97d5210ff5877bae36de2d30"
     },
     {
+      "path": "scripts/prepare-installer-release.py",
+      "bytes": 8636,
+      "sha256": "bdc63d14bac5e6b04299119ba222c0604b617ce6e3e18a92579a259a67f26a3c"
+    },
+    {
       "path": "scripts/prepare-public-release.py",
       "bytes": 7730,
-      "sha256": "f4b02cc84c8bfd62199d9aa693a223172d0f5554e269cccc2376a8e9e6d238a9"
+      "sha256": "9e3c939986dadd44690a76d9a595b14e5b995b773c038c9ded8141cc18b564f6"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -1995,7 +2000,7 @@
     {
       "path": "scripts/publish-public-beta.sh",
       "bytes": 3562,
-      "sha256": "1b451e877c9c64e80a5a095b570650e77d8da50497bdefabfd2a9088d978f9a9"
+      "sha256": "4cdf3d5192a1444d4f67f1eb10d865217a3a51852236569664ba6fc4969ac72c"
     },
     {
       "path": "scripts/run-ui-tests.mjs",
@@ -2009,8 +2014,8 @@
     },
     {
       "path": "scripts/test-public-release.py",
-      "bytes": 4890,
-      "sha256": "7bb801476277a0d1626573010f8fdc4483a3ec1b8bdadf8cbe24a0b300c03c89"
+      "bytes": 13009,
+      "sha256": "abf8b0083048a644707870e49a374fbc59b89edf714a9c77b799b0f8887e2bde"
     },
     {
       "path": "scripts/test-windows-delivery.py",
@@ -2099,8 +2104,8 @@
     },
     {
       "path": "docs/ROADMAP.md",
-      "bytes": 7159,
-      "sha256": "8d40cd1b6ee0e4dd879d9b56abce721471d38d67f8adb3f469341ae7946dc93f"
+      "bytes": 7237,
+      "sha256": "c2bd1174634416f0e27ad4468c24df6d171581dd4c3b3cff4a289c48a0999be5"
     },
     {
       "path": "docs/SLOT-ATTACHMENTS-4.3.26.md",
@@ -2109,13 +2114,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 12074,
-      "sha256": "17e780ca29fd9793eb6eb3bfba7192b215c553bc67367ff8db8f6ac4e8278335"
+      "bytes": 12891,
+      "sha256": "478cc35c6998128e2834d35292f087b0dcfc092ad6c5390ee0b12f1ce68aa775"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 20347,
-      "sha256": "efa598be00747bf943a707a1bd666ac88a1c4045de09da7462bc418be1a9a889"
+      "bytes": 19098,
+      "sha256": "f7531f1819f70702e92601ee05f99da0d006854c42ebcb1e27610ce39e1a48d6"
     },
     {
       "path": "docs/TESTING.md",
@@ -2159,8 +2164,13 @@
     },
     {
       "path": "docs/releases/v0.9.4-beta.5.md",
-      "bytes": 8052,
-      "sha256": "9d63da3e09f7317499fddc88bd781aac05d66e8b00b9a5e6fc54cae35c85a5bf"
+      "bytes": 8289,
+      "sha256": "2b6dd7ca072f251da9eb0696620d578ca76c10c2a99a2d930e26f02d9e0a54bc"
+    },
+    {
+      "path": "docs/releases/v0.9.4-beta.6.md",
+      "bytes": 4236,
+      "sha256": "1ea957d258af815de4913832c5a3d66c08c95ea2d6c158253924b0ad33c715b5"
     },
     {
       "path": "docs/research/ANIMATION-BONE-BEZIER-UI-2026-11-06.md",
@@ -2928,6 +2938,16 @@
       "sha256": "a9eac266f876bdd6dfbe53011f50fd4074f8f236b730c2a6cbe979cdbf64f4ff"
     },
     {
+      "path": "docs/research/PUBLIC-INSTALLER-DOWNLOAD-UI-GATE-2026-11-08.md",
+      "bytes": 3841,
+      "sha256": "cd1a1b0e5475a3be5a3690cc62a907be1be50da534d36fafb8b1cf0710c042f6"
+    },
+    {
+      "path": "docs/research/PUBLIC-INSTALLERS-DATA-GATE-2026-11-08.md",
+      "bytes": 6068,
+      "sha256": "c771ea4e9f292ec650ab79f5748989078b3f6f63155cc9f9f183f5f3dea9d58f"
+    },
+    {
       "path": "docs/research/PUBLIC-UPDATE-DATA-GATE-2026-11-08.md",
       "bytes": 7466,
       "sha256": "16e479dc698a4fa78b596d5f08d61cd4cb0c9184de3ad395d37779986d0ffd30"
@@ -3289,8 +3309,8 @@
     },
     {
       "path": "docs/tasks/F109-runtime.md",
-      "bytes": 3120,
-      "sha256": "d156f6561fb7bce185d0a159916bf25ecaee63d0bcbaaac871fcadb322d3acce"
+      "bytes": 3276,
+      "sha256": "bbf088e00f3821fc5a3ad437bda76293f11539b96767eecd3251a426de0c7fdb"
     },
     {
       "path": "docs/tasks/F222-slot-attachments.md",

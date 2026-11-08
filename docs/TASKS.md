@@ -1,23 +1,10 @@
 # FBones tasks
 
-Latest user request authorizes pushing current work and updating the automatic
-build/release flow. F000-public is active for the prepared beta5 publication;
-F105-reliability is DONE for the supported corrections. Beta3 publication was
-blocked by diagnosed Windows ESM-helper
-and Sequence Setup no-op failures. Beta4 main passed all3desktop jobs but
-113/114UbuntuUI, exposing a later unchanged Graph-key submission; its tag run was
-intentionally canceled before publication after the native File-menu report.
-Neither candidate published assets. Beta5 includes semantic authored-f32 key
-no-op detection and recursive native menu lookup. Fresh local114UI/418JS with
-one known skip/runtime16+24sample checks pass. OwnWindows8f65102a six native-menu
-groups pass and closed normally; current39efc9c1 selected/normal visible startup
-observed, no final-image native gesture claim. Beta5 has not yet been pushed;
-hosted CI/publication remain pending. Prior beta2/publication and Animate
-delivery evidence retain their named bounds below. Full
-compatibility and F307/F308 deferred scope are unchanged.
-The user tested the actual mascot and confirmed runtime export and the other
-File buttons work; this adds bounded user acceptance, not original-format proof.
-Current publication state/cleanup live in STATE and analysis/public-beta4-check.json.
+Latest user steering requests publicly visible APP installers plus Pixi runtime.
+F000-public is ACTIVE for beta6 installer retention/publication and direct Download
+tables. Prior beta5 source/runtime publication and acceptance remain verified;
+product/format code is unchanged. Paired installer DATA/UI gates and STATE own
+current scope. Full compatibility and F307/F308 deferred work remain unchanged.
 
 Statuses: TODO, ACTIVE, WAITING, DONE. External checks remain WAITING until
 observed. Spine reference: **4.3.26 only**. Historical acceptance counts below
@@ -25,7 +12,7 @@ belong to their named delivery, not to a new combined test run.
 
 | ID | Status | Dependencies | Acceptance |
 | --- | --- | --- | --- |
-| F000-public | ACTIVE | Current0.9.4 | Beta3 remains failed/unpublished; beta4f21d908 main passed all3desktop jobs but113/114UbuntuUI (later Sequence key no-op), and tag run was intentionally canceled after native File-menu diagnosis. No beta3/beta4assets; immutable tags retained. Beta5 semantic key no-op/native recursive-menu fixes pass local114UI/418JS+knownskip/runtime16+24; ownWindows menu6groups pass. Beta5 not yet pushed; fresh CI/publication pending. Source+runtime gates unchanged; no updater/npm/installer claim. Earlier beta2 evidence: PUBLIC Malasuerte94/FBones/MIT/contributor kit/live desktop+mobile README verified. Source prerelease v0.9.4-beta.2 published atc60d3bb780e1db63c57fd05f0597df68fd546293. Finaltag41207513156/main41207513094 SUCCESS: all3native build/test/package/report jobs and95/95UI each, no skips/retries/fails. Public472blob/sourcehash audit and5downloaded asset digests/checksums/archive equality pass; all3reports exactcommit/architectures/packages. Source-only; no installer/nativeGUI/notarization claim. Earlier beta.1 retained, no gate bypass. See STATE. |
+| F000-public | ACTIVE | Current0.9.4 | Newuserrequest: beta6 must publish4desktop packages+runtime/source/3reports/checksums and show directDownloadtables underunchangedCIgates; currentpublicationpending. Priorbeta5: Public source/runtime prerelease v0.9.4-beta.5 at4033a831; tag42511316324/main42511316267 SUCCESS, all3native build/test/package jobs and114/114hostedUI, no skips/retries/failures. Downloaded6assets: allGitHubdigests/bothchecksums/source682blob equality/runtime31files equality/3exactcommit architecture reports pass. Runtime40,373bytes SHA655df42b…b510a. Source+runtime only; no public installers, app updater, npm or nativeGUI/notarization claim. Beta3failed/beta4withheld tags retained. See STATE/checkpoint. |
 | F001 | DONE | — | Instructions, continuation notes, ignored research data; remove exactly the three obsolete editor packages and update inventory. |
 | F002 | WAITING | F001 | Shell/viewport implemented; Windows user-confirmed and current Linux debug GTK/X11/WebGL startup observed. macOS launch remains unverified. |
 | F003a | DONE | F001 | Reproducible 4.3.26 corpus inspection; distinguish proven format facts from unknowns. |
@@ -89,7 +76,7 @@ belong to their named delivery, not to a new combined test run.
 | F310 | DONE | F220, F309 | Product delivered2688a874: selected B/C/D create3 independent Physics in one history action without Target modal; generated names follow bone rename/custom names persist. Active preset, colored sliders+precise fields, live Setup A-drag reaction/settling before Save/Reset and explicit Off/non-baking persistence pass63/63 LinuxUI,200native/93legacy/28Scene,225JS+1knownskip and5actualWindows groups/native OS SaveCloseOpen. ONE new sourceab9e now passes exact original4.3.26 export and independent105Physics/32bone/24child-bit comparison; original gestures/phase remain outside this bounded authoring scope. See docs/tasks/F310-physics-authoring.md and analysis/physics-batch-delivery-check.json. |
 | F105 | WAITING | F222 | Full Animate/timeline scope stays open. Supported release-drag/playback/numeric corrections pass F105-reliability; runtime preview tracked F109-runtime. Current114UI/416JS/326native/95legacy/16default/103Scene checks pass with existing skips distinct. Mascot/source-profile evidence retained; remaining curves/inheritance/budgets/Path/original/macOS/mixing/onion-skin fidelity remain. See STATE and F105. |
 | F105-reliability | DONE | F105 supported slices | Frozen baseline fixes release delta, stable input fixes selection loss; subtreeCPU4×/timelineCPU13.55×/viewport2→1draws, no whole-appFPS claim. Beta5 semantic mode/index/authored-f32-delay no-op prevents unchanged Graph-key blur consuming Undo; recursive native-menu lookup restores capability states. Fresh local114/114UI nofail/skip/retry,418JS+oneknownskip,runtime16+24samples(residual6.36e-7) pass. OwnWindows8f65102a native-menu6groups pass with OS SaveAs/Export/inspection copy/Close, then normal close. Final39efc9c1 selected/startup observed; onlykeyguard differs from menuQAimage, no final-image native gesture claim. Prior drag/native checks retain their named image bounds. User mascot window protected. Source/profile/original limits and fullF105 remain open; see STATE and paired gates. |
-| F109-runtime | WAITING | F105 supported data/solver slices | Independent MIT0.1.0-beta.1 headlessNode/browser+optionalPixi8 preview and native authored JSON/referencedPNG/WAV export delivered.40,353-byte archive under WINDOWS_TEST/RUNTIME; offlineNode/strictTS/noPixi consumer,16package/24native samples and realWebGL pixel tests pass. Full runtime/mixing/directbinaryloader/fidelity/publicGitHub/npm remain open; scope unreserved, no publication claim. See docs/tasks/F109-runtime.md. |
+| F109-runtime | WAITING | F105 supported data/solver slices | Independent MIT0.1.0-beta.1 headlessNode/browser+optionalPixi8 and native authored JSON/referencedPNG/WAV export delivered. GitHub beta5 source+40,373-byte archive published/independently verified31files.16package/24native samples, shippedWebGL pixels and prior offlineNode/strictTS pass. NativeFile-menu6groups+useractualmascot export/buttons pass. Full runtime/mixing/directbinaryloader/fidelity/npm remain open; scope unreserved. See docs/tasks/F109-runtime.md and STATE. |
 | F106 | TODO | F105 | IK/transform/path constraints, then gravity/inertia/damping; numerical comparison. |
 | F107 | TODO | F106 | Full 4.3.26 compatibility matrix with explicit passing coverage. |
 | F108 | TODO | F107 | Additional tool modules using shared project/viewport. |

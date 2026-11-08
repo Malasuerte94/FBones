@@ -2,36 +2,38 @@
 
 ## Active goal and priorities
 
-The latest user explicitly authorized Git push and automatic build/release update.
-Immutable beta3 remains a failed candidate: its Windows test-only bare-drive ESM
-import and hosted Sequence Setup no-op comparison blocked publication. Main and
-immutable`v0.9.4-beta.4` were pushed at`f21d908cfa7ce0aa68fbd716965aa8eb74081f5b`.
-Its main run passed all three desktop build/test/package jobs, but Ubuntu UI
-finished113/114: Setup Undo/Redo passed, then an unchanged Sequence Graph-key
-blur resubmitted the accepted key and consumed Undo. The beta4 tag run was
-intentionally canceled before publication after the user reported disabled
-native File commands. No beta3/beta4 release assets were published; both tags
-and failure evidence remain intact.
+The latest user explicitly requests visible downloads for BOTH the FBones
+application and the Pixi runtime. This supersedes the earlier source-only public
+delivery policy. F000-public is active for immutable beta6: publish Windows x64
+NSIS, Linux x64 AppImage/Debian and macOS universal DMG alongside runtime/source,
+three build reports and aggregate checksums. Keep the same three-platform and
+Ubuntu UI/runtime gates. Product code is unchanged from accepted beta5.
 
-Beta5 is prepared with semantic mode/index/authored-f32-delay no-op detection and
-recursive native File/Edit command lookup. The native defect was a shallow Tauri
-root-menu lookup missing commands inside submenus, not a project capability
-change. Fresh rebuilt-production local acceptance passes114/114UI,418JS with
-one known skip and runtime16package/24native-export samples. Own Windows native
-menu QA on immutable`8f65102a…24dbf` passes all6groups and closed normally; exact
-scope is below. Beta5 has not yet been pushed; fresh CI and release publication
-remain pending. Prior candidate failures are not relabeled as passing runs.
+Observed beta5 assets contain only source/runtime/checksum/reports, no app
+installers; its CI retained reports rather than packages. GitHub's latest endpoint
+returns404 because every existing release is a prerelease. Keep honest beta
+metadata and use direct release/asset links in Download tables above screenshots
+and at the top of release notes. Paired
+[DATA](research/PUBLIC-INSTALLERS-DATA-GATE-2026-11-08.md)/
+[UI](research/PUBLIC-INSTALLER-DOWNLOAD-UI-GATE-2026-11-08.md) gates own the new
+publication contract. No original-editor observation or product fix is needed.
 
-Main push starts CI; validated beta tags publish source+runtime only after all
-three desktop builds and Ubuntu UI/runtime checks pass. Installed-app auto-update,
-public desktop installers and npm registry publication remain separate milestones.
-Prior [beta4 publication checkpoint](../analysis/public-beta4-check.json),
-[Sequence DATA](research/SEQUENCE-SETUP-NOOP-DATA-2026-11-08.md) and paired
+Prior beta5 remains published at4033a831b057d9bbe1a13e8f009eb3d3869b9299,
+main42511316267/tag42511316324 SUCCESS. All3platform build/test/package jobs,
+114/114hostedUI and runtime16/24samples pass. All6downloaded beta5 assets, both
+checksums, source682blob/archive equality and runtime31file equality were verified.
+Its source/runtime-only scope stays historical; beta6 assets remain pending.
+
+Beta5 fixes semantic mode/index/authored-f32-delay key no-ops and recursive native
+File/Edit item lookup. Tauri's shallow root lookup missed submenu commands; all
+project capability guards remain. Own native menu QA passes6groups on8f65102a,
+then closed normally; current selected39efc9c1differs only by the Sequence guard.
+Current [publication checkpoint](../analysis/public-beta5-check.json),
+[Sequence DATA](research/SEQUENCE-SETUP-NOOP-DATA-2026-11-08.md), paired
 [release DATA](research/PUBLIC-UPDATE-DATA-GATE-2026-11-08.md)/
-[UI](research/PUBLIC-UPDATE-UI-GATE-2026-11-08.md), plus the
-[native menu gate](research/NATIVE-FILE-MENU-UI-GATE-2026-11-08.md), own the
-current correction. The beta4 checkpoint retains its named local/remote evidence;
-current local beta5 acceptance does not establish a remote CI or release result.
+[UI](research/PUBLIC-UPDATE-UI-GATE-2026-11-08.md) and
+[native menu gate](research/NATIVE-FILE-MENU-UI-GATE-2026-11-08.md) own the results.
+Prior candidate evidence remains under its named checkpoint.
 
 The prior Animate X/Y/performance/runtime delivery stays implemented and verified;
 full F105/runtime/Spine compatibility remains open. The user clarified that the
@@ -89,14 +91,16 @@ PixiJS8 `/pixi` view. It bundles our own code under MIT, no Spine runtime code,
 assets or dependency. Usage/support/limits are in
 [packages/runtime/README.md](../packages/runtime/README.md).
 
-Installable local archive:
-`WINDOWS_TEST/RUNTIME/fbones-runtime-0.1.0-beta.1.tgz` (40,353bytes/31files), SHA
-`3239fd388e5929766571d6fb6d6d066657e9e89fa8143e5857c664c4b30d1a61`.
-Offline Node playback and strict NodeNext TypeScript pass with only this package
-installed, without Pixi or editor dependencies. Runtime source is in the public
-repository; validated tagged releases attach a fresh archive after gates pass.
-Beta5 publication is pending. npm publication/scope ownership remain separate.
-Direct repository-root installation installs the editor; use the runtime archive.
+Published installable archive:
+[fbones-runtime-0.1.0-beta.1.tgz](https://github.com/Malasuerte94/FBones/releases/download/v0.9.4-beta.5/fbones-runtime-0.1.0-beta.1.tgz),
+40,373bytes/31files, SHA256
+`655df42b7db85508a1a718904b3ed44b615631b8178145e1bcb72328ac7b510a`.
+The downloaded package matches current locally tested source/dist byte for byte.
+Earlier offline standalone Node/strict NodeNext checks remain named evidence;
+headless use needs neither Pixi nor the editor. The historical local40,353-byte
+archive is retained under WINDOWS_TEST/RUNTIME for its earlier receipt. Use the
+published archive for the current distribution. npm scope/publication is pending;
+direct repository-root installation installs the editor instead of the runtime.
 
 File → Export runtime uses a native destination-folder picker and creates a new
 `FBones-runtime-*` bundle: `skeleton.fbones.runtime.json`, referenced PNG/WAVs.
@@ -164,26 +168,34 @@ F307/F308 broader fidelity remains explicitly user-deferred.
 
 ## Cleanup and next reproducible action
 
-This publication/menu session removed243.07MiBallocated Linux data: the consumed
+This publication/menu session removed246.16MiBallocated Linux artifacts: the consumed
 beta3 clean-install workspace, disposable own fixture-generator executable and
-normally closed own menu-QA launcher copy. It removed74.03MiBfile data from that
+normally closed own menu-QA launcher copy,72unreferenced current UI session
+directories and disposable Python caches. It removed74.03MiBfile data from that
 QA's Windows profile after verifying no image/profile process remained. Earlier
 session cleanup is retained in its named integration evidence; no Linux removal
-is reported as immediate Windows/VHDX space recovery. Linux free831GiB, Windows
-Cfree89GiB. Current user windows/profiles and all original/personal files remain.
+is reported as immediate Windows/VHDX space recovery. pnpm hardlinks/live activity prevent attributing immediate physical recovery.
+Linux free831GiB, Windows Cfree88GiB. Current user windows/profiles and all original/personal files remain.
 
-Retained current runtime/dist, selected/QA immutable images, fresh114-case report
+Retained1981referenced/older UI session directories63.82MiB
+(older ownership uncertain), current runtime/dist, selected/QA
+immutable images, fresh114-case report
 and required saved/GPU artifacts, cited raw failures/traces/receipts and source
 archives. Coherent native dependencies5.2GiB and Windows release cache852MiB stay
 for repeatable builds; incremental cache4KiB. Historical images/workspaces remain
 where ownership or future reference relevance is uncertain. No broad cargo clean.
 
-Next: export the reviewed beta5 source, commit and atomically push main plus a new
-immutable tag; observe its exact platform/UI/runtime jobs and attached release
-assets before claiming publication. Never retag beta3/beta4 or bypass failed gates.
-The user has confirmed mascot runtime export and the corrected File commands.
-For developer use, install the runtime archive and File → Export runtime; follow
-its package guide. npm publication still requires an owned scope and a separate
-publication instruction. Reproduce integration with `pnpm test:runtime` and
-`pnpm test:ui --no-build --workers=2 --global-timeout=600000` after rebuilding
-changed sources. Reuse retained exact-version evidence, not unchanged oracle runs.
+Next: export/commit/push immutable beta6; observe its complete platform/UI/runtime
+gates,10published assets and direct desktop/mobile GitHub download links.
+Local7policytests plus workflow/content checks pass; all255product/runtime/format
+source files match accepted beta5. No application rebuild or new original probe
+is needed for this packaging-only change. Use File → Export runtime and follow
+the package guide. The user confirmed mascot export and corrected File
+commands. GitHub main pushes build automatically; new validated beta tags publish
+source/runtime after every gate passes. An already installed/open editor has no
+auto-updater. npm publication requires an owned scope and separate instruction.
+Prior beta5 code is pushed; beta6 packaging/download changes are prepared and
+await their immutable publication checkpoint. Full F105/runtime/Spine fidelity
+remains open; do not restart deferred probes. Reproduce runtime/UI checks using
+`pnpm test:runtime` and `pnpm test:ui --no-build --workers=2 --global-timeout=600000`
+after rebuilding changed sources. Reuse accepted exact-version evidence.

@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import struct
 import subprocess
+import sys
 
 TARGETS = {
     'x86_64-unknown-linux-gnu': ('deb/*.deb', 'appimage/*.AppImage'),
@@ -109,12 +110,14 @@ def verify(target):
         'checks': ['architecture', 'executable-private-path-scan', 'package-structure'],
         'packages': packages, 'native_gui_validation': False,
         'signing': 'ad-hoc; not notarized' if target == 'universal-apple-darwin' else 'not verified',
-        'distribution': 'build report only; installers require separate release acceptance',
+        'distribution': 'experimental prerelease installer; native installation not validated',
     }
     output = Path('ci-reports') / f'{target}.json'
     output.parent.mkdir(exist_ok=True)
     output.write_text(json.dumps(report, indent=2) + '\n')
     print(f'Verified {target}: architecture, executable path scan, {len(packages)} packages.')
+    run(sys.executable, 'scripts/prepare-installer-release.py', 'stage', '--target', target,
+        '--output', str(Path('ci-installers') / target))
 
 
 def main():

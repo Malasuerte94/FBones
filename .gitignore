@@ -22,6 +22,7 @@ Thumbs.db
 /spine_pictures/
 __pycache__/
 ci-reports/
+ci-installers/
 
 # Reference-only screenshots and private agent configuration.
 /animare/
