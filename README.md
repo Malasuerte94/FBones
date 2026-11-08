@@ -52,7 +52,7 @@ Unsupported structures remain inspection-only rather than being discarded to mak
 
 ## Getting started
 
-The **`v0.9.4-beta.4`** update is a source and developer-runtime preview; the application displays **0.9.4**. Desktop installers remain unpublished. See [beta release notes](docs/releases/v0.9.4-beta.4.md) for scope and platform limits. [Release downloads](https://github.com/Malasuerte94/FBones/releases) appear only after the tag's build, runtime, and Ubuntu UI checks pass.
+The **`v0.9.4-beta.5`** update is a source and developer-runtime preview; the application displays **0.9.4**. Desktop installers remain unpublished. See [beta release notes](docs/releases/v0.9.4-beta.5.md) for scope and platform limits. [Release downloads](https://github.com/Malasuerte94/FBones/releases) appear only after the tag's build, runtime, and Ubuntu UI checks pass.
 
 To build from source, install **Node.js 22.12+**, **pnpm 11.1.0**, **Rust 1.93+**, and the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/).
 
@@ -73,7 +73,7 @@ The independent **`@fbones/runtime` 0.1.0-beta.1** package plays the supported F
 
 In the desktop editor, choose **File → Export runtime** and select a destination folder. The new bundle contains `skeleton.fbones.runtime.json` and referenced PNG/WAV resources. This separate game export does not replace the binary `.fbones` authoring format or bake temporary poses into saved keys.
 
-Download `fbones-runtime-0.1.0-beta.1.tgz` from the gated [beta release](https://github.com/Malasuerte94/FBones/releases/tag/v0.9.4-beta.4), or build the package from source:
+Download `fbones-runtime-0.1.0-beta.1.tgz` from the gated [beta release](https://github.com/Malasuerte94/FBones/releases/tag/v0.9.4-beta.5), or build the package from source:
 
 ```sh
 pnpm build:runtime

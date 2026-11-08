@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Publish only the reviewed source snapshot, never the private working directory.
 set -euo pipefail
-release_tag=${2:-v0.9.4-beta.4}
+release_tag=${2:-v0.9.4-beta.5}
 [[ "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[1-9][0-9]*$ ]] || { echo 'Expected a versioned beta tag.' >&2; exit 1; }
 release_repo=Malasuerte94/FBones
 script_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)

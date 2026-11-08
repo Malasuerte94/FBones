@@ -1,5 +1,5 @@
 {
-  "release": "v0.9.4-beta.4",
+  "release": "v0.9.4-beta.5",
   "kind": "source-only",
   "files": [
     {
@@ -15,7 +15,7 @@
     {
       "path": "README.md",
       "bytes": 10268,
-      "sha256": "289031e32a745c77ebfea6debfcca3c610e699af7f6d33f978e860c1e9f96e9e"
+      "sha256": "d1ce0fcc8fee84708eb35aa100af2023a1547b0c1fc8f434064de53207dd3850"
     },
     {
       "path": "CONTRIBUTING.md",
@@ -319,8 +319,8 @@
     },
     {
       "path": "src/composables/useSequenceAnimationWorkspace.ts",
-      "bytes": 4991,
-      "sha256": "cc1135f66ea232db34c58ddb669eacc072adc52a5387b865f4b76e99a73d21f7"
+      "bytes": 5288,
+      "sha256": "be4f648a2fda56b45d2c1f082af53d8ba45be5a3471d42b30ea0627d6c2a2efc"
     },
     {
       "path": "src/composables/useSlotAnimationWorkspace.ts",
@@ -794,8 +794,8 @@
     },
     {
       "path": "src-tauri/src/lib.rs",
-      "bytes": 20118,
-      "sha256": "6149bd33b9fd2cb98fd725c237a0a9e849ca0cdea8677af7ee3ed038743222ff"
+      "bytes": 20800,
+      "sha256": "2a7c62a9c69d20d375b6128d7998dd50fe4b9699412376d29f8b4f955097e553"
     },
     {
       "path": "src-tauri/src/library.rs",
@@ -1409,8 +1409,8 @@
     },
     {
       "path": "tests/animation-sequence-controls.test.mjs",
-      "bytes": 16816,
-      "sha256": "2260bac26541698af7055aae890bc1be6e25688b5725347bae31f15694a2632b"
+      "bytes": 19517,
+      "sha256": "d350c8586fc3aeff80007184f17d8f310609adcc6b4382aceef13e96156ba799"
     },
     {
       "path": "tests/animation-sequence-workspace.test.mjs",
@@ -1980,7 +1980,7 @@
     {
       "path": "scripts/prepare-public-release.py",
       "bytes": 7730,
-      "sha256": "8a4228aea52d1870ae503a1481dce760d8e8ce7c2790c9d3860c10b7a5b539d2"
+      "sha256": "f4b02cc84c8bfd62199d9aa693a223172d0f5554e269cccc2376a8e9e6d238a9"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -1995,7 +1995,7 @@
     {
       "path": "scripts/publish-public-beta.sh",
       "bytes": 3562,
-      "sha256": "730e2a2ba0101314fb28177f588308e13a5cd90c1826197a5312fa5b5a682fef"
+      "sha256": "1b451e877c9c64e80a5a095b570650e77d8da50497bdefabfd2a9088d978f9a9"
     },
     {
       "path": "scripts/run-ui-tests.mjs",
@@ -2109,13 +2109,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 9526,
-      "sha256": "b7eab24a915c0bc78c33c5cdf2313ec128f78c6fcea148ec179474edd2e33ba1"
+      "bytes": 12074,
+      "sha256": "17e780ca29fd9793eb6eb3bfba7192b215c553bc67367ff8db8f6ac4e8278335"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 19172,
-      "sha256": "86eb86273b90438d0ae88304ffec43681eed3237ed91f1b3e1bdbc18334ce679"
+      "bytes": 20347,
+      "sha256": "efa598be00747bf943a707a1bd666ac88a1c4045de09da7462bc418be1a9a889"
     },
     {
       "path": "docs/TESTING.md",
@@ -2154,8 +2154,13 @@
     },
     {
       "path": "docs/releases/v0.9.4-beta.4.md",
-      "bytes": 5968,
-      "sha256": "9463d4f97d6a70bad37eafddb52e33bf7e40694315a2019703ce2c7cbbb3a146"
+      "bytes": 6524,
+      "sha256": "02371e07b7043b90fb1b12d4cf32038c978a715f254a8362d13791d226587838"
+    },
+    {
+      "path": "docs/releases/v0.9.4-beta.5.md",
+      "bytes": 8052,
+      "sha256": "9d63da3e09f7317499fddc88bd781aac05d66e8b00b9a5e6fc54cae35c85a5bf"
     },
     {
       "path": "docs/research/ANIMATION-BONE-BEZIER-UI-2026-11-06.md",
@@ -2758,6 +2763,11 @@
       "sha256": "b45ad6223351d7dc4c8173434c8d371feec0989b21279f284907427aa81dd0b4"
     },
     {
+      "path": "docs/research/NATIVE-FILE-MENU-UI-GATE-2026-11-08.md",
+      "bytes": 5520,
+      "sha256": "32dd86d23e9b72726bc0a017f8523336df043bdfcedf1e6bd58dc797d4300b1c"
+    },
+    {
       "path": "docs/research/PHYSICS-BATCH-AUTHORING-POLICY.md",
       "bytes": 3544,
       "sha256": "6b0f0f045aad6a4ec57606bb613d65143da1e07e6c7dca0313f88634f9ad7feb"
@@ -2898,6 +2908,11 @@
       "sha256": "ee2fca48c6ace85a44ba56b24eecd63766bf6c0b8efc9c74ebe44c92a6b80f6d"
     },
     {
+      "path": "docs/research/PROJECT-OPEN-CAPABILITY-DATA-2026-11-08.md",
+      "bytes": 5023,
+      "sha256": "5cd4bf01cc8d09a24b213bd7e05edd4066b06aec75d86be35224a8c32d35b858"
+    },
+    {
       "path": "docs/research/PUBLIC-BETA-CI-DATA.md",
       "bytes": 7615,
       "sha256": "27aa9532c32cc099c3c73ad428efd477e5307449f7e2ffd1d14c2dd30c2f8dff"
@@ -2919,8 +2934,8 @@
     },
     {
       "path": "docs/research/PUBLIC-UPDATE-UI-GATE-2026-11-08.md",
-      "bytes": 4886,
-      "sha256": "77daf757a3440c31c0b25a7d44e9efc0dd76036478e7e7dd77f4f93d6faaaf82"
+      "bytes": 6532,
+      "sha256": "b844126bbb79cd46931454584711171a7c1621184d5fe805fe4f1070b30c563d"
     },
     {
       "path": "docs/research/RE-WORKFLOW-REVIEW-2026-10-30.md",
@@ -2934,8 +2949,8 @@
     },
     {
       "path": "docs/research/SEQUENCE-SETUP-NOOP-DATA-2026-11-08.md",
-      "bytes": 3898,
-      "sha256": "84127bcfc2119c19beea51627a9d41c7ecb015fd8d03c5cc5a8d20c4d7e39ee4"
+      "bytes": 7525,
+      "sha256": "3507c3ea9b5cc3a19d21a34df509e25c1cf04dfbdf7aaaafaeb9ad50d4cdd967"
     },
     {
       "path": "docs/research/TRANSFORM-ACTIVE-GRAPH-BEHAVIOR-PLAN.md",

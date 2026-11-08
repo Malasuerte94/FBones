@@ -79,3 +79,29 @@ Raw action evidence is retained privately under the beta.3 Sequence failure
 artifacts; this public note contains only the aggregate observation. Source
 commands: inspect `SequenceInspector.vue` and the retained trace's Enter/Undo
 actions and JSONL command arguments.
+
+## Hosted Sequence key-editor follow-up
+
+The beta.4 main trace proves that Setup Undo/Redo now issue their intended native
+commands. The same scenario subsequently reaches the Graph's Sequence key editor.
+Enter changes key12/index2 to index1 at revision8. The next Undo click issues
+the identical key12/index1/delay0.25 edit at revision9, with no native Undo
+request afterward. Thus the Setup correction worked, and a distinct unchanged
+key submission still consumes a later history click.
+
+Reviewed `SequenceKeyEditor::commit`, Timeline's Sequence commit forwarding and
+`useSequenceAnimationWorkspace::updateSequenceAnimationKey`: neither the shared
+editor nor the selected-key update path currently excludes an unchanged pose.
+UI concurrence before the DATA-owned correction: compare the three authored
+working-pose values before repeating an accepted edit. Mode/index compare as
+integers; delay compares as f32 because native exact decimal presentation and a
+typed shorter decimal can represent the same authored scalar. Keep validation,
+context/key identity, actual changed edits, disabled state and Enter/change
+interaction unchanged. No generic store/history rewrite is indicated.
+
+The field must not disable a clicked Undo or mode action just because an
+unchanged blur fires. Cover native-presented delay precision and the actual
+compiled control/update route, while retaining the exact Graph edit/Undo/Redo
+assertions. Do not hide the event ordering by retries, sleeps or looser tests.
+The raw trace is private; this note claims only the observed command sequence
+and source-inspected missing no-op check, not an original Spine gesture.

@@ -469,6 +469,26 @@ fn get_image_data(
     session.image_data(document_id, &name)
 }
 
+fn find_menu_item<R: tauri::Runtime>(
+    items: Vec<tauri::menu::MenuItemKind<R>>,
+    id: &str,
+) -> Option<tauri::menu::MenuItem<R>> {
+    for kind in items {
+        match kind {
+            tauri::menu::MenuItemKind::MenuItem(item) if item.id().as_ref() == id => {
+                return Some(item);
+            }
+            tauri::menu::MenuItemKind::Submenu(submenu) => {
+                if let Some(item) = find_menu_item(submenu.items().unwrap_or_default(), id) {
+                    return Some(item);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 fn update_menu(app: &tauri::AppHandle, project: Option<&ProjectSummary>) {
     if let Some(menu) = app.menu() {
         for (id, enabled) in [
@@ -483,10 +503,10 @@ fn update_menu(app: &tauri::AppHandle, project: Option<&ProjectSummary>) {
             ("undo", project.is_some_and(|p| p.can_undo)),
             ("redo", project.is_some_and(|p| p.can_redo)),
         ] {
-            if let Some(kind) = menu.get(id) {
-                if let Some(item) = kind.as_menuitem() {
-                    let _ = item.set_enabled(enabled);
-                }
+            // Tauri's Menu::get only searches direct children; our commands
+            // live inside the File/Edit submenus.
+            if let Some(item) = find_menu_item(menu.items().unwrap_or_default(), id) {
+                let _ = item.set_enabled(enabled);
             }
         }
     }

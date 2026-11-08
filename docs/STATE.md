@@ -3,33 +3,53 @@
 ## Active goal and priorities
 
 The latest user explicitly authorized Git push and automatic build/release update.
-Main and immutable`v0.9.4-beta.3` were pushed at`cc32a9e45edae435268cad4427e5c0ba9d2bea91`.
-Both beta3/main CI runs passed Linux/universal-macOS native builds, but Windows
-found a test-only bare-drive ESM import and Ubuntu UI found a Sequence no-op
-comparison defect (113/114each). Release was correctly skipped; beta3 is retained
-as a failed candidate, not force-moved or published. Corrected candidate beta4 is
-being verified: file-URL test import plus semantic Sequence field equality. The
-new compiled regression fails under the old comparison and passes6/6 after fix;
-actual Windows Node proves the file-URL correction.417JS now pass/one knownskip.
+Immutable beta3 remains a failed candidate: its Windows test-only bare-drive ESM
+import and hosted Sequence Setup no-op comparison blocked publication. Main and
+immutable`v0.9.4-beta.4` were pushed at`f21d908cfa7ce0aa68fbd716965aa8eb74081f5b`.
+Its main run passed all three desktop build/test/package jobs, but Ubuntu UI
+finished113/114: Setup Undo/Redo passed, then an unchanged Sequence Graph-key
+blur resubmitted the accepted key and consumed Undo. The beta4 tag run was
+intentionally canceled before publication after the user reported disabled
+native File commands. No beta3/beta4 release assets were published; both tags
+and failure evidence remain intact.
+
+Beta5 is prepared with semantic mode/index/authored-f32-delay no-op detection and
+recursive native File/Edit command lookup. The native defect was a shallow Tauri
+root-menu lookup missing commands inside submenus, not a project capability
+change. Fresh rebuilt-production local acceptance passes114/114UI,418JS with
+one known skip and runtime16package/24native-export samples. Own Windows native
+menu QA on immutable`8f65102a…24dbf` passes all6groups and closed normally; exact
+scope is below. Beta5 has not yet been pushed; fresh CI and release publication
+remain pending. Prior candidate failures are not relabeled as passing runs.
 
 Main push starts CI; validated beta tags publish source+runtime only after all
 three desktop builds and Ubuntu UI/runtime checks pass. Installed-app auto-update,
 public desktop installers and npm registry publication remain separate milestones.
-Current [publication checkpoint](../analysis/public-beta4-check.json),
+Prior [beta4 publication checkpoint](../analysis/public-beta4-check.json),
 [Sequence DATA](research/SEQUENCE-SETUP-NOOP-DATA-2026-11-08.md) and paired
 [release DATA](research/PUBLIC-UPDATE-DATA-GATE-2026-11-08.md)/
-[UI](research/PUBLIC-UPDATE-UI-GATE-2026-11-08.md) own the current correction.
+[UI](research/PUBLIC-UPDATE-UI-GATE-2026-11-08.md), plus the
+[native menu gate](research/NATIVE-FILE-MENU-UI-GATE-2026-11-08.md), own the
+current correction. The beta4 checkpoint retains its named local/remote evidence;
+current local beta5 acceptance does not establish a remote CI or release result.
 
 The prior Animate X/Y/performance/runtime delivery stays implemented and verified;
-full F105/runtime/Spine compatibility remains open. The user reports mascot import
-works. Do not resume unrelated E/B/F/G or user-deferred F307/F308 fidelity research.
+full F105/runtime/Spine compatibility remains open. The user clarified that the
+opened mascot came from the Desktop import test; the protected window's earlier
+read-only title observation confirms a loaded document. The user then tested
+that mascot and confirmed runtime export and the other File buttons work. This
+is user-reported command acceptance, not a fresh original-format equivalence
+check. No automation of that user window is authorized. Do not resume unrelated E/B/F/G or user-deferred
+F307/F308 fidelity research.
 
-Current immutable Windows0.9.4:
-`80c71cc0094263ad99616151c8ea44f0aeff4876fd0cc192a0b76d8ccd7a1645`
+Current selected immutable Windows0.9.4:
+`39efc9c1c8bb370811fe827dc9a0a378fdf6210eb3e2a2efa0a95becb5d03a58`
 (13,301,760bytes), selected by unchanged bootstrap/shortcuts in `WINDOWS_TEST`.
-Normal visible frontend startup was observed, no debugger port, and ownership
-transferred to the user. That new window is protected; do not automate or close
-it. Its fresh receipt is `.local/animation-reliability-user-process.json`.
+Fresh normal visible launch90656 reached frontend ready without a debugger port;
+ownership transferred to the user. That new window is protected; do not automate
+or close it. Its receipt is `.local/public-beta5-user-process.json`. The older
+protected mascot window was untouched. Final image differs from the menu-QA
+image only by the Sequence key guard; final-image native gestures were not rerun.
 The earlier WSL launch failure is historical: Windows interop worked this session.
 No user/original project or window was operated. Public beta.2 is unchanged.
 
@@ -73,10 +93,10 @@ Installable local archive:
 `WINDOWS_TEST/RUNTIME/fbones-runtime-0.1.0-beta.1.tgz` (40,353bytes/31files), SHA
 `3239fd388e5929766571d6fb6d6d066657e9e89fa8143e5857c664c4b30d1a61`.
 Offline Node playback and strict NodeNext TypeScript pass with only this package
-installed, without Pixi or editor dependencies. GitHub source/releases plus npm
-is the intended distribution; nothing was published, and scope ownership is not
-established. Direct GitHub repository-root installation installs the editor, so
-use the runtime archive until its package is published.
+installed, without Pixi or editor dependencies. Runtime source is in the public
+repository; validated tagged releases attach a fresh archive after gates pass.
+Beta5 publication is pending. npm publication/scope ownership remain separate.
+Direct repository-root installation installs the editor; use the runtime archive.
 
 File → Export runtime uses a native destination-folder picker and creates a new
 `FBones-runtime-*` bundle: `skeleton.fbones.runtime.json`, referenced PNG/WAVs.
@@ -88,15 +108,28 @@ parity remain unsupported. Physics retains the existing bounded FBones policy.
 
 ## Current proof
 
-Final114/114browser cases pass, zero skips/failures/retries, production CSP and
-isolated real Rust Session. This includes final numeric focus, signed drag,
+Fresh beta5 local114/114browser cases pass in2.5minutes, zero skips/failures/retries,
+rebuilt production CSP and isolated real Rust Session. This includes both
+Sequence Undo boundaries, final numeric focus, signed drag,
 geometry/history/binary SaveCloseOpen, resources and shipped Pixi WebGL pixels
-for Region/weighted Mesh/Clip/Sequence/two-color/topology changes.416JavaScript
-pass/one existing Physics skip;326native/two existing ignored;95legacy/one
-ignored;16default-format/103Scene-format. Runtime16package tests and24generated
-native-export samples pass (maximum matrix residual6.36e-7). Product/UI types,
-web build, native check, strict e2e-host Clippy, rustfmt, two Windows delivery
-and two bootstrap tests pass.
+for Region/weighted Mesh/Clip/Sequence/two-color/topology changes.418JavaScript
+pass/one existing Physics skip. Fresh runtime16package tests and24generated
+native-export samples pass (maximum matrix residual6.36e-7). Prior named
+326native/two ignored,95legacy/one ignored,16default-format/103Scene-format,
+types/build/native-check/Clippy/rustfmt/delivery/bootstrap proofs remain retained;
+they are not a new combined beta5 run or a remote CI result.
+
+Fresh own Windows native-menu QA on immutable`8f65102a…24dbf` passes6groups:
+actual WinAPI Save/SaveAs/Export disabled when blank; all3enabled after native
+Open of an own editable fixture; native WM_COMMAND SaveAs and runtime Export
+reach OS pickers and produce the expected outputs; inspection-only SaveAs is
+byte-identical while Save/export remain disabled; Close restores all3disabled.
+Typed-f32 runtime JSON is exact, and export preserves authoring. Inspection copy
+advances the Session revision once by `project.rs` copy policy, not authoring.
+The QA session closed normally. Caption/revision assertion failures and traces
+remain retained; successful mutations were not repeated. Receipt:
+`.local/native-file-menu-qa-result.json`. This proves that own Windows image's
+native menu state/routes, separately from browser custom-File coverage.
 
 Own Windows WebView2 QA on immutable`6ea2ad16…26d9e` passes five groups: two
 signed XY drags with preview/release and Undo/Redo, non-authoring playback,
@@ -105,10 +138,11 @@ normally. Exact typed-f32 comparison resolves81.6 versus81.5999984741211 JSON
 spellings without loosening integer/reference checks. Failed attempts/raw traces
 were retained; completed drags were not repeated.
 
-Final`80c71cc0…a1645` differs from that QA image only in final numeric HUD
+Prior`80c71cc0…a1645` differs from that earlier drag-QA image only in numeric HUD
 presentation/styles, covered by all114final browser cases. Its normal Windows
-startup is observed. This is not a second final-image native numeric gesture
-or fresh original4.3.26 acceptance claim. macOS remains unverified. No new
+startup was observed. Current`39efc9c1…03a58` normal startup is observed, but no
+final-image native numeric gesture or fresh original4.3.26 acceptance is claimed.
+macOS remains unverified. No new
 original editor launch, probe or compatibility acceptance was attempted.
 
 ## Preserved profile boundaries
@@ -130,25 +164,26 @@ F307/F308 broader fidelity remains explicitly user-deferred.
 
 ## Cleanup and next reproducible action
 
-Removed39.25MiBallocated Linux artifacts including agent cleanup:278own temporary
-UI session directories, redundant GPU probe bundle, own bootstrap test binary,
-closed own QA launcher copy and package caches/scratch. Removed the normally
-closed Windows QA profile (74.07MiBfile data), after checking no image/profile
-process remained. No VHDX shrinking/host-space recovery is inferred from Linux
-removal. Final Linux free831GiB, Windows Cfree79GiB.
+This publication/menu session removed243.07MiBallocated Linux data: the consumed
+beta3 clean-install workspace, disposable own fixture-generator executable and
+normally closed own menu-QA launcher copy. It removed74.03MiBfile data from that
+QA's Windows profile after verifying no image/profile process remained. Earlier
+session cleanup is retained in its named integration evidence; no Linux removal
+is reported as immediate Windows/VHDX space recovery. Linux free831GiB, Windows
+Cfree89GiB. Current user windows/profiles and all original/personal files remain.
 
-Retained current package/dist, current/QA immutable images, current UI report and
-required saved/GPU artifacts, cited raw evidence/useful failures, coherent5.0GiB
-native dependencies and852MiBWindows release cache. Older immutable Windows
-images455MiB and historical test workspaces58MiB are retained; ownership/current
-relevance was not established for deletion. Incremental compilation is disabled
-for one-off checks; its cache is4KiB. The new user's active window/profile stays.
+Retained current runtime/dist, selected/QA immutable images, fresh114-case report
+and required saved/GPU artifacts, cited raw failures/traces/receipts and source
+archives. Coherent native dependencies5.2GiB and Windows release cache852MiB stay
+for repeatable builds; incremental cache4KiB. Historical images/workspaces remain
+where ownership or future reference relevance is uncertain. No broad cargo clean.
 
-Next: use the already-open current window or existing shortcut and test the
-mascot's X/Y release/playback on the user's hardware. For development, install
-the local runtime archive, File → Export runtime, and follow the package example.
-A future publication needs the maintainer's chosen/owned npm scope and explicit
-publication instruction; do not imply the package is already on GitHub/npm.
-Reproduce current integration with `pnpm test:runtime` (build e2e-host first) and
+Next: export the reviewed beta5 source, commit and atomically push main plus a new
+immutable tag; observe its exact platform/UI/runtime jobs and attached release
+assets before claiming publication. Never retag beta3/beta4 or bypass failed gates.
+The user has confirmed mascot runtime export and the corrected File commands.
+For developer use, install the runtime archive and File → Export runtime; follow
+its package guide. npm publication still requires an owned scope and a separate
+publication instruction. Reproduce integration with `pnpm test:runtime` and
 `pnpm test:ui --no-build --workers=2 --global-timeout=600000` after rebuilding
 changed sources. Reuse retained exact-version evidence, not unchanged oracle runs.

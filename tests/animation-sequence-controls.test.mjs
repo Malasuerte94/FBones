@@ -6,7 +6,7 @@ import {readFileSync,mkdirSync,unlinkSync} from 'node:fs';
 import {dirname} from 'node:path';
 import {build} from 'esbuild';
 import {parse,compileScript} from 'vue/compiler-sfc';
-import {createRenderer,h,nextTick,ref} from 'vue';
+import {createRenderer,h,nextTick,ref,shallowRef,effectScope} from 'vue';
 import {createPinia} from 'pinia';
 import {i18n} from '../src/i18n.ts';
 const windowListeners=new Map();
@@ -17,6 +17,7 @@ globalThis.Document=class{};globalThis.ShadowRoot=class{};
 globalThis.__TAURI__={core:{invoke:async()=>{throw Error('No native API in compiled component check');}},window:{getCurrentWindow:()=>({setTitle:async()=>{}})}};
 const {useWorkspace}=await import('../src/stores/workspace.ts');
 const {draftSummary}=await import('../src/domain/project.ts');
+const {useAnimationWorkspace}=await import('../src/composables/useAnimationWorkspace.ts');
 mkdirSync('.local/animation-sequence-control-tests',{recursive:true});
 async function compile(name,path){const outfile=`.local/animation-sequence-control-tests/${name}-${process.pid}.mjs`;await build({entryPoints:[path],outfile,bundle:true,format:'esm',platform:'node',packages:'external',plugins:[{name:'vue-sfc',setup(builder){builder.onLoad({filter:/\.vue$/},({path})=>{const {descriptor}=parse(readFileSync(path,'utf8'),{filename:path});return{contents:compileScript(descriptor,{id:path,inlineTemplate:true}).content,loader:'ts',resolveDir:dirname(path)};});builder.onLoad({filter:/\.css$/},()=>({contents:'',loader:'js'}));}}]});const result=(await import(new URL('../'+outfile,import.meta.url))).default;unlinkSync(outfile);return result;}
 const Inspector=await compile('Inspector','src/components/organisms/SequenceInspector.vue'),Timeline=await compile('Timeline','src/components/organisms/AnimationTimeline.vue');
@@ -75,6 +76,21 @@ test('compiled Sequence timeline keeps discrete keys in Graph and routes stable 
   e.find('timeline-key-92').props.onPointerdown(event());dispatch('pointermove',event({clientX:147}));dispatch('pointerup');await nextTick();assert.deepEqual(events.shift(),['pause']);assert.deepEqual(events.shift(),['move',{ids:[92],deltaFrames:5}]);
   e.find('animation-timeline').props.onKeydown(event({key:'Delete',target:node('section')}));assert.deepEqual(events.shift(),['delete',[92]]);disabled.value=true;await nextTick();assert.equal(e.find('timeline-key-sequence-9').props.disabled,true);assert.equal(e.find('timeline-sequence-index').props.disabled,true);
  }finally{e.app.unmount();}
+});
+
+test('compiled Sequence timeline with the production workspace ignores delayed change and equal f32 delays after native publication',async()=>{
+ const project=shallowRef(model()),mode=ref('animate'),scope=effectScope(),edits=[],notices=[];
+ const edit=async command=>{edits.push(clone(command));const next=clone(project.value),input=command.keys[0],key=next.animations[0].sequenceTracks[0].keys.find(k=>k.id===input.keyId);Object.assign(key,{mode:input.mode,index:input.index,delay:Math.fround(input.delay)});next.revision++;project.value=next;return true;};
+ const w=scope.run(()=>useAnimationWorkspace({project,busy:ref(false),selectedIds:ref([]),editorMode:mode,localBones:shallowRef([]),attachment:ref(9),edit,notice:message=>notices.push(message),changed(){}}));w.resetAnimationState();
+ const e=mount(Timeline,()=>({animations:w.animations.value,activeAnimationId:w.animationId.value,bones:project.value.bones,selectedBoneIds:[],tracks:[],currentFrame:0,durationFrames:30,fps:30,playing:false,loop:true,autoKey:false,slots:project.value.slots.map(s=>({id:s.id,name:s.name,boneId:s.bone,attachments:s.attachments})),selectedSlotIds:[7],sequenceTracks:w.animationSequenceTracks.value,onPause:w.pauseAnimation,onUpdateSequenceKey:w.updateSequenceAnimationKey}));await nextTick();try{
+  e.find('timeline-key-92').props.onPointerdown(event());dispatch('pointerup');await nextTick();
+  let field=e.find('timeline-sequence-index');await field.props.onChange(event({target:field}));await nextTick();assert.equal(edits.length,0,'an unchanged selected key cannot start a busy native transaction');
+  await input(e,'timeline-sequence-index','2');assert.equal(edits.length,1);assert.equal(project.value.animations[0].sequenceTracks[0].keys[1].index,2);
+  field=e.find('timeline-sequence-index');await field.props.onChange(event({target:field}));await nextTick();assert.equal(edits.length,1,'delayed change after Enter/publication cannot consume the following Undo click');
+  await input(e,'timeline-sequence-delay','.1');assert.equal(edits.length,2);assert.equal(project.value.animations[0].sequenceTracks[0].keys[1].delay,Math.fround(.1));
+  await input(e,'timeline-sequence-delay','.100000001');assert.equal(edits.length,2,'different decimal text with the same authored f32 delay is unchanged');
+  await input(e,'timeline-sequence-delay','.10000001');assert.equal(edits.length,3,'a different representable f32 delay remains editable');assert.equal(edits[2].keys[0].keyId,92);assert.equal(edits[2].keys[0].frame,15);assert.deepEqual(notices,[]);
+ }finally{e.app.unmount();scope.stop();}
 });
 
 test('compiled timeline distinguishes stored duration from effective preview End, gives budget guidance and keeps explicit End authoritative',async()=>{

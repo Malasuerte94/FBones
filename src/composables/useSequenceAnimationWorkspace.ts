@@ -38,7 +38,11 @@ export function useSequenceAnimationWorkspace(o:Options){
  function sequenceKeysForIds(ids:readonly number[]):SequenceKeyInput[]{return(o.active.value?.sequenceTracks??[]).flatMap(track=>track.keys.filter(key=>ids.includes(key.id)).map(({id,...key})=>({...key,attachment:track.attachment,keyId:id})));}
  async function updateSequenceAnimationKey(change:{id:number}&SequenceWorkingPose){return perform(async()=>{
   o.pause();const key=sequenceKeysForIds([change.id])[0],target=key&&attachment(key.attachment);if(!key||!target?.sequence||!validSequenceWorkingPose(target.sequence,change))return false;
-  return o.edit({type:'setAnimationSequenceKeys',animation:current().id,keys:[{...key,mode:change.mode,index:change.index,delay:change.delay}]});
+  const clip=current();
+  // Enter can be followed by change/blur after the native reply. Equal stored
+  // f32 values must not start another busy transaction and consume that click.
+  if(key.mode===change.mode&&key.index===change.index&&Math.fround(key.delay)===Math.fround(change.delay))return true;
+  return o.edit({type:'setAnimationSequenceKeys',animation:clip.id,keys:[{...key,mode:change.mode,index:change.index,delay:change.delay}]});
  });}
  function clearSequenceAnimationDraft(){if(sequenceDraft.value.size)sequenceDraft.value=new Map();}
  watch(()=>[o.project.value?.documentId,o.project.value?.animations,o.active.value?.id,o.frame.value,o.mode.value],clearSequenceAnimationDraft,{flush:'sync'});
