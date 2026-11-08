@@ -2,7 +2,7 @@ name: Desktop checks and builds
 on:
   push:
     branches: [main]
-    tags: [v0.9.4-beta.2]
+    tags: ['v*.*.*-beta.*']
   pull_request:
   workflow_dispatch:
 
@@ -54,6 +54,10 @@ jobs:
       - name: Remap private build paths
         run: python scripts/ci-build.py configure
       - run: pnpm install --frozen-lockfile
+      - run: python scripts/test-public-release.py
+      - run: pnpm build:runtime
+      - name: Verify independent runtime package
+        run: node packages/runtime/tests/runtime.test.mjs
       - run: pnpm test
       - run: pnpm typecheck:ui
       - run: cargo test --workspace --locked
@@ -95,6 +99,19 @@ jobs:
       # The UI runner deliberately builds its Rust host offline.
       - run: cargo fetch --locked
       - run: pnpm test:ui
+      - name: Verify native exports in the independent runtime
+        run: pnpm test:runtime
+      - name: Package independent runtime archive
+        run: |
+          mkdir -p .local/ci-runtime-release
+          npm pack ./packages/runtime --pack-destination .local/ci-runtime-release
+          python scripts/prepare-runtime-release.py .local/ci-runtime-release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: runtime-package
+          path: .local/ci-runtime-release/
+          include-hidden-files: true
+          if-no-files-found: error
       - name: Validate README links and screenshot integrity
         run: python scripts/check-public-readme.py
       - name: Retain UI failure diagnostics
@@ -109,26 +126,34 @@ jobs:
           if-no-files-found: ignore
 
   release:
-    name: Publish source beta after all checks
+    name: Publish source and runtime beta after all checks
     needs: [desktop, linux-ui]
-    if: github.repository == 'Malasuerte94/FBones' && github.ref == 'refs/tags/v0.9.4-beta.2'
+    if: github.repository == 'Malasuerte94/FBones' && github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     runs-on: ubuntu-22.04
     permissions:
       contents: write
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Prepare and verify source release
-        run: python scripts/prepare-public-release.py --output .local/ci-source-release
+        run: python scripts/prepare-public-release.py --tag "$RELEASE_TAG" --output .local/ci-source-release
       - uses: actions/download-artifact@v4
         with:
           pattern: build-report-*
           path: .local/platform-build-reports
           merge-multiple: true
-      - name: Publish prerelease source, checksums, and build reports
+      - uses: actions/download-artifact@v4
+        with:
+          name: runtime-package
+          path: .local/runtime-release
+      - name: Publish prerelease source, runtime, checksums, and build reports
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v0.9.4-beta.2 .local/ci-source-release/fbones-v0.9.4-beta.2-source.tar.gz .local/ci-source-release/SHA256SUMS .local/platform-build-reports/*.json --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease --latest=false --title 'FBones 0.9.4 Beta 2 — source preview' --notes-file docs/releases/v0.9.4-beta.2.md
+          python scripts/prepare-runtime-release.py .local/runtime-release
+          cat .local/runtime-release/RUNTIME_SHA256SUMS >> .local/ci-source-release/SHA256SUMS
+          gh release create "$RELEASE_TAG" ".local/ci-source-release/fbones-$RELEASE_TAG-source.tar.gz" .local/ci-source-release/SHA256SUMS .local/runtime-release/*.tgz .local/platform-build-reports/*.json --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease --latest=false --title "FBones $RELEASE_TAG — editor source and runtime preview" --notes-file "docs/releases/$RELEASE_TAG.md"

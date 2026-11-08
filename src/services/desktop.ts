@@ -30,6 +30,10 @@ export async function saveProject(saveAs = false): Promise<ProjectSummary | null
   if (!desktop) throw new Error('File operations are available in the desktop application.');
   return invoke('save_project', { saveAs });
 }
+export async function exportRuntime(expectedRevision:number):Promise<{path:string;imageCount:number;audioCount:number}|null>{
+  if(!desktop)throw new Error('Runtime export is available in the desktop application.');
+  return invoke('export_runtime',{expectedRevision});
+}
 export async function editRig(edit: RigEdit, expectedRevision: number,poseEpoch?:number): Promise<ProjectSummary> {
   if (!desktop) throw new Error('Bone editing is available in the desktop application.');
   if(edit.type==='setAnimationDeformKeys')edit={...edit,keys:edit.keys.map(preserveDeformOffsetBits)};

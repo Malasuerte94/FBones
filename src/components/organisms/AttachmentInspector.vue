@@ -5,6 +5,8 @@ import {useWorkspace} from '../../stores/workspace';
 import {useSceneFieldEditor} from '../../composables/useSceneFieldEditor';
 import type {RegionView} from '../../domain/project';
 import AppButton from '../atoms/AppButton.vue';
+import SequenceInspector from './SequenceInspector.vue';
+import AttachmentColorEditor from './AttachmentColorEditor.vue';
 const w=useWorkspace(),{t}=useI18n();
 const fields=['x','y','rotation','scaleX','scaleY'] as const;
 const attachment=computed(()=>w.selectedAttachment);
@@ -57,6 +59,6 @@ async function moveOwner(event:Event){
    <p v-if="attachment.region" class="break-all text-[11px] text-muted">{{attachment.region.image}}.png · {{attachment.region.width}} × {{attachment.region.height}}</p><p v-if="attachment.region&&!attachment.imageAvailable" role="status" class="text-xs leading-4 text-warning">{{t('missingImage')}}</p>
    <AppButton v-if="attachment.region" class="w-full" @click="editMesh">{{t(attachment.mesh?'editMesh':'convertMesh')}}</AppButton>
    <AppButton v-if="w.sceneEditing" class="w-full" @click="w.removeAttachment">{{t('deleteAttachment')}}</AppButton>
-  </fieldset><p v-if="w.inspectorError" role="alert" class="mt-2 text-xs text-danger">{{w.inspectorError}}</p>
+  </fieldset><AttachmentColorEditor v-if="attachment.region" :attachment="attachment"/><SequenceInspector v-if="attachment.region" :attachment="attachment"/><p v-if="w.inspectorError" role="alert" class="mt-2 text-xs text-danger">{{w.inspectorError}}</p>
  </section>
 </template>

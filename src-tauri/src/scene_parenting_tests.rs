@@ -455,7 +455,8 @@ fn parent_selection_slot_limit_rejects_partial_split_but_full_inventory_moves_in
         .iter()
         .map(|a| a.id)
         .collect::<Vec<_>>();
-    for i in 1..128 {
+    let slot_limit = fbones_format::minimal::scene::MAX_SCENE_SLOTS;
+    for i in 1..slot_limit {
         p = command(
             &s,
             &p,
@@ -468,7 +469,7 @@ fn parent_selection_slot_limit_rejects_partial_split_but_full_inventory_moves_in
         .is_err());
     unchanged(&s, &p, &before);
     let p = s.edit(p.revision, edit(vec![], ids, target)).unwrap();
-    assert_eq!(p.slots.len(), 128);
+    assert_eq!(p.slots.len(), slot_limit);
     assert_eq!(p.slots[0].id, source);
     assert_eq!(p.slots[0].bone, target);
 }

@@ -43,7 +43,8 @@ function angle(t:Triangle,points:Point[]){let minimum=Infinity;for(let i=0;i<3;i
 function improve(triangles:Triangle[],points:Point[],fixed:Set<string>,measured:Point[]){
   type Edge={u:number;v:number;faces:number[]};
   const edges=new Map<number,Edge>(),pending=new Set<number>(),heap:number[]=[];
-  const encode=(u:number,v:number)=>Math.min(u,v)*256+Math.max(u,v);
+  // Preserve lexicographic edge priority without aliasing indices above255.
+  const encode=(u:number,v:number)=>Math.min(u,v)*points.length+Math.max(u,v);
   const enqueue=(id:number)=>{if(pending.has(id))return;pending.add(id);let i=heap.length;heap.push(id);while(i>0){const parent=(i-1)>>1;if(heap[parent]!<=id)break;heap[i]=heap[parent]!;i=parent;heap[i]=id;}};
   const pop=()=>{const value=heap[0]!,last=heap.pop()!;pending.delete(value);if(heap.length){heap[0]=last;let i=0;while(true){const left=i*2+1,right=left+1;if(left>=heap.length)break;let child=right<heap.length&&heap[right]!<heap[left]!?right:left;if(heap[i]!<=heap[child]!)break;[heap[i],heap[child]]=[heap[child]!,heap[i]!];i=child;}}return value;};
   const add=(face:number,t:Triangle)=>{for(let i=0;i<3;i++){const a=t[i]!,b=t[(i+1)%3]!,id=encode(a,b);let e=edges.get(id);if(!e){e={u:Math.min(a,b),v:Math.max(a,b),faces:[]};edges.set(id,e);}e.faces.push(face);e.faces.sort((a,b)=>a-b);enqueue(id);}};
@@ -66,7 +67,7 @@ function measuredQuality(triangles:Triangle[],points:Point[],fixed:Set<string>,w
 /** Pure bounded constrained triangulation used only for live viewport previews.
  * Rust repeats authoritative validation on release; no IPC occurs per frame. */
 export function retriangulate(uvs:readonly number[],hull:number,constraints:readonly number[],world?:readonly {x:number;y:number}[]):number[]{
-  const n=uvs.length/2;if(!Number.isInteger(n)||n<3||n>256||hull<3||hull>n||constraints.length%2||uvs.some(v=>!Number.isFinite(v)))throw Error('Invalid mesh');
+  const n=uvs.length/2;if(!Number.isInteger(n)||n<3||n>512||hull<3||hull>n||constraints.length%2||uvs.some(v=>!Number.isFinite(v)))throw Error('Invalid mesh');
   const points:Point[]=Array.from({length:n},(_,i)=>[uvs[i*2]!,uvs[i*2+1]!]);
   for(let i=0;i<n;i++)for(let j=0;j<i;j++)if(Math.abs(points[i]![0]-points[j]![0])<EPS&&Math.abs(points[i]![1]-points[j]![1])<EPS)throw Error('Duplicate vertex');
   const requested:Array<[number,number]>=Array.from({length:hull},(_,i)=>[i,(i+1)%hull]);

@@ -1,8 +1,9 @@
 import type {AnimationChannel,AnimationKeyInput,AnimationView} from './animation.ts';
-import type {Rgba,SlotAnimationKeyInput,SlotAnimationPose} from './animationSlots.ts';
+import type {Rgba,Rgb,SlotAnimationKeyInput,SlotAnimationPose} from './animationSlots.ts';
 import type {DeformKeyInput,DeformPose,DrawOrderKeyInput} from './animationGeometry.ts';
 import type {ConstraintKeyInput,ConstraintPose} from './animationConstraints.ts';
 import type {EventDefinition,EventKeyInput,EventPatch} from './animationEvents.ts';
+import type {SequenceSettings,SequenceKeyInput} from './animationSequence.ts';
 export interface BoneView {
   id: number; parent: number | null; name: string;
   x: number; y: number; rotation: number; length: number;
@@ -22,6 +23,7 @@ export interface EvaluationSnapshot {
   drawOrder?:number[];
   deformPose?:DeformPose[];
   constraintPose?:ConstraintPose[];
+  sequencePose?:{attachment:number;slot:number;index:number;image:string}[];
 }
 export interface RegionView {
   /** Authored override; empty falls back to the attachment name. */
@@ -54,6 +56,11 @@ export interface SlotView {
   color?:number;
   /** Transient sampled light color, never Setup/persistence input. */
   animatedColor?:Rgba;
+  /** Slot black-end remap is independent from light/attachment tint. The stored
+   * darkColor alpha is metadataFF; animatedDarkColor contains only RGB. */
+  tintBlack?:boolean;
+  darkColor?:number;
+  animatedDarkColor?:Rgb;
   blend: SlotBlendMode;
   region: RegionView | null; imageAvailable: boolean; mesh?: MeshView | null;
   attachments?: AttachmentView[];
@@ -65,7 +72,11 @@ export interface ClippingView extends DenseBindingView {
 }
 export interface AttachmentView {
   id:number;slot:number;name:string;type:'region'|'mesh'|'clipping';
+  /** Setup attachment tint, independent of animated slot light RGBA. */
+  color?:number;
   region:RegionView|null;mesh:MeshView|null;clipping:ClippingView|null;imageAvailable:boolean;
+  sequence?:SequenceSettings|null;
+  sequenceAvailableFrames?:number[];
 }
 export type TransformProperty = 'rotate'|'x'|'y'|'scaleX'|'scaleY'|'shearY';
 export type TransformChannels = [number,number,number,number,number,number];
@@ -108,7 +119,10 @@ export type RigEdit =
   | ({type:'setAnimationKey';animation:number}&AnimationKeyInput)
   | {type:'setAnimationKeys';animation:number;keys:AnimationKeyInput[]}
   | {type:'setAnimationSlotKeys';animation:number;keys:SlotAnimationKeyInput[]}
-  | {type:'setAnimationKeyBatch';animation:number;boneKeys:AnimationKeyInput[];slotKeys:SlotAnimationKeyInput[];drawOrderKeys?:DrawOrderKeyInput[];deformKeys?:DeformKeyInput[];constraintKeys?:ConstraintKeyInput[];eventKeys?:EventKeyInput[]}
+  | {type:'setAnimationKeyBatch';animation:number;boneKeys:AnimationKeyInput[];slotKeys:SlotAnimationKeyInput[];drawOrderKeys?:DrawOrderKeyInput[];deformKeys?:DeformKeyInput[];constraintKeys?:ConstraintKeyInput[];eventKeys?:EventKeyInput[];sequenceKeys?:SequenceKeyInput[]}
+  | {type:'setAttachmentSequence';id:number;sequence:SequenceSettings|null}
+  | {type:'setAttachmentColor';id:number;color:number}
+  | {type:'setAnimationSequenceKeys';animation:number;keys:SequenceKeyInput[]}
   | {type:'setAnimationConstraintKeys';animation:number;keys:ConstraintKeyInput[]}
   | {type:'setAnimationEventKeys';animation:number;keys:EventKeyInput[]}
   | {type:'createEvent';name:string}
@@ -126,6 +140,7 @@ export type RigEdit =
   | {type:'transformBones';ids:number[];mode:'translate'|'rotate'|'scale'|'shear'|'pose';individual?:boolean;localAxes?:boolean;pivotX:number;pivotY:number;dx:number;dy:number;rotation:number;scaleX:number;scaleY:number;shearX:number;shearY:number}
   | {type:'setBoneColors';colors:{id:number;color:number}[]}
   | {type:'setBoneColor'|'setSlotColor';id:number;color:number}
+  | {type:'setSlotDarkColor';id:number;enabled:boolean;color:number}
   | {type:'setSlotBlend';id:number;blend:SlotBlendMode}
   | {type:'createSlot';bone:number;name?:string}
   | {type:'setActiveAttachment';slot:number;attachment:number|null}
@@ -190,6 +205,8 @@ export interface ProjectSummary {
   canRedo: boolean;
   editedBone: number | null;
   documentId: number;
+  /** Logical open document; resource documentId still guards images/evaluation. */
+  logicalDocumentId?:number;
   slots: SlotView[];
   editedSlot: number | null;
   editedVertex?: number | null;

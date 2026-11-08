@@ -89,7 +89,7 @@ test('@native compact Dopesheet and Graph retain real multi-key move delete and 
 
 test('@native all four bone channels persist and a real Bezier tangent drag commits once while Escape cancels its preview',async({page,native},info)=>{
  const f=await fixture(page,native,true),channels=['rotate','translate','scale','shear']as const;await expect(page.getByTestId('editor-mode-animate')).toHaveAttribute('aria-pressed','true');await expect(page.getByTestId('animation-preview').getByRole('img',{name:'Live animation preview'})).toHaveAttribute('data-ready','true');
- expect((await native.snapshot())!.animationChannels).toEqual([...channels]);
+ expect((await native.snapshot())!.animationChannels).toEqual([...channels,'translateX','translateY','scaleX','scaleY']);
  for(const channel of channels){await page.getByTestId('timeline-key-'+channel).click();await expect.poll(async()=>clip((await native.snapshot())!).tracks.find(t=>t.channel===channel)?.keys.length).toBe(1);}
  const fps=page.getByTestId('timeline-fps');await fps.fill('24');await fps.press('Enter');await expect.poll(async()=>(await native.snapshot())!.animationFps).toBe(24);expect(clip((await native.snapshot())!).tracks.every(t=>t.keys[0]!.frame===0)).toBe(true);
  await seek(page,24);

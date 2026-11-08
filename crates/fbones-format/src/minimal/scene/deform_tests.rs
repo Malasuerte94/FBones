@@ -138,6 +138,7 @@ fn draw_and_mesh_clip_dense_deform_roundtrip_preserve_all_setup_dormant_bits_and
         keys: vec![SlotRgbaKey {
             frame: 0.,
             values: [1.; 4],
+            dark_values: [0.; 3],
             curve: SlotRgbaCurve::Linear,
         }],
     });
@@ -307,15 +308,22 @@ fn new_family_arena_limits_close_encoder_decoder_budget_including_scene_overhead
             .collect(),
     };
     p.animations[0].deform_tracks.push(make(4096));
+    let bytes = encode_scene_payload(&p).unwrap();
+    assert_eq!(decode_scene(&bytes).unwrap(), p);
+    let mut second = Animation::new("second deform".into());
+    second.deform_tracks.push(make(4096));
+    p.animations.push(second);
     assert!(encode_scene_payload(&p).is_err());
-    p.animations[0].deform_tracks[0] = make(4090);
+    p.animations[1].deform_tracks[0] = make(4090);
     assert!(
         encode_scene_payload(&p).is_err(),
         "scene overhead must be included beyond the early animation lower bound"
     );
     p.animations[0].deform_tracks[0] = make(4000);
+    p.animations[1].deform_tracks[0] = make(4000);
     let bytes = encode_scene_payload(&p).unwrap();
     assert_eq!(decode_scene(&bytes).unwrap(), p);
+    p.animations.truncate(1);
     p.animations[0].deform_tracks.clear();
     p.animations[0].draw_order = (0..4096)
         .map(|i| DrawOrderKey {
@@ -323,5 +331,10 @@ fn new_family_arena_limits_close_encoder_decoder_budget_including_scene_overhead
             offsets: draw_order_offsets(&[2, 1, 0]).unwrap(),
         })
         .collect();
+    let bytes = encode_scene_payload(&p).unwrap();
+    assert_eq!(decode_scene(&bytes).unwrap(), p);
+    let mut second = p.animations[0].clone();
+    second.name = "second order".into();
+    p.animations.push(second);
     assert!(encode_scene_payload(&p).is_err());
 }

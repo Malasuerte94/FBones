@@ -12,6 +12,19 @@ use fbones_format::minimal::{
 };
 use std::collections::HashMap;
 pub(crate) type Point = [f32; 2];
+// Shared arithmetic envelope; public legacy/Clip format and request guards stay256.
+#[cfg(feature = "scene-editing")]
+pub(crate) const MAX_VERTICES: usize = fbones_format::minimal::scene::MAX_SCENE_MESH_VERTICES;
+#[cfg(not(feature = "scene-editing"))]
+pub(crate) const MAX_VERTICES: usize = 256;
+#[cfg(feature = "scene-editing")]
+pub(crate) const MAX_TRIANGLE_INDICES: usize =
+    fbones_format::minimal::scene::MAX_SCENE_MESH_TRIANGLE_INDICES;
+#[cfg(not(feature = "scene-editing"))]
+pub(crate) const MAX_TRIANGLE_INDICES: usize = 1536;
+#[cfg(all(test, feature = "scene-editing"))]
+#[path = "large_mesh_core_tests.rs"]
+mod large_mesh_core_tests;
 fn invalid(message: &str) -> AppError {
     AppError::new("InvalidMesh", message)
 }
@@ -265,10 +278,10 @@ fn add_vertex_inner(
     poses: &[Pose],
 ) -> Result<usize, AppError> {
     let n = mesh.vertices.len();
-    if n >= 256 {
-        return Err(invalid(
-            "This version supports up to 256 vertices per mesh.",
-        ));
+    if n >= MAX_VERTICES {
+        return Err(invalid(&format!(
+            "This profile supports up to {MAX_VERTICES} vertices per mesh."
+        )));
     }
     let points = world_vertices(mesh, poses);
     let mut hint = hint;

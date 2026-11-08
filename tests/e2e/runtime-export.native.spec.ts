@@ -1,0 +1,30 @@
+import {readFile,readdir} from 'node:fs/promises';
+import {join} from 'node:path';
+import {test,expect,openNativeEditor} from './fixtures/native-session';
+import type {ProjectSummary} from '../../src/domain/project';
+
+test('@native runtime export flushes valid fields, cancels safely and bundles only authored data and referenced PNGs',async({page,native})=>{
+ let p=await native.invoke<ProjectSummary>('create_project',{name:'Own runtime export',discardChanges:true});
+ await native.queueDialog('folder','images');
+ p=await native.invoke<ProjectSummary>('choose_images_folder',{expectedRevision:p.revision});
+ p=await native.invoke<ProjectSummary>('place_images',{keys:['green'],bone:p.bones[0]!.id,x:0,y:0,expectedRevision:p.revision});
+ await openNativeEditor(page);
+ const menu=page.locator('header details').filter({has:page.locator('summary').filter({hasText:/^File$/})});
+ const exportAction=page.getByTestId('export-runtime');
+ await native.queueDialog('folder',null);await menu.locator('summary').click();await exportAction.click();
+ await expect.poll(()=>native.calls.filter(c=>c.command==='export_runtime'&&c.result===null).length).toBe(1);
+ expect(await native.snapshot()).toEqual(p);
+ await page.locator(`[data-tree-kind="bone"][data-tree-id="${p.bones[0]!.id}"]`).getByRole('treeitem').click();
+ const x=page.getByTestId('bone-x');
+ await x.fill('23.25');
+ await native.queueDialog('folder','images');await menu.locator('summary').click();await exportAction.click();
+ await expect.poll(()=>native.calls.filter(c=>c.command==='export_runtime'&&!!c.result).length).toBe(1);
+ const result=[...native.calls].reverse().find(c=>c.command==='export_runtime'&&!!c.result)!.result as {path:string;imageCount:number;audioCount:number};
+ const after=(await native.snapshot())!;
+ expect(after.bones[0]!.x).toBe(23.25);expect(after.dirty).toBe(true);expect(result.imageCount).toBe(1);
+ const data=JSON.parse(await readFile(join(result.path,'skeleton.fbones.runtime.json'),'utf8'));
+ expect(Object.keys(data).sort()).toEqual(['animations','bones','constraints','events','format','fps','slots','version']);
+ expect(data.bones).toEqual(after.bones);expect(data.slots).toEqual(after.slots);expect(await readdir(join(result.path,'images'))).toEqual(['green.png']);
+ expect((await readFile(join(result.path,'images/green.png'))).equals(await readFile(join(result.path,'../green.png')))).toBe(true);
+ expect(after.revision).toBe(p.revision+1);expect(await native.snapshot()).toEqual(after);
+});

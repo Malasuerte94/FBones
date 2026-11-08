@@ -1,191 +1,146 @@
-# Current state —2026-10-31
+# Current state — 2026-11-08
 
-## Public beta and platform CI — current user goal
+## Active goal and priorities
 
-PUBLIC repository: https://github.com/Malasuerte94/FBones (main, MIT, issues,
-contributor kit). User authorized public creation/push/releases. Official gh OAuth
-and SSH now work; credentials remain ignored. Root private/original materials and
-protected user windows are untouched. Only allowlisted source is exported.
+The latest user explicitly authorized Git push and the corresponding automatic
+build/release update. Preparing `v0.9.4-beta.3` source plus developer runtime
+publication. Main push starts CI; validated beta tags publish only after all
+three desktop builds and Ubuntu UI/runtime checks pass. Installed-app auto-update,
+public desktop installers and npm registry publication are separate, unconfigured
+milestones. Current [publication checkpoint](../analysis/public-beta3-check.json)
+and paired [DATA](research/PUBLIC-UPDATE-DATA-GATE-2026-11-08.md)/
+[UI](research/PUBLIC-UPDATE-UI-GATE-2026-11-08.md) audits own this action.
+No main/tag push or beta3 release is claimed before remote observation.
 
-Current published main and immutable candidate tag v0.9.4-beta.1 point to
-5086547ebafc148f8cc2a631e86418b1f3f1a080. Both hosted runs41205464845 (main)
-and41205464589 (tag) finished: ALL THREE native build/package/report jobs PASS,
-including Linux deb/AppImage, Windows NSIS and universal macOS app/DMG with both
-architectures, codesign verification and executable path scan. Reports mark native
-GUI validation false; no installers are distributed or notarization claimed.
-The release job correctly stayed skipped because each UI run had94pass/1fail.
-No public release exists yet. The public tag is retained; beta.2 is being prepared.
+The prior Animate X/Y/performance/runtime delivery stays implemented and verified;
+full F105/runtime/Spine compatibility remains open. The user reports mascot import
+works. Do not resume unrelated E/B/F/G or user-deferred F307/F308 fidelity research.
 
-Paired DATA/UI trace audits proved two test errors, not solver failures:
-- Tag: Reset creates a new epoch; resumed movement was compared with a pre-Reset
-  overshoot. Test now samples the paused post-Step pose, preserves the strict0.01
-  movement, Off/clock/authored-state/history checks. Focused CI-profile1/1PASS.
-- Main: the parent moved11.336px between sampling and pointerdown, outside9px hit
-  tolerance; Tree deselection proves an empty-space box. Replay freeze/time/all6
-  matrix checks already passed. Test installs Playwright clock before navigation,
-  proves Play progression, then holds RAF while sending real mouse down/drag/up.
-  Adds selected-parent assertion; preserves exactly1Replay/1edit, epoch/key/frame,
-  Setup/nonbaking and numeric checks. Focused CI-profile1/1PASS. Official clock
-  API documents pre-navigation install and RAF pause; no production source change.
-Audit receipts: .local/public-beta/live-ci-data/{tag-ui-reset-baseline-finding,
-main-508-moving-target-finding}.{json,md} and live-readme/{reset-epoch-baseline-ui-gate,
-play-pointer-hit-ui-gate}.md. No retries/skips/tolerance relaxation introduced.
+Current immutable Windows0.9.4:
+`80c71cc0094263ad99616151c8ea44f0aeff4876fd0cc192a0b76d8ccd7a1645`
+(13,301,760bytes), selected by unchanged bootstrap/shortcuts in `WINDOWS_TEST`.
+Normal visible frontend startup was observed, no debugger port, and ownership
+transferred to the user. That new window is protected; do not automate or close
+it. Its fresh receipt is `.local/animation-reliability-user-process.json`.
+The earlier WSL launch failure is historical: Windows interop worked this session.
+No user/original project or window was operated. Public beta.2 is unchanged.
 
-Earlier6578770/run41203936898 passed full95UI with zero retries/skips/fails.
-Hosted rendering was measured5.77x slower than local; CI uses1worker and calibrated
-execution allowances, all assertions retained. Earlier packaging fixes explicitly
-select fbones and move the identical opt-in host wrapper outside Tauri auto-scan;
-Apple lipo input order was corrected after primary-source audit. None changes
-editor/runtime/codec algorithms. Local263JS/1knownskip,254native+46format+7research,
-93legacy/1ignored, product/test TypeScript and frontend build pass. Isolated clean
-install/build/test passed after full access superseded the old sandbox blocker.
+[Single checkpoint](../analysis/animation-reliability-check.json),
+[integration and limits](research/ANIMATION-RELIABILITY-INTEGRATION-2026-11-08.md),
+[drag DATA](research/ANIMATION-DRAG-RELEASE-DATA-2026-11-08.md),
+[UI/performance](research/ANIMATION-DRAG-PLAYBACK-UI-GATE-2026-11-08.md) and
+[numeric DATA](research/ANIMATION-NUMERIC-FOCUS-DATA-2026-11-08.md) own this work.
+Accepted earlier format/source evidence remains in the
+[mascot checkpoint](../analysis/mascot-support-check.json) and paired gates.
 
-README has3 genuine FBones screenshots, implementation/remaining-work table,
-CONTRIBUTING/ROADMAP/license/notices. Actual live GitHub1440/390 visual inspection
-passes: images decoded, no document overflow/errors, contained table scrolling;
-all3PNGs and contributor/roadmap/license resources200/exact bytes. Evidence in
-.local/public-beta/live-readme/. These captures are our fixtures/assets only.
+## Current behavior
 
-Beta.2 keeps source-only scope and all3native+full95UI gating before publication.
-Next: export/reconcile reviewed source into .local/public-beta/current/repository,
-commit and atomically push main plus NEW v0.9.4-beta.2; observe final tag gates,
-then reconcile all3reports and public prerelease5assets/source archive/checksums.
-Use a fresh candidate archive; historical current/*.tar.gz does not match edits.
-Full publication/build/README goal remains ACTIVE until those final gates pass.
+The release jump was a second application of a previewed transform: a measured
+extra26units. Frozen Animate gestures now key against the original native local
+pose and world matrices. Signed X/Y, groups, Rotate/Scale/Shear, Auto Key on/off,
+Escape/stale epochs and single-action history remain covered. Setup is untouched.
 
+Numeric input keeps exact text in the DOM throughout focus, with an inaccessible,
+noninteractive compact display overlay when unfocused. This preserves selections
+made before focus and fixes replacement text appending to the old precise value.
+A synchronous focus-write attempt was disproved; reuse final evidence, not that
+superseded proposal. Replacement/Enter/Escape/Sequence/Refresh retention pass.
+Central Setup/Animate transform placement and Animate-only Key/Auto Key remain.
 
-## Priority and current delivery
+Playback recomputes only affected constraint subtrees, submits one viewport draw
+per pose instead of two, and caches unchanged timeline metadata/rows/Graph.
+Measured mascot evaluator CPU mean1.010→0.253ms (4.00×); all-bone custom-renderer
+Timeline CPU13.579→1.002ms (13.55×).756complete frames/Physics states and48draft
+samples match exactly, with additional retained solver comparisons. These are
+component CPU measurements, not a whole-app Windows mascot FPS guarantee.
 
-F105 Animate/timeline/keyframes remains ACTIVE. The user accepted existing
-Physics/meshes and deferred remaining F307/F308 exact-fidelity probes. Continue
-animation without restarting those batches. Follow animare/ screenshots closely
-with FBones colors. The central transform HUD works in BOTH Setup and Animate.
+## Independent runtime preview
 
-Internally delivered/opened Windows **0.9.4**, immutable image
-`429e4c4f3f9aa08204f5c5f7d960f8d4d0f132dc0f86a1348b948a8be343887c`,
-12,440,064bytes. build-info/current-build select it. All37older immutable images,
-442reference helper files and stable bootstrap90e9c17e remain unchanged. Existing
-examples/resources are preserved; no Desktop writes/manual copying/global settings.
-Main reports: analysis/animation-physics-preview-{ui,delivery}-check.json,
-animation-physics-preview-data-check.json and animation-physics-ui-original-check.json.
-Full animation compatibility and original Physics dynamics/phase parity are FALSE.
+`@fbones/runtime`0.1.0-beta.1 has platform-free Node/browser ESM/types and optional
+PixiJS8 `/pixi` view. It bundles our own code under MIT, no Spine runtime code,
+assets or dependency. Usage/support/limits are in
+[packages/runtime/README.md](../packages/runtime/README.md).
 
-## Delivered behavior
+Installable local archive:
+`WINDOWS_TEST/RUNTIME/fbones-runtime-0.1.0-beta.1.tgz` (40,353bytes/31files), SHA
+`3239fd388e5929766571d6fb6d6d066657e9e89fa8143e5857c664c4b30d1a61`.
+Offline Node playback and strict NodeNext TypeScript pass with only this package
+installed, without Pixi or editor dependencies. GitHub source/releases plus npm
+is the intended distribution; nothing was published, and scope ownership is not
+established. Direct GitHub repository-root installation installs the editor, so
+use the runtime archive until its package is published.
 
-Setup retains affine bones/group gizmos, Tree/slots/PNG library, mesh tracing,
-weights and clipping, constraints, default-live parent-motion Physics and native
-history/save/reopen. Shared central transforms retain Setup Length; key/Auto Key
-belongs to Animate. Earlier0.9.1–0.9.3 animation functionality remains available:
-- Named clips/FPS, four bone channels, linear/stepped/Bezier, Graph/Dopesheet,
-  mixed key selection/marquee/move/delete/clipboard, playback/loop and clean Preview.
-- Slot Region/Mesh/Clipping/none activation, combined light RGBA, Draw Order,
-  weighted Mesh/Clip deformation, scalar-progress curves and retained vertex selection.
-- Grouped IK flags/two Bezier axes, six Transform mixes, seven Physics coefficients
-  and Reset tracks; separate Event definitions/materialized payloads and portable
-  PCM16WAV preview through real WebAudio/native validated resources.
+File → Export runtime uses a native destination-folder picker and creates a new
+`FBones-runtime-*` bundle: `skeleton.fbones.runtime.json`, referenced PNG/WAVs.
+It rejects missing resources, stale revisions and inspection-only projects,
+never bakes working poses or marks the authoring project saved. Separate game
+JSON does not replace/change binary `.fbones`. Unknown timelines/data fail
+validation. Mixing, direct project-binary loading and full Spine numeric/dynamics
+parity remain unsupported. Physics retains the existing bounded FBones policy.
 
-New0.9.4 feeds Main and Preview from one animated Physics evaluation. Saved bone
-keys, sampled coefficients and Reset use timeline time. Complete60Hz ticks commit;
-fractional endpoints render cloned state. Seek/backward/loop rebuilds saved prefix
-without redispatching Events/audio. Simulate Off uses None/static evaluation;
-Rebuild keeps current frame and creates no key/history. Simulate On is explicitly
-bounded to120seconds, with visible error and Off recovery for longer clips.
+## Current proof
 
-Native Replay geometry freezes agree with displayed motion, including the first
-unkeyed weighted Mesh gesture. Working bone/constraint drafts apply once at the
-endpoint, never in historical replay. Held frontend leases bind document/revision/
-clip/frame/draft generation and Simulate intent; stale replies reject before
-AutoKey-off transient conversion and again before IPC. A completed drag creates
-one native key/history entry. Setup, velocities and preview clocks never bake into
-saved files. No per-frame full-scene IPC or new CSP allowances.
+Final114/114browser cases pass, zero skips/failures/retries, production CSP and
+isolated real Rust Session. This includes final numeric focus, signed drag,
+geometry/history/binary SaveCloseOpen, resources and shipped Pixi WebGL pixels
+for Region/weighted Mesh/Clip/Sequence/two-color/topology changes.416JavaScript
+pass/one existing Physics skip;326native/two existing ignored;95legacy/one
+ignored;16default-format/103Scene-format. Runtime16package tests and24generated
+native-export samples pass (maximum matrix residual6.36e-7). Product/UI types,
+web build, native check, strict e2e-host Clippy, rustfmt, two Windows delivery
+and two bootstrap tests pass.
 
-## Verification and retained limits
+Own Windows WebView2 QA on immutable`6ea2ad16…26d9e` passes five groups: two
+signed XY drags with preview/release and Undo/Redo, non-authoring playback,
+native Open/SaveAs and native runtime export. The owned QA was saved and closed
+normally. Exact typed-f32 comparison resolves81.6 versus81.5999984741211 JSON
+spellings without loosening integer/reference checks. Failed attempts/raw traces
+were retained; completed drags were not repeated.
 
-- **95/95 Linux UI**, one rebuilt production frontend+real Rust run,112326.192ms;
-  zero failures/skips/retries. Frozen artifacts .local/animation-physics-final-ui-green/.
-  Separate focused4/4 passed in7.2s. Strict product/test TypeScript passes.
-- JS263pass/oneexisting Physics skip; native254pass/2ignore, legacy93pass/1ignore;
-  strictClippy default/legacy/e2e-host and rustfmt pass. Native receipt
-  .local/animation-physics-preview-native-check.json. Unchanged format profile
-  retains46previous accepted tests; no new codec feature or original batch repeat.
-- Independent DATA112comparisons at24/30FPS, default1/60 and exact1/64, animated
-  parent/allseven coefficients/Reset/fractional tick boundaries/endpoints and
-  f64 drafts: RAF schedules exactly agree; max native publicf32 residual
-  3.5806674532068428e-6 under predeclared1e-5. This compares our two engines,
-  not original Spine dynamics. Read-only integration review is separately pinned.
-- Frozen279source hashes .local/animation-physics-checked-sources.json and complete
-  source+dist .local/releases/0.9.4/source-snapshot; all match checked product code.
-- Three actual Windows WebView2 groups on exact429e/own90144 pass: seek/Play/Pause/
-  Rebuild/Simulate/limit and both GPU views; actual weighted Mesh drag/Replay freeze/
-  history; native OS SaveAs/Close/Open with all typed key bits, Setup and PNGs.
-  Own90144 normalclosed clean, noforce; .local/animation-physics-owned-qa-close.json.
-- First focus3/4 failed because screenshot probe hit parent-bone overlay; preceding
-  seven pose checks passed. Only test probe moved to clean opaque sprite interior;
-  exact RGB/matrix/limit bounds unchanged. Traces preserved at
-  .local/animation-physics-first-ui-failure/. Full95 includes corrected test.
-- Pre-existing bone temporary JSON negative-zero transport limitation was not
-  expanded; nonzero f64 endpoint precision and constraint/deform zero carriers
-  are tested. Stored f32 fields are privately canonicalized for own solver parity;
-  genuine endpoint f64 drafts/editor-derived values remain unrounded.
-- Linux browser checks do not prove GTK lifecycle/macOS/Windows OS HTML5 drag/drop.
-  Current Windows GPU/native dialogs are separately observed. Existing audio0.9.3
-  checks establish decoded PCM/start/node parameters, not hardware audibility or
-  original audio parity. Full animation scope remains ACTIVE.
+Final`80c71cc0…a1645` differs from that QA image only in final numeric HUD
+presentation/styles, covered by all114final browser cases. Its normal Windows
+startup is observed. This is not a second final-image native numeric gesture
+or fresh original4.3.26 acceptance claim. macOS remains unverified. No new
+original editor launch, probe or compatibility acceptance was attempted.
 
-## One new original export and source reuse
+## Preserved profile boundaries
 
-Exact own UI source9eff810a7368dc71f65252c93314e81955d537ebc4ad1a2d6fc4431430c4b564
-(892B) was accepted/exported ONCE by original4.3.26, retained process81984 exit0,
-exact version/Complete observed, metadata errorNULL. Own source/copy/fivePNGs
-unchanged; no original UI input/render/audio playback or solver observation.
-Collector .local/research/animation-physics-ui-original-v1/ is consumed; no rerun.
-Outputb91526b738260dad5cb60644e57b2a97431a616bb5b0db5d9e4fa0cac407a6f0.
+Mascot remains typed/editable125bones/24slots/22PNGs/2clips/79constraints with
+all223769source payload bytes independently regenerated and accepted earlier
+native/saved-field proofs. Known source state/Slot8 remain typed read-only
+snapshots; remembered export/PSD paths never cause operations. Existing whole
+canonical reserialization equality and unknown-record guards remain mandatory.
+Earlier eight-source corpus remains4editable/4guarded; mascot is fifth of nine.
 
-Independent report analysis/animation-physics-ui-original-check.json SHAaff8f0cd:
-13keys=4bone+6Physics+1Reset+2Deform;24Setupchannels,8weights/16positions,
-32dense/16dormant offset bits checked raw/native/saved/reopened.72 represented
-runtime scalars max1.9073486328125e-6 under5.1e-6; dense-to-positive binding
-projection verified. Documented original JSON omission defaults remain distinct
-from exact raw-bit equality. No dynamics/phase/gesture parity follows from export.
+Scene bones256/slots512, Mesh512/Clip256vertices, geometry4096/edge4096,
+binding/constraints128, cliptracks1024/projecttracks4096/projectkeys8192,
+perclip/pertrack/nativebatch4096, domain16384/depth256 remain unchanged.
+PNG128MiBcompressed/256MiBdecoded-cache/max4096side and legacy bounds remain.
+E reversing keys, B inheritance/curves, F larger budgets/curves and G Path/other
+unmodeled data remain guarded. Full animation roadmap stays under F105;
+F307/F308 broader fidelity remains explicitly user-deferred.
 
-Fresh full95source1b5bfb41 differs from9eff only five bytes within complete typed
-identity field12..27; all other1757decoded payload bytes and independent typed
-graph/resources match. Report animation-physics-final-source-reuse-check.json
-retains its at-time pending status; later aff8 acceptance supplies the link.
-Fresh compressed bytes were not separately exported. No accepted oracle repeated.
+## Cleanup and next reproducible action
 
-Earlier0.9.3 reports animation-constraints-events-{ui,delivery}-check.json and
-ui-original-v2-check.json retain Event/audio/IK2 reference acceptance. Sourcec910,
-original115048/output562f, all earlier source/failed probes and helper pins stay
-protected. Skeleton53bool meaning remains unknown; unsupported records still
-reject complete canonical reserialization instead of losing data.
+Removed39.25MiBallocated Linux artifacts including agent cleanup:278own temporary
+UI session directories, redundant GPU probe bundle, own bootstrap test binary,
+closed own QA launcher copy and package caches/scratch. Removed the normally
+closed Windows QA profile (74.07MiBfile data), after checking no image/profile
+process remained. No VHDX shrinking/host-space recovery is inferred from Linux
+removal. Final Linux free831GiB, Windows Cfree79GiB.
 
-## Normal window, example and protection
+Retained current package/dist, current/QA immutable images, current UI report and
+required saved/GPU artifacts, cited raw evidence/useful failures, coherent5.0GiB
+native dependencies and852MiBWindows release cache. Older immutable Windows
+images455MiB and historical test workspaces58MiB are retained; ownership/current
+relevance was not established for deletion. Incremental compilation is disabled
+for one-off checks; its cache is4KiB. The new user's active window/profile stays.
 
-Normal user **113788/start2026-10-30T21:13:07.6115683Z/HWND132848106** is genuinely
-visible/frontend-ready/version0.9.4 with no remote debugging. Receipt
-.local/animation-physics-native-launch.json; ownership ledger
-.local/animation-physics-user-process.json is Owned=false/DoNotAutomate.
-**Never automate/reset/open fixtures in/close it.** Launch transport execsession55266
-may stay live; never kill/restart solely for timeout. No demo preload attempted.
-Older107208/111304/103180/40348/75012/Linux966265 and all other user ledgers/transports
-remain protected. Own90144/HWND1775528 is closed/historical; never reuse identity.
-
-Open WINDOWS_TEST/EXAMPLES/Animate/Physics.fbones in FBones, switch Animate and
-select Moving parent physics; Play or scrub0–60. Green weighted Mesh reacts to
-its animated parent. Select Animated secondary motion for Simulate/Rebuild.
-Source is exact accepted9eff; own PNGs copied byte-identically. Older Constraints/
-Geometry/Slots/Demo/Controls and audio remain available. Nothing to copy/build.
-
-## Next reproducible action
-
-Finish the authorized beta.2 publication and final hosted gates using the
-reviewed allowlisted source snapshot and publisher above. Product work
-then continues F105 with paired DATA/UI reference audits before dependent implementation.
-Next open scope: global Physics targets/reset-all, separate RGB/alpha/TintBlack,
-advanced timing/Graph controls, animation mixing and onion skin. Reuse exact4.3.26
-fixtures/static observations first, then primary docs; label unsupported guesses.
-Keep broader F105 and full goal ACTIVE. F307/F308 remain user-deferred; no repeated
-Match/solver/JVMTI experiments, memory attachment or guessed object-offset readers.
-Protect personal original sources/windows; frozen Match and negative JVM evidence
-stay archived. Read relevant existing animation DATA/UI gates before new probes.
+Next: use the already-open current window or existing shortcut and test the
+mascot's X/Y release/playback on the user's hardware. For development, install
+the local runtime archive, File → Export runtime, and follow the package example.
+A future publication needs the maintainer's chosen/owned npm scope and explicit
+publication instruction; do not imply the package is already on GitHub/npm.
+Reproduce current integration with `pnpm test:runtime` (build e2e-host first) and
+`pnpm test:ui --no-build --workers=2 --global-timeout=600000` after rebuilding
+changed sources. Reuse retained exact-version evidence, not unchanged oracle runs.

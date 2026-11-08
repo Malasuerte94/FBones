@@ -13,11 +13,12 @@ below cover tested profiles; they do not establish full Spine compatibility.
 | Images and slots | Folder-backed PNG library, multiple alternative attachments per slot, nullable active attachment, draw order, colors and supported blend modes. |
 | Meshes and weights | Vertex/edge editing, alpha-contour tracing, triangulation, multi-bone bindings, numeric/direct/brush weight editing and weighted clipping. |
 | Constraints | Supported IK and Transform authoring, ordered evaluation, and default-live Setup Physics that remains separate from saved Setup data. |
-| Animation editing | Named clips, stored FPS, four bone channels, manual and Auto Key, mixed key selection/marquee, move/delete/copy/paste and native history. |
+| Animation editing | Named clips, stored FPS, Rotate/Translate/Scale/Shear plus split Translate/Scale X/Y, manual and Auto Key, mixed key selection/marquee, move/delete/copy/paste and native history. |
 | Timeline and curves | Dopesheet, Graph, linear/stepped/Bezier interpolation, editable tangents, frame scrubbing, playback, ranges and looping. |
-| Attachment animation | Region/Mesh/Clipping/none activation, combined light RGBA, Draw Order and weighted Mesh/Clipping deformation. |
+| Attachment animation | Region/Mesh/Clipping/none activation, combined light RGBA and linear two-color keys, Draw Order, weighted Mesh/Clipping deformation and numbered Region/Mesh sequences. |
 | Constraint and Event tracks | Supported IK flags and mixes, six Transform mixes, seven Physics coefficients and Reset, Event definitions/payloads and portable PCM16 WAV preview. |
 | Animated Physics preview | Main and Preview share timeline-based evaluation; seeking and loops reconstruct the saved prefix; Simulate and Rebuild controls are available. |
+| Developer runtime preview | Independent MIT Node/browser player and optional PixiJS 8 view; separate game export with authored data and referenced PNG/WAV resources. |
 
 Setup and Animate share the central transform controls. Setup edits the authored
 rig; Animate edits a sampled pose and keys. Key and Auto Key controls belong to
@@ -36,7 +37,10 @@ Animate. Structural edits stay in Setup.
   data remains valid; Simulate Off provides static evaluation beyond that bound.
 - Physics and some Transform Match behavior have explicit FBones policies and
   unresolved fidelity gaps. These must stay visible as the project develops.
-- The beta does not yet establish a complete game-runtime export pipeline.
+- The independent runtime/export preview covers its declared FBones profile.
+  Animation mixing, direct binary-project loading, texture atlases and full
+  Spine numerical/feature compatibility are not established. The archive can be
+  installed as a file; npm registry publication is separate.
 - The desktop is designed for Windows, Linux and macOS. Windows native workflows
   have been observed; Ubuntu browser regression and an earlier native Linux
   startup have been observed. Current packaged Linux lifecycle and macOS native
@@ -45,19 +49,24 @@ Animate. Structural edits stay in Setup.
 ## Next milestones
 
 1. **Complete animation coverage.** Expand global Physics targets/reset-all,
-   separate RGB and alpha/TintBlack timelines, advanced timing and Graph tools,
+   separate RGB and alpha timelines and broader two-color interpolation, advanced timing and Graph tools,
    animation mixing and onion skin. Preserve native history, save/reopen and
    the existing supported profiles throughout.
 2. **Improve the contributor and beta experience.** Keep installation steps,
    examples, screenshots, reproducible bug reports and native platform checks
-   easy to follow from a clean checkout.
+   easy to follow from a clean checkout. Publish versioned source/runtime archives
+   through gated releases; keep desktop installers and installed-app updates as
+   explicit, separately verified distribution milestones.
 3. **Broaden constraints and numerical coverage.** Extend remaining constraint
    families and document measured behavior. The deferred original Physics and
    Transform Match investigations resume only when needed or reprioritized.
 4. **Publish a fuller compatibility matrix.** Expand supported binary profiles
    only after bounded parsing, independent encoding and original-editor
    acceptance have been demonstrated for each profile.
-5. **Add further tools.** Build on the shared project model, viewport and history
+5. **Expand the independent runtime.** Improve representative game integration,
+   mixing/transitions, performance coverage, package distribution and supported
+   profile fidelity without depending on proprietary runtime code.
+6. **Add further tools.** Build on the shared project model, viewport and history
    after the core editor and compatibility coverage are ready.
 
 There are no promised dates for these milestones. A feature appearing in a
@@ -66,18 +75,24 @@ is implemented.
 
 ## Evidence at the 0.9.4 checkpoint
 
-The recorded implementation checkpoint reports 95 passing Ubuntu
-Chromium/real-Rust UI cases, 263 passing JavaScript checks with one existing
-Physics skip, and 254 native plus 93 legacy-profile passing checks. These are
-the recorded results for that delivery, not a claim of a fresh run on every
-checkout or operating system.
+The current recorded implementation checkpoint reports 114 passing Ubuntu
+Chromium/real-Rust UI cases, 416 passing JavaScript checks with one existing
+Physics skip, and 326 native plus 95 legacy-profile passing checks with existing
+ignored cases kept distinct. Runtime checks add 16 package tests and 24 native-export
+samples, plus shipped-Pixi WebGL pixel/topology/texture-ownership coverage.
+These are recorded results, not a claim of a fresh run on every checkout or OS.
 
-Three observed Windows groups cover both GPU views, simulated mesh dragging
-and native Save As/Close/Open. A newly UI-authored Physics/deformation file was
-accepted/exported by original 4.3.26, followed by independent checks of 13 keys
-and 72 represented scalars. This is bounded file/semantic evidence, not original
-solver, audio or gesture parity. Earlier accepted format cases remain separate
-evidence for their respective profiles.
+Current own Windows QA covers signed X/Y preview/release continuity, Undo/Redo,
+non-authoring playback, native Open/SaveAs and native runtime folder export. The
+final normal Windows frontend was opened; the final numeric-presentation change
+has browser coverage rather than a second final-image native numeric gesture.
+Named component benchmarks improve constraint CPU work by roughly 4× and
+all-bone timeline custom-renderer CPU by 13.55×; whole-app FPS is not inferred.
+
+Earlier Windows groups and the original 4.3.26 acceptance of a UI-authored
+Physics/deformation file retain their separate bounded scope (13 keys and 72
+represented scalars). No new original observation was made for this update,
+and those samples do not establish original solver, audio or gesture parity.
 
 The [current checkpoint](STATE.md), [detailed tasks](TASKS.md),
 [animation scope](tasks/F105-animation.md) and [format notes](FORMAT-4.3.26.md)

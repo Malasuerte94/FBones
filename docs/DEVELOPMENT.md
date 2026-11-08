@@ -35,6 +35,25 @@ restriction. This regression check needs no display or GPU. The full browser
 Playwright suite serves the production frontend with the exact desktop CSP as
 an HTTP header. No eval, file-script or connect-src exceptions are added.
 
+## Developer runtime preview
+
+The independent runtime source is in [packages/runtime](../packages/runtime/README.md).
+Run `pnpm build:runtime`, then `pnpm test:runtime` after building the opt-in native
+test host. Its headless ESM entry works in Node and browsers; the optional `/pixi`
+entry uses PixiJS 8. This preview uses our bounded FBones evaluator and does not
+claim full Spine runtime parity or animation mixing.
+
+The desktop File → Export runtime action creates a new `FBones-runtime-*` bundle
+under a selected destination, containing `skeleton.fbones.runtime.json` and only
+referenced PNG/WAV resources. It exports authored Setup and stored keys, leaves
+the project/history/dirty state untouched and rejects missing resources. This
+developer exchange format is separate from binary `.fbones` authoring files.
+
+For an offline game install, use the prepared runtime `.tgz` under
+`WINDOWS_TEST/RUNTIME`, or build one with `npm pack ./packages/runtime`.
+GitHub source/releases and public npm are the intended distribution routes;
+the local package does not establish registry ownership or publication.
+
 ## Routine interface tests on Ubuntu
 
 `pnpm test:ui` builds the frontend and the opt-in headless Rust test host, then

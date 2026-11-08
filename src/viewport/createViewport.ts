@@ -249,14 +249,14 @@ export async function createViewport(host: HTMLElement, onZoom: (zoom: number) =
   function endIdleGeometry(){
     if(!gesture&&!pending&&preparingPointer===null&&!scene.clippingDraft){preparedPose=null;options?.onEndGeometry?.();}
   }
-  function cancel() {
+  function cancel(redraw=true) {
     if(preparingPointer!==null)pending=false;
     preparation++;preparingPointer=null;preparedPose=null;
     if(gesture?.kind==='attachmentPivot')attachmentPivot=gesture.previousAttachmentPivot??null;
     const id = gesture?.id; gesture = null;
     if (!pending) { preview = null; previewSlots = null;previewAuthored=null;options?.onEndBonePreview?.(); }
     if (id !== undefined && canvas.hasPointerCapture(id)) canvas.releasePointerCapture(id);
-    endIdleGeometry();cursor(); draw();
+    endIdleGeometry();if(redraw){cursor();draw();}
   }
   function selectedBones() { return (scene.selectedBones??(scene.selected===null?[]:[scene.selected])).filter(id=>scene.bones.some(b=>b.id===id)); }
   function selectBones(ids:number[],active:number|null) {
@@ -692,7 +692,7 @@ export async function createViewport(host: HTMLElement, onZoom: (zoom: number) =
       const resetPivot=selectionChanged||value.documentId!==scene.documentId||value.mode!=='images'||value.revision!==scene.revision&&!pending;
       const weightSelectionChanged=attachmentSelectionKey(value.selectedVertices)!==attachmentSelectionKey(scene.selectedVertices)||attachmentSelectionKey(value.selectedInfluences)!==attachmentSelectionKey(scene.selectedInfluences)||attachmentSelectionKey(value.lockedInfluences)!==attachmentSelectionKey(scene.lockedInfluences);
       const changed = value.poseKey!==scene.poseKey||value.requiresBonePose!==scene.requiresBonePose||value.parentPicking!==scene.parentPicking||weightSelectionChanged||selectionChanged||value.inspectedAttachment?.id!==scene.inspectedAttachment?.id||nextPivotMode!==pivotMode || value.revision !== scene.revision || value.tool !== scene.tool || value.mode !== scene.mode || value.documentId !== scene.documentId || value.selectedSlot !== scene.selectedSlot || value.meshTool !== scene.meshTool || value.meshEditUvs !== scene.meshEditUvs || value.influence !== scene.influence;
-      scene = value; pivotMode=nextPivotMode;if(changed){edgeStart=null;cancel();}if(resetPivot)attachmentPivot=null;
+      scene = value; pivotMode=nextPivotMode;if(changed){edgeStart=null;cancel(false);}if(resetPivot)attachmentPivot=null;
       cursor(); draw();
     },
     reset() { cancel(); zoom = 1; panX = 0; panY = 0; onZoom(100); drawGrid(); draw(); },

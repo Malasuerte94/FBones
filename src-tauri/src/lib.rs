@@ -9,7 +9,11 @@ mod animation_events;
 #[cfg(feature = "scene-editing")]
 mod animation_order;
 #[cfg(feature = "scene-editing")]
+mod animation_sequence;
+#[cfg(feature = "scene-editing")]
 mod animation_slots;
+#[cfg(feature = "scene-editing")]
+mod attachment_color;
 #[cfg(feature = "scene-editing")]
 mod audio;
 mod auto_weights;
@@ -28,7 +32,33 @@ mod mesh_edit;
 mod project;
 mod rig;
 #[cfg(feature = "scene-editing")]
+mod runtime_export;
+#[cfg(all(feature = "scene-editing", any(test, feature = "e2e-host")))]
+mod scene_constraint_declarations_fixture;
+#[cfg(feature = "scene-editing")]
 pub mod scene_edit;
+#[cfg(all(feature = "scene-editing", any(test, feature = "e2e-host")))]
+mod scene_import_metadata_fixture;
+#[cfg(all(feature = "scene-editing", any(test, feature = "e2e-host")))]
+mod scene_large_mesh_fixture;
+#[cfg(all(feature = "scene-editing", any(test, feature = "e2e-host")))]
+mod scene_partial_translate_fixture;
+#[cfg(all(feature = "scene-editing", any(test, feature = "e2e-host")))]
+mod scene_sequence_fixture;
+#[cfg(all(feature = "scene-editing", any(test, feature = "e2e-host")))]
+mod scene_slot_capacity_fixture;
+#[cfg(all(feature = "scene-editing", any(test, feature = "e2e-host")))]
+mod scene_split_fixture;
+#[cfg(all(feature = "scene-editing", any(test, feature = "e2e-host")))]
+mod scene_string_form_fixture;
+#[cfg(all(feature = "scene-editing", any(test, feature = "e2e-host")))]
+mod scene_two_color_fixture;
+#[cfg(feature = "scene-editing")]
+mod scene_wire;
+#[cfg(all(feature = "scene-editing", any(test, feature = "e2e-host")))]
+mod scene_wire_fixture;
+#[cfg(feature = "scene-editing")]
+mod slot_dark_color;
 #[cfg(feature = "scene-editing")]
 pub mod solve;
 mod trace;
@@ -114,6 +144,42 @@ async fn save_project(
     .map_err(|_| AppError::new("Internal", "The project could not be saved."))??;
     update_menu(&app, Some(&summary));
     Ok(Some(summary))
+}
+
+#[tauri::command]
+async fn export_runtime(
+    app: tauri::AppHandle,
+    expected_revision: u64,
+) -> Result<Option<serde_json::Value>, AppError> {
+    #[cfg(feature = "scene-editing")]
+    {
+        let snapshot = app
+            .state::<Session>()
+            .prepare_runtime_export(expected_revision)?;
+        let Some(parent) =
+            dialogs::pick_folder_titled(app.clone(), "Export runtime: choose destination folder")
+                .await?
+        else {
+            return Ok(None);
+        };
+        let result = tauri::async_runtime::spawn_blocking(move || {
+            app.state::<Session>()
+                .write_runtime_export(snapshot, &parent)
+        })
+        .await
+        .map_err(|_| AppError::new("Internal", "Runtime export failed."))??;
+        serde_json::to_value(result)
+            .map(Some)
+            .map_err(|_| AppError::new("Internal", "Runtime export result could not be encoded."))
+    }
+    #[cfg(not(feature = "scene-editing"))]
+    {
+        let _ = (app, expected_revision);
+        Err(AppError::new(
+            "UnsupportedProfile",
+            "Runtime export requires Scene editing.",
+        ))
+    }
 }
 
 #[cfg(feature = "scene-editing")]
@@ -408,6 +474,10 @@ fn update_menu(app: &tauri::AppHandle, project: Option<&ProjectSummary>) {
         for (id, enabled) in [
             ("save", project.is_some_and(|p| p.can_save)),
             ("copy", project.is_some_and(|p| p.can_copy)),
+            (
+                "export-runtime",
+                cfg!(feature = "scene-editing") && project.is_some_and(|p| !p.inspection_only),
+            ),
             ("close", project.is_some()),
             ("import", project.is_some_and(|p| !p.inspection_only)),
             ("undo", project.is_some_and(|p| p.can_undo)),
@@ -456,6 +526,7 @@ pub fn run() {
             open_project,
             close_project,
             save_project,
+            export_runtime,
             edit_rig,
             #[cfg(feature = "scene-editing")]
             evaluate_project,
@@ -494,6 +565,9 @@ pub fn run() {
                 .accelerator("CmdOrCtrl+W")
                 .enabled(false)
                 .build(app)?;
+            let runtime = MenuItemBuilder::with_id("export-runtime", "Export runtime…")
+                .enabled(false)
+                .build(app)?;
             let import = MenuItemBuilder::with_id("import", "Choose Images Folder…")
                 .accelerator("CmdOrCtrl+I")
                 .enabled(false)
@@ -504,6 +578,7 @@ pub fn run() {
                 .item(&import)
                 .separator()
                 .items(&[&save, &copy])
+                .item(&runtime)
                 .separator()
                 .item(&close)
                 .build()?;

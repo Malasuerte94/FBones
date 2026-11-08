@@ -1,7 +1,8 @@
 //! Typed scene profile under the internal desktop migration gate.
 //!
-//! Only the canonical default-skin graph is editable. Complete reserialization
-//! equality remains mandatory; unknown fields and richer branches are rejected.
+//! Only the bounded default-skin graph and known typed wire provenance are
+//! editable. Complete reserialization equality remains mandatory; unknown fields
+//! and richer branches are rejected.
 use super::{
     meshes::{Mesh, Vertex},
     regions::{self, BlendMode, Region, RegionProject},
@@ -9,6 +10,8 @@ use super::{
 };
 use crate::FormatError;
 mod animation;
+mod bezier_time;
+pub use bezier_time::bezier_time_monotone;
 mod constraints_events;
 pub use constraints_events::*;
 mod deform;
@@ -16,14 +19,39 @@ pub use deform::{
     deform_coordinate_count, draw_order_offsets, draw_order_permutation, DeformCurve, DeformKey,
     DeformTimeline, DrawOrderKey, SlotOffset, MAX_DEFORM_COORDINATES,
 };
+mod attachment_color;
+mod slot_dark;
+pub use slot_dark::*;
 mod ranges;
+pub use attachment_color::*;
+mod sequence;
 pub use animation::{
-    Animation, BoneChannel, BoneKeyframe, BoneTimeline, KeyCurve, SlotAttachmentKey, SlotRgbaCurve,
-    SlotRgbaKey, SlotTimeline,
+    Animation, BoneChannel, BoneKeyframe, BoneSplitConfig, BoneSplitMode, BoneTimeline, KeyCurve,
+    SlotAttachmentKey, SlotRgbaCurve, SlotRgbaKey, SlotTimeline,
 };
+pub use sequence::*;
 mod validate;
+pub mod wire;
 mod write;
 pub use ranges::{FiniteF32, TransformEditorRange};
+pub use wire::*;
+pub(super) mod editor_metadata;
+pub use editor_metadata::*;
+mod source_state;
+pub use source_state::*;
+
+/// Measured FBones aggregate budgets, not original format limits.
+pub const MAX_SCENE_BONES: usize = 256;
+pub const MAX_SCENE_SLOTS: usize = 512;
+pub const MAX_SCENE_MESH_VERTICES: usize = 512;
+pub const MAX_SCENE_MESH_TRIANGLE_INDICES: usize = 3072;
+pub const MAX_SCENE_TRACKS: usize = 4096;
+pub const MAX_SCENE_KEYS: usize = 8192;
+pub const MAX_SCENE_DOMAINS: usize = 16384;
+/// Measured active-clip track budget; key/per-track budgets remain unchanged.
+pub const MAX_ANIMATION_TRACKS: usize = 1024;
+pub const MAX_ANIMATION_KEYS: usize = 4096;
+pub const MAX_TRACK_KEYS: usize = 4096;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct AttachmentAddress {
@@ -32,6 +60,7 @@ pub struct AttachmentAddress {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct SceneProject {
+    pub wire: Option<SceneWire>,
     pub rig: MinimalProject,
     pub images_root: String,
     pub audio_root: String,
@@ -42,6 +71,9 @@ pub struct SceneProject {
     pub slots: Vec<SceneSlot>,
     /// Global default-skin inventory order, independent of active attachments.
     pub attachment_order: Vec<AttachmentAddress>,
+    pub attachment_sequences: Vec<AttachmentSequence>,
+    pub attachment_colors: Vec<AttachmentColor>,
+    pub slot_dark_colors: Vec<SlotDarkColor>,
     /// Evaluation order. The observed wire constraint group's children reverse it.
     pub constraints: Vec<Constraint>,
     pub animations: Vec<Animation>,
@@ -404,6 +436,10 @@ impl PhysicsConstraint {
 impl From<&RegionProject> for SceneProject {
     fn from(project: &RegionProject) -> Self {
         Self {
+            wire: None,
+            attachment_sequences: vec![],
+            attachment_colors: vec![],
+            slot_dark_colors: vec![],
             rig: project.rig.clone(),
             images_root: project.images_root.clone(),
             audio_root: "./audio".into(),
@@ -447,7 +483,12 @@ impl SceneProject {
     /// older profile. It never drops constraints or inactive alternatives.
     pub fn to_regions(&self) -> Result<RegionProject, FormatError> {
         validate::project(self)?;
-        if self.editor_flag_53
+        if self.slots.len() > 128
+            || !self.slot_dark_colors.is_empty()
+            || !self.attachment_colors.is_empty()
+            || !self.attachment_sequences.is_empty()
+            || self.wire.is_some()
+            || self.editor_flag_53
             || !self.events.is_empty()
             || self.audio_root != "./audio"
             || !self.constraints.is_empty()
@@ -479,6 +520,7 @@ impl SceneProject {
                                     Ok(regions::Attachment::Region(r.clone()))
                                 }
                                 SceneAttachment::Mesh(m) => {
+                                    super::meshes::validate_mesh(m, s.bone, self.rig.bones.len())?;
                                     Ok(regions::Attachment::Mesh(m.clone()))
                                 }
                                 SceneAttachment::Clipping(_) => {
@@ -496,9 +538,12 @@ pub fn encode_scene_payload(project: &SceneProject) -> Result<Vec<u8>, FormatErr
     validate::project(project)?;
     let (payload, domains, generics) =
         super::encode_record_payload_counted(&write::project_record(project), project.rig.identity);
-    if domains > 8192 || generics > 16384 {
+    if domains > MAX_SCENE_DOMAINS as u32 || generics > super::MAX_GENERIC_OBJECTS as u32 {
         return Err(FormatError::UnsupportedProfile);
     }
+    // The same bounded structural reader must accept every authored output.
+    // This is not decode_scene: no semantic extraction/re-encoding recursion.
+    super::reader::validate_scene_payload_structure(&payload)?;
     Ok(payload)
 }
 pub fn encode_scene(project: &SceneProject) -> Result<Vec<u8>, FormatError> {
@@ -540,6 +585,10 @@ mod tests {
         b.length = 40.0;
         rig.bones.push(b);
         SceneProject {
+            wire: None,
+            attachment_sequences: vec![],
+            attachment_colors: vec![],
+            slot_dark_colors: vec![],
             rig,
             images_root: "./images/".into(),
             audio_root: "./audio".into(),
@@ -753,3 +802,22 @@ mod tests {
 #[cfg(test)]
 #[path = "scene/deform_tests.rs"]
 mod deform_tests;
+
+#[cfg(test)]
+#[path = "scene/capacity_tests.rs"]
+mod capacity_tests;
+
+#[cfg(test)]
+mod split_tests;
+
+#[cfg(test)]
+#[path = "scene/declaration_tests.rs"]
+mod declaration_tests;
+#[cfg(test)]
+mod large_mesh_tests;
+#[cfg(test)]
+#[path = "scene/slot_capacity_tests.rs"]
+mod slot_capacity_tests;
+#[cfg(test)]
+#[path = "scene/string_form_tests.rs"]
+mod string_form_tests;

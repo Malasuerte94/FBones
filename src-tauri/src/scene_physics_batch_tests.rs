@@ -21,6 +21,7 @@ fn project() -> SceneProject {
         rig.bones.push(bone);
     }
     SceneProject {
+        wire: None,
         audio_root: "./audio".into(),
         events: vec![],
         editor_flag_53: false,
@@ -32,6 +33,9 @@ fn project() -> SceneProject {
         images_root: String::new(),
         slots: vec![],
         attachment_order: vec![],
+        attachment_sequences: vec![],
+        attachment_colors: vec![],
+        slot_dark_colors: vec![],
         constraints: vec![],
     }
 }

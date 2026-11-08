@@ -1,0 +1,20 @@
+{
+  "name": "@fbones/runtime",
+  "version": "0.1.0-beta.1",
+  "description": "Independent FBones animation player for Node, browsers and PixiJS 8",
+  "type": "module",
+  "license": "MIT",
+  "files": ["dist", "LICENSE", "README.md", "examples"],
+  "sideEffects": ["./dist/pixi.js"],
+  "exports": {
+    ".": {"types": "./dist/types/packages/runtime/src/index.d.ts", "import": "./dist/index.js"},
+    "./pixi": {"types": "./dist/types/packages/runtime/src/pixi.d.ts", "import": "./dist/pixi.js"},
+    "./package.json": "./package.json"
+  },
+  "engines": {"node": ">=22.12"},
+  "peerDependencies": {"pixi.js": "^8.8.1"},
+  "peerDependenciesMeta": {"pixi.js": {"optional": true}},
+  "repository": {"type": "git", "url": "git+https://github.com/Malasuerte94/FBones.git", "directory": "packages/runtime"},
+  "scripts": {"build": "node build.mjs", "test": "node tests/runtime.test.mjs", "prepack": "node verify-dist.mjs"},
+  "publishConfig": {"access": "public"}
+}

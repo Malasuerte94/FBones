@@ -11,10 +11,10 @@ export type {Affine,BoneFrame,Evaluation,LocalPose,SolveErrorCode,SolveScene,Ste
 
 function prepare(scene:SolveScene):InternalScene{
  const count=scene.bones.length;if(count===0||count>4096)fail('InvalidGraph');
- const indices=new Map<number,number>(),parents:(number|null)[]=[];
+ const indices=new Map<number,number>(),parents:(number|null)[]=[],children:number[][]=Array.from({length:count},()=>[]);
  for(const [index,bone]of scene.bones.entries()){
   if(!Number.isSafeInteger(bone.id)||indices.has(bone.id)||!Number.isFinite(bone.length)||bone.length<0)fail('InvalidGraph');
-  if(bone.parent!==null&&!indices.has(bone.parent))fail('InvalidGraph');parents.push(bone.parent===null?null:indices.get(bone.parent)!);indices.set(bone.id,index);
+  if(bone.parent!==null&&!indices.has(bone.parent))fail('InvalidGraph');const parent=bone.parent===null?null:indices.get(bone.parent)!;parents.push(parent);if(parent!==null)children[parent]!.push(index);indices.set(bone.id,index);
  }
  const constraints=[...(scene.constraints??[])].sort((a,b)=>a.order-b.order),names=new Set<string>(),ids=new Set<number>(),orders=new Set<number>();
  const allFinite=(values:readonly number[])=>values.every(Number.isFinite);
@@ -29,14 +29,14 @@ function prepare(scene:SolveScene):InternalScene{
     let ancestor:number|null=c.target;while(ancestor!==null){if(c.bones.includes(ancestor))fail('InvalidConstraint');ancestor=scene.bones[indices.get(ancestor)!]!.parent;}break;
    }
    case'transform':{
-    if(!indices.has(c.source)||c.offsets.length!==6||c.mix.length!==6||!allFinite([...c.offsets,...c.mix])||c.mix.some(v=>v<0||v>1)||c.properties.length>6||new Set(c.properties.map(p=>p.property)).size!==c.properties.length)fail('InvalidConstraint');
+    if(!indices.has(c.source)||c.offsets.length!==6||c.mix.length!==6||!allFinite([...c.offsets,...c.mix])||c.properties.length>6||new Set(c.properties.map(p=>p.property)).size!==c.properties.length)fail('InvalidConstraint');
     for(const p of c.properties){if(!channels.includes(p.property)||!Number.isFinite(p.offset)||p.to.length===0||p.to.length>6||new Set(p.to.map(t=>t.property)).size!==p.to.length||p.to.some(t=>!channels.includes(t.property)||!allFinite([t.offset,t.max,t.scale])))fail('InvalidConstraint');}break;
    }
    case'physics':if(!indices.has(c.bone)||!allFinite([c.x,c.y,c.scaleX,c.shearX,c.step,c.inertia,c.strength,c.damping,c.mass,c.wind,c.gravity,c.mix,c.limit])||(c.rotate!==null&&(!Number.isFinite(c.rotate)||c.rotate<0))||(c.rotate===null&&c.shearX!==0)||c.shearX<0||c.step<=0||c.mass<=0||c.limit<0||c.damping<0)fail('InvalidConstraint');break;
    default:fail('InvalidConstraint');
   }
  }
- return{bones:scene.bones,parents,constraints,indices};
+ return{bones:scene.bones,parents,children,constraints,indices};
 }
 /** Absolute seconds are explicit. Caller resets on deliberate setup changes/seek. */
 export function evaluate(scene:SolveScene,authored:readonly LocalPose[]|null|undefined,physics:PhysicsState,mode:StepMode):Evaluation{return evaluateOrdered(scene,authored,physics,mode,null,[]);}

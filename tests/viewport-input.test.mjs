@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { build } from 'esbuild';
+import {Color} from 'pixi.js';
 import {worldBones} from '../src/domain/rig.ts';
 const { outputFiles } = await build({
   stdin: { contents: "import {createViewport} from './src/viewport/createViewport.ts'; globalThis.factory=createViewport;", resolveDir: process.cwd() },
@@ -11,6 +12,7 @@ const { outputFiles } = await build({
   plugins: [{ name: 'test-renderer', setup(bundler) {
     bundler.onResolve({ filter: /^pixi\.js(?:\/unsafe-eval)?$/ }, args => ({ path: args.path, namespace: 'test-pixi' }));
     bundler.onLoad({ filter: /.*/, namespace: 'test-pixi' }, args => ({ contents: args.path.endsWith('unsafe-eval') ? '' : `
+      export const Color=globalThis.ActualPixiColor;
       export class Graphics { destroy(){} constructor(){this.circles=[];(globalThis.recordedGraphics??=[]).push(this)} clear(){this.circles=[];return this} rect(){return this} moveTo(){return this} lineTo(){return this} stroke(){return this} fill(){return this} circle(x,y,radius){this.circles.push({x,y,radius});return this} poly(){return this} }
       export class Container { children=[]; addChild(...items){this.children.push(...items)} setChildIndex(){} destroy(){} }
       export class BitmapText { position={set(){}}; constructor(options){this.text=options.text} }
@@ -19,10 +21,11 @@ const { outputFiles } = await build({
       export class Matrix { }
       export class Mesh { }
       export class MeshGeometry { }
+      export class ColorMatrixFilter { }
       export class Application {
         canvas=globalThis.testCanvas; stage={addChild(){}}; screen={width:800,height:600};
         renderer={resolution:1,resize:(width,height)=>{this.screen={width,height}}};
-        async init(){} render(){} destroy(){}
+        async init(){} render(){globalThis.renderCount=(globalThis.renderCount??0)+1} destroy(){}
       }` }));
   } }],
 });
@@ -37,7 +40,7 @@ async function setup(tool = 'select', options = {}) {
     addEventListener: (name, fn) => listeners.set(name, fn), removeEventListener: name => listeners.delete(name),
     setPointerCapture: id => captured.add(id), hasPointerCapture: id => captured.has(id),
     releasePointerCapture: id => { captured.delete(id); listeners.get('lostpointercapture')?.({ pointerId: id }); } };
-  const context = vm.createContext({ testCanvas: canvas, console,
+  const context = vm.createContext({ testCanvas: canvas, console,ActualPixiColor:Color,
     window: { devicePixelRatio: 1, addEventListener: (name, fn) => keys.set(name, fn), removeEventListener: name => keys.delete(name) },
     ResizeObserver: class { observe(){} disconnect(){} },
   });
@@ -50,8 +53,19 @@ async function setup(tool = 'select', options = {}) {
   controller.setScene(scene);
   const emit = (name, x, y, extra = {}) => listeners.get(name)?.({ pointerId: 1, button: 0, clientX: x, clientY: y, preventDefault(){}, ...extra });
   const key = (name, value) => keys.get(name)?.({ preventDefault(){}, target: { closest: () => null }, ...value });
-  return { weightSelections, controller, graphics:context.recordedGraphics, scene, emit, key, commits, vertexSelections, selections, slotSelections, groupSelections,imageSelections, drops, escapes, errors, captured, listeners, keys, canvas };
+  return { weightSelections, controller, graphics:context.recordedGraphics, get renderCount(){return context.renderCount??0;},scene, emit, key, commits, vertexSelections, selections, slotSelections, groupSelections,imageSelections, drops, escapes, errors, captured, listeners, keys, canvas };
 }
+test('each sampled animation pose renders once while still canceling a gesture from the prior frame',async()=>{
+ const env=await setup('translate');
+ env.controller.setScene({...env.scene,requiresBonePose:true,poseKey:'animation:0'});
+ for(let frame=1;frame<=120;frame++){
+  const before=env.renderCount;env.controller.setScene({...env.scene,requiresBonePose:true,poseKey:`animation:${frame}`});
+  assert.equal(env.renderCount-before,1,'one GPU submission per sampled pose');
+ }
+ env.emit('pointerdown',450,300);env.emit('pointermove',470,320);assert.equal(env.captured.has(1),true);
+ const before=env.renderCount;env.controller.setScene({...env.scene,requiresBonePose:true,poseKey:'animation:121'});
+ assert.equal(env.renderCount-before,1);assert.equal(env.captured.size,0);env.emit('pointerup',470,320);assert.deepEqual(env.commits,[]);env.controller.destroy();
+});
 test('bone dragging previews locally and sends exactly one world-space edit on release', async () => {
   const env = await setup();
   env.emit('pointerdown', 450, 300); env.emit('pointermove', 460, 310); env.emit('pointermove', 470, 320);

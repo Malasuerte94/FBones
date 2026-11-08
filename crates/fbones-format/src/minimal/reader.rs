@@ -7,7 +7,8 @@ use super::{
     meshes::{Mesh, Vertex},
     project_record_with_regions,
     regions::{encode_region_payload, Attachment, BlendMode, Region, RegionProject, Slot},
-    Bone, Field, FieldKind, MinimalProject, Object, Record,
+    Bone, Field, FieldKind, MinimalProject, Object, Record, MAX_DOMAIN_OBJECTS,
+    MAX_GENERIC_OBJECTS,
 };
 use crate::FormatError;
 use std::collections::{BTreeMap, HashMap};
@@ -15,6 +16,12 @@ use std::collections::{BTreeMap, HashMap};
 #[cfg(feature = "scene-codec")]
 #[path = "reader/constraint_events.rs"]
 mod constraint_events;
+#[cfg(feature = "scene-codec")]
+#[path = "reader/editor_metadata.rs"]
+mod editor_metadata;
+#[cfg(feature = "scene-codec")]
+#[path = "reader/source_state.rs"]
+mod source_state;
 
 type Result<T> = std::result::Result<T, FormatError>;
 fn unsupported<T>() -> Result<T> {
@@ -34,6 +41,8 @@ enum Value {
     Reference(Reference),
     #[cfg(feature = "scene-codec")]
     AngularBits(u32),
+    #[cfg(feature = "scene-codec")]
+    UInt64(u64),
 }
 enum GenericValue {
     Enum(u32),
@@ -42,13 +51,25 @@ enum GenericValue {
     FloatList(Vec<f32>),
     IntList(Vec<u32>),
     Color([u8; 4]),
+    #[cfg(not(feature = "scene-codec"))]
+    #[cfg(not(feature = "scene-codec"))]
     Other,
+    #[cfg(feature = "scene-codec")]
+    Map(Vec<(Reference, Reference)>),
+    #[cfg(feature = "scene-codec")]
+    StringArray(Vec<String>),
+    #[cfg(feature = "scene-codec")]
+    Vector([f32; 3]),
     #[cfg(feature = "scene-codec")]
     NullableFloats([Option<f32>; 24]),
     #[cfg(feature = "scene-codec")]
     AnimationKeys(Vec<super::scene::BoneKeyframe>),
     #[cfg(feature = "scene-codec")]
+    SplitModes(Vec<(Reference, u32)>),
+    #[cfg(feature = "scene-codec")]
     SlotRgbaKeys(Vec<super::scene::SlotRgbaKey>),
+    #[cfg(feature = "scene-codec")]
+    SequenceKeys(Vec<super::scene::SequenceKeyframe>),
     #[cfg(feature = "scene-codec")]
     SlotAttachmentKeys(Vec<(f32, Reference)>),
     #[cfg(feature = "scene-codec")]
@@ -76,36 +97,43 @@ struct Domain {
 }
 type Schema = HashMap<u32, HashMap<u32, FieldKind>>;
 
+fn collect_object_schema(object: &Object, schema: &mut Schema) {
+    match object {
+        Object::Record(record) => collect_schema(record, schema),
+        Object::Array(items) => {
+            for item in items {
+                collect_object_schema(item, schema);
+            }
+        }
+        #[cfg(feature = "scene-codec")]
+        Object::Map(items) => {
+            for (key, value) in items {
+                collect_object_schema(key, schema);
+                collect_object_schema(value, schema);
+            }
+        }
+        #[cfg(feature = "scene-codec")]
+        Object::DrawOrderAnimationTrack { rows, .. } => {
+            for row in rows {
+                for item in row {
+                    collect_object_schema(item, schema);
+                }
+            }
+        }
+        _ => (),
+    }
+}
 fn collect_schema(record: &Record, schema: &mut Schema) {
     schema.entry(record.class).or_insert_with(|| {
         record
             .fields
             .iter()
-            .map(|(tag, f)| (*tag, f.kind()))
+            .map(|(tag, field)| (*tag, field.kind()))
             .collect()
     });
-    fn visit(object: &Object, schema: &mut Schema) {
-        match object {
-            Object::Record(record) => collect_schema(record, schema),
-            Object::Array(items) => {
-                for item in items {
-                    visit(item, schema);
-                }
-            }
-            #[cfg(feature = "scene-codec")]
-            Object::DrawOrderAnimationTrack { rows, .. } => {
-                for row in rows {
-                    for item in row {
-                        visit(item, schema);
-                    }
-                }
-            }
-            _ => (),
-        }
-    }
     for (_, field) in &record.fields {
         if let Field::Value(object) = field {
-            visit(object, schema);
+            collect_object_schema(object, schema);
         }
     }
 }
@@ -119,6 +147,14 @@ struct Reader<'a> {
     schema: Schema,
     #[cfg(feature = "scene-codec")]
     deform_coordinates: usize,
+    #[cfg(feature = "scene-codec")]
+    string_fields: Vec<(Reference, u32, Reference)>,
+    #[cfg(feature = "scene-codec")]
+    mesh_uv_limit: usize,
+    #[cfg(feature = "scene-codec")]
+    draw_order_limit: usize,
+    #[cfg(feature = "scene-codec")]
+    string_encodings: HashMap<usize, super::scene::WireStringForm>,
 }
 impl<'a> Reader<'a> {
     fn take(&mut self, count: usize) -> Result<&'a [u8]> {
@@ -164,6 +200,18 @@ impl<'a> Reader<'a> {
             return unsupported();
         }
         Ok(value)
+    }
+    #[cfg(feature = "scene-codec")]
+    fn uint42(&mut self) -> Result<u64> {
+        let mut value = 0u64;
+        for shift in [0, 7, 14, 21, 28, 35] {
+            let byte = self.byte()?;
+            value |= u64::from(byte & 127) << shift;
+            if byte < 128 {
+                return Ok(value);
+            }
+        }
+        unsupported()
     }
     fn string(&mut self) -> Result<String> {
         let first = self.byte()?;
@@ -241,12 +289,22 @@ impl<'a> Reader<'a> {
         match self.uint()? {
             0 => Ok(Reference::Null),
             1 => {
-                if self.generic.len() >= 16384 {
+                if self.generic.len() >= MAX_GENERIC_OBJECTS {
                     return unsupported();
                 }
                 let index = self.generic.len();
                 self.generic.push(Generic { kind, value: None });
+                #[cfg(feature = "scene-codec")]
+                let body_start = self.pos;
                 let value = read(self)?;
+                #[cfg(feature = "scene-codec")]
+                if kind == 3
+                    && self.bytes[body_start] >= 128
+                    && matches!(&value, GenericValue::String(s) if s.is_ascii() && s.len() >= 2)
+                {
+                    self.string_encodings
+                        .insert(index, super::scene::WireStringForm::Utf8Length);
+                }
                 self.generic[index].value = Some(value);
                 Ok(Reference::Generic(index))
             }
@@ -263,7 +321,7 @@ impl<'a> Reader<'a> {
         match self.uint()? {
             0 => Ok(Reference::Null),
             1 => {
-                if self.domain.len() >= 8192 || self.depth >= 256 {
+                if self.domain.len() >= MAX_DOMAIN_OBJECTS || self.depth >= 256 {
                     return unsupported();
                 }
                 self.depth += 1;
@@ -276,8 +334,65 @@ impl<'a> Reader<'a> {
                 if class == 132 {
                     use super::scene::{BoneKeyframe, KeyCurve};
                     let kind = self.uint()?;
-                    if !matches!(kind, 0..=8 | 12 | 13 | 23..=30) {
+                    if !matches!(kind, 0..=8 | 12..=17 | 22..=30) {
                         return unsupported();
+                    }
+                    if kind == 22 {
+                        use super::scene::{FiniteF32, SequenceKeyframe, SequenceMode};
+                        let at = self.pos;
+                        if self.uint()? != 1 {
+                            return unsupported();
+                        }
+                        self.pos = at;
+                        let keys = self.generic(204, |r| {
+                            let count = r.uint()?;
+                            if count == 0 || count > super::scene::MAX_TRACK_KEYS as u32 {
+                                return unsupported();
+                            }
+                            let mut keys = Vec::with_capacity(count as usize);
+                            for _ in 0..count {
+                                if r.uint()? != 133
+                                    || r.uint()? != 1
+                                    || r.domain.len() >= MAX_DOMAIN_OBJECTS
+                                {
+                                    return unsupported();
+                                }
+                                r.domain.push(Domain {
+                                    class: 133,
+                                    fields: Some(BTreeMap::new()),
+                                });
+                                let frame = r.float()?;
+                                let raw_mode = r.float()?;
+                                let raw_index = r.float()?;
+                                let delay = FiniteF32::new(r.float()?)?;
+                                let mode = SequenceMode::from_wire(raw_mode as u32)
+                                    .ok_or(FormatError::UnsupportedProfile)?;
+                                let index = raw_index as u32;
+                                if (mode.wire() as f32).to_bits() != raw_mode.to_bits()
+                                    || (index as f32).to_bits() != raw_index.to_bits()
+                                    || r.uint()? != 0
+                                {
+                                    return unsupported();
+                                }
+                                keys.push(SequenceKeyframe {
+                                    frame,
+                                    mode,
+                                    index,
+                                    delay,
+                                });
+                            }
+                            Ok(GenericValue::SequenceKeys(keys))
+                        })?;
+                        let slot = self.domain(13)?;
+                        let attachment = self.object()?;
+                        self.domain[index].fields = Some(BTreeMap::from([
+                            (0, Value::UInt(22)),
+                            (1, Value::Reference(keys)),
+                            (2, Value::Reference(slot)),
+                            (3, Value::Reference(attachment)),
+                        ]));
+                        self.depth -= 1;
+                        return Ok(Reference::Domain(index));
                     }
                     if matches!(kind, 7 | 8 | 12 | 23..=30) {
                         self.domain[index].fields = Some(self.constraint_event_track(kind)?);
@@ -288,14 +403,17 @@ impl<'a> Reader<'a> {
                         use super::scene::{DeformCurve, DeformKey, MAX_DEFORM_COORDINATES};
                         let keys = self.generic(204, |r| {
                             let count = r.uint()?;
-                            if count == 0 || count > 4096 {
+                            if count == 0 || count > super::scene::MAX_TRACK_KEYS as u32 {
                                 return unsupported();
                             }
                             let mut draws = Vec::new();
                             let mut raw = Vec::new();
                             let mut previous = 0;
                             for _ in 0..count {
-                                if r.uint()? != 133 || r.uint()? != 1 || r.domain.len() >= 8192 {
+                                if r.uint()? != 133
+                                    || r.uint()? != 1
+                                    || r.domain.len() >= MAX_DOMAIN_OBJECTS
+                                {
                                     return unsupported();
                                 }
                                 r.domain.push(Domain {
@@ -310,7 +428,7 @@ impl<'a> Reader<'a> {
                                 if kind == 13 {
                                     let list = r.generic(205, |r| {
                                         let count = r.uint()?;
-                                        if count > 128 {
+                                        if count as usize > r.draw_order_limit {
                                             return unsupported();
                                         }
                                         let mut offsets = Vec::new();
@@ -347,7 +465,7 @@ impl<'a> Reader<'a> {
                                 }
                                 // Typed vector is a separate DOMAIN identity. Aliased
                                 // vectors are outside our independently emitted profile.
-                                if r.uint()? != 1 || r.domain.len() >= 8192 {
+                                if r.uint()? != 1 || r.domain.len() >= MAX_DOMAIN_OBJECTS {
                                     return unsupported();
                                 }
                                 r.domain.push(Domain {
@@ -419,18 +537,21 @@ impl<'a> Reader<'a> {
                         self.depth -= 1;
                         return Ok(Reference::Domain(index));
                     }
-                    if kind >= 4 {
+                    if matches!(kind, 4 | 5) {
                         use super::scene::{SlotRgbaCurve, SlotRgbaKey};
                         let keys = self.generic(204, |r| {
                             let count = r.uint()?;
-                            if count == 0 || count > 4096 {
+                            if count == 0 || count > super::scene::MAX_TRACK_KEYS as u32 {
                                 return unsupported();
                             }
                             let mut raw = Vec::new();
                             let mut attachments = Vec::new();
                             let mut previous = 0;
                             for _ in 0..count {
-                                if r.uint()? != 133 || r.uint()? != 1 || r.domain.len() >= 8192 {
+                                if r.uint()? != 133
+                                    || r.uint()? != 1
+                                    || r.domain.len() >= MAX_DOMAIN_OBJECTS
+                                {
                                     return unsupported();
                                 }
                                 r.domain.push(Domain {
@@ -449,10 +570,9 @@ impl<'a> Reader<'a> {
                                 for v in &mut values {
                                     *v = r.float()?;
                                 }
-                                for _ in 0..3 {
-                                    if r.float()?.to_bits() != 0 {
-                                        return unsupported();
-                                    }
+                                let mut dark_values = [0.; 3];
+                                for v in &mut dark_values {
+                                    *v = r.float()?;
                                 }
                                 let code = r.uint()?;
                                 if code > 2 {
@@ -468,22 +588,16 @@ impl<'a> Reader<'a> {
                                             return unsupported();
                                         }
                                     }
-                                    if handles[4..]
-                                        .iter()
-                                        .flatten()
-                                        .any(|v| v.to_bits() != 2147483648_f32.to_bits())
-                                    {
-                                        return unsupported();
-                                    }
                                 }
-                                raw.push((frame, values, code, handles));
+                                raw.push((frame, values, dark_values, code, handles));
                                 previous = code;
                             }
                             if kind == 5 {
                                 return Ok(GenericValue::SlotAttachmentKeys(attachments));
                             }
                             let mut keys = Vec::new();
-                            for (i, (frame, values, code, h)) in raw.iter().enumerate() {
+                            for (i, (frame, values, dark_values, code, h)) in raw.iter().enumerate()
+                            {
                                 let curve = match code {
                                     0 => SlotRgbaCurve::Linear,
                                     2 => SlotRgbaCurve::Stepped,
@@ -495,17 +609,37 @@ impl<'a> Reader<'a> {
                                             [
                                                 h[axis][2],
                                                 h[axis][3],
-                                                next.3[axis][0],
-                                                next.3[axis][1],
+                                                next.4[axis][0],
+                                                next.4[axis][1],
                                             ]
                                         });
-                                        SlotRgbaCurve::Bezier { controls }
+                                        let sentinel = 2147483648_f32.to_bits();
+                                        let nondefault_dark = h[4..]
+                                            .iter()
+                                            .chain(&next.4[4..])
+                                            .flatten()
+                                            .any(|v| v.to_bits() != sentinel);
+                                        let dark_controls = nondefault_dark.then(|| {
+                                            std::array::from_fn(|axis| {
+                                                [
+                                                    h[axis + 4][2],
+                                                    h[axis + 4][3],
+                                                    next.4[axis + 4][0],
+                                                    next.4[axis + 4][1],
+                                                ]
+                                            })
+                                        });
+                                        SlotRgbaCurve::Bezier {
+                                            controls,
+                                            dark_controls,
+                                        }
                                     }
                                     _ => return unsupported(),
                                 };
                                 keys.push(SlotRgbaKey {
                                     frame: *frame,
                                     values: *values,
+                                    dark_values: *dark_values,
                                     curve,
                                 });
                             }
@@ -520,16 +654,19 @@ impl<'a> Reader<'a> {
                         self.depth -= 1;
                         return Ok(Reference::Domain(index));
                     }
-                    let dimensions = if kind == 0 { 1 } else { 2 };
+                    let dimensions = super::scene::BoneChannel::from_wire(kind)?.dimensions();
                     let keys = self.generic(204, |r| {
                         let count = r.uint()?;
-                        if count == 0 || count > 4096 {
+                        if count == 0 || count > super::scene::MAX_TRACK_KEYS as u32 {
                             return unsupported();
                         }
                         let mut raw = Vec::with_capacity(count as usize);
                         let mut previous = 0;
                         for _ in 0..count {
-                            if r.uint()? != 133 || r.uint()? != 1 || r.domain.len() >= 8192 {
+                            if r.uint()? != 133
+                                || r.uint()? != 1
+                                || r.domain.len() >= MAX_DOMAIN_OBJECTS
+                            {
                                 return unsupported();
                             }
                             r.domain.push(Domain {
@@ -620,6 +757,32 @@ impl<'a> Reader<'a> {
                         FieldKind::UInt => Value::UInt(self.uint()?),
                         FieldKind::Float => Value::Float(self.float()?),
                         #[cfg(feature = "scene-codec")]
+                        FieldKind::UInt64 => Value::UInt64(self.uint42()?),
+                        #[cfg(feature = "scene-codec")]
+                        FieldKind::StringArray => Value::Reference(self.generic(206, |r| {
+                            let count = r.uint()?;
+                            if count == 0 || count > 65 {
+                                return unsupported();
+                            }
+                            let mut values = Vec::new();
+                            for _ in 1..count {
+                                values.push(r.string()?);
+                            }
+                            Ok(GenericValue::StringArray(values))
+                        })?),
+                        #[cfg(feature = "scene-codec")]
+                        FieldKind::EnumArray => Value::Reference(self.generic(207, |r| {
+                            let count = r.uint()?;
+                            if count == 0 || count > 65 {
+                                return unsupported();
+                            }
+                            let mut values = Vec::new();
+                            for _ in 1..count {
+                                values.push(r.generic(201, |r| Ok(GenericValue::Enum(r.uint()?)))?);
+                            }
+                            Ok(GenericValue::Array(values))
+                        })?),
+                        #[cfg(feature = "scene-codec")]
                         FieldKind::AngularBits => {
                             let bits = u32::from_be_bytes(self.take(4)?.try_into().unwrap());
                             // The only permitted nonfinite primitive is the
@@ -647,10 +810,25 @@ impl<'a> Reader<'a> {
                             }
                             Ok(GenericValue::NullableFloats(values))
                         })?),
-                        FieldKind::String => Value::Reference(
-                            self.generic(3, |r| Ok(GenericValue::String(r.string()?)))?,
-                        ),
-                        FieldKind::Object => Value::Reference(self.object()?),
+                        FieldKind::String => {
+                            let reference =
+                                self.generic(3, |r| Ok(GenericValue::String(r.string()?)))?;
+                            #[cfg(feature = "scene-codec")]
+                            self.string_fields
+                                .push((Reference::Domain(index), tag, reference));
+                            Value::Reference(reference)
+                        }
+                        FieldKind::Object => {
+                            #[cfg(feature = "scene-codec")]
+                            let reference = if class == 46 && tag == 12 {
+                                self.object_with_float_limit(self.mesh_uv_limit)?
+                            } else {
+                                self.object()?
+                            };
+                            #[cfg(not(feature = "scene-codec"))]
+                            let reference = self.object()?;
+                            Value::Reference(reference)
+                        }
                         FieldKind::DomainLink(class) => Value::Reference(self.domain(class)?),
                         FieldKind::Enum => Value::Reference(
                             self.generic(201, |r| Ok(GenericValue::Enum(r.uint()?)))?,
@@ -660,10 +838,11 @@ impl<'a> Reader<'a> {
                             if count == 0 || count > 129 {
                                 return unsupported();
                             }
+                            let mut values = Vec::with_capacity(count as usize - 1);
                             for _ in 1..count {
-                                r.float()?;
+                                values.push(r.float()?);
                             }
-                            Ok(GenericValue::Other)
+                            Ok(GenericValue::FloatList(values))
                         })?),
                     };
                     if fields.insert(tag, value).is_some() {
@@ -684,6 +863,9 @@ impl<'a> Reader<'a> {
         }
     }
     fn object(&mut self) -> Result<Reference> {
+        self.object_with_float_limit(512)
+    }
+    fn object_with_float_limit(&mut self, float_limit: usize) -> Result<Reference> {
         if self.depth >= 256 {
             return unsupported();
         }
@@ -705,7 +887,7 @@ impl<'a> Reader<'a> {
             }),
             17 => self.generic(17, |r| {
                 let count = r.uint()?;
-                if count > 512 {
+                if count as usize > float_limit {
                     return unsupported();
                 }
                 let mut values = Vec::with_capacity(count as usize);
@@ -733,20 +915,76 @@ impl<'a> Reader<'a> {
                 Ok(GenericValue::Color(r.take(4)?.try_into().unwrap()))
             }),
             41 => self.generic(41, |r| {
-                for _ in 0..3 {
-                    r.float()?;
+                #[cfg(feature = "scene-codec")]
+                {
+                    Ok(GenericValue::Vector([r.float()?, r.float()?, r.float()?]))
                 }
-                Ok(GenericValue::Other)
+                #[cfg(not(feature = "scene-codec"))]
+                {
+                    for _ in 0..3 {
+                        r.float()?;
+                    }
+                    Ok(GenericValue::Other)
+                }
             }),
-            38 | 116 => self.generic(class, |r| {
+            #[cfg(feature = "scene-codec")]
+            116 => self.generic(116, |r| {
+                let count = r.uint()?;
+                if count > 512 {
+                    return unsupported();
+                }
+                let mut rows = Vec::with_capacity(count as usize);
+                for _ in 0..count {
+                    let bone = r.object()?;
+                    r.fields(bone, 12)?;
+                    let mode = r.uint()?;
+                    super::scene::BoneSplitMode::from_wire(mode)?;
+                    rows.push((bone, mode));
+                }
+                Ok(GenericValue::SplitModes(rows))
+            }),
+            #[cfg(not(feature = "scene-codec"))]
+            116 => self.generic(class, |r| {
                 if r.uint()? != 0 {
                     return unsupported();
                 }
                 Ok(GenericValue::Other)
             }),
+            38 => self.generic(class, |r| {
+                #[cfg(feature = "scene-codec")]
+                {
+                    let count = r.uint()?;
+                    if count > 64 {
+                        return unsupported();
+                    }
+                    let mut pairs = Vec::new();
+                    for _ in 0..count {
+                        pairs.push((r.object()?, r.object()?));
+                    }
+                    Ok(GenericValue::Map(pairs))
+                }
+                #[cfg(not(feature = "scene-codec"))]
+                {
+                    if r.uint()? != 0 {
+                        return unsupported();
+                    }
+                    Ok(GenericValue::Other)
+                }
+            }),
             11 | 12 | 13 | 18 | 43 | 46 | 54 | 71 | 80 | 108 => self.domain(class),
             #[cfg(feature = "scene-codec")]
-            19 | 35 | 39 | 53 | 56 | 65 | 84 | 121 | 132 => self.domain(class),
+            19 | 35 | 39 | 53 | 56 | 65 | 84 | 85 | 86 | 89 | 100 | 121 | 132 | 149 => {
+                self.domain(class)
+            }
+            #[cfg(feature = "scene-codec")]
+            123 => {
+                let at = self.pos;
+                if self.uint()? != 1 {
+                    return unsupported();
+                }
+                self.pos = at;
+                self.domain(class)
+            }
             #[cfg(feature = "scene-codec")]
             134..=139 => self.generic(class, |r| {
                 let offset = r.float()?;
@@ -771,6 +1009,16 @@ impl<'a> Reader<'a> {
             }),
             _ => unsupported(),
         };
+        // A cached list must satisfy the current requesting field, not only
+        // the larger context which first introduced its generic identity.
+        if class == 17 {
+            if let Ok(Reference::Generic(i)) = &value {
+                if !matches!(self.generic.get(*i).and_then(|g|g.value.as_ref()),Some(GenericValue::FloatList(v)) if v.len()<=float_limit)
+                {
+                    return unsupported();
+                }
+            }
+        }
         self.depth -= 1;
         value
     }
@@ -1038,6 +1286,14 @@ pub(super) fn decode_region_profile(payload: &[u8]) -> Result<RegionProject> {
         schema,
         #[cfg(feature = "scene-codec")]
         deform_coordinates: 0,
+        #[cfg(feature = "scene-codec")]
+        string_fields: vec![],
+        #[cfg(feature = "scene-codec")]
+        mesh_uv_limit: 512,
+        #[cfg(feature = "scene-codec")]
+        draw_order_limit: 128,
+        #[cfg(feature = "scene-codec")]
+        string_encodings: HashMap::new(),
     };
     let root = r.domain(0)?;
     if r.bytes.get(r.pos..) != Some(&[1, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0][..]) {
@@ -1161,6 +1417,49 @@ mod tests {
     use super::*;
     use crate::minimal::encode_minimal_payload;
 
+    #[cfg(feature = "scene-codec")]
+    #[test]
+    fn large_uv_lists_cannot_escape_the_requesting_context_via_cached_references() {
+        fn reader(bytes: &[u8], cached: usize) -> Reader<'_> {
+            Reader {
+                bytes,
+                pos: 0,
+                depth: 0,
+                generic: vec![Generic {
+                    kind: 17,
+                    value: Some(GenericValue::FloatList(vec![0.; cached])),
+                }],
+                domain: vec![],
+                schema: Schema::new(),
+                deform_coordinates: 0,
+                string_fields: vec![],
+                mesh_uv_limit: 1024,
+                draw_order_limit: super::super::scene::MAX_SCENE_SLOTS,
+                string_encodings: HashMap::new(),
+            }
+        }
+        let bytes = [17, 2, 17, 2];
+        let mut large = reader(&bytes, 1024);
+        assert!(large.object_with_float_limit(1024).is_ok());
+        assert!(
+            large.object().is_err(),
+            "Cached UV identity must not bypass a later ordinary field limit"
+        );
+        let mut ordinary = reader(&bytes, 512);
+        assert!(ordinary.object_with_float_limit(1024).is_ok());
+        assert!(ordinary.object().is_ok());
+        let mut too_large = reader(&bytes, 1025);
+        assert!(too_large.object_with_float_limit(1024).is_err());
+        let mut body = vec![17, 1, 0x81, 4];
+        body.extend(vec![0; 513 * 4]);
+        let mut ordinary = reader(&body, 0);
+        ordinary.generic.clear();
+        assert!(ordinary.object().is_err());
+        let mut uv = reader(&body, 0);
+        uv.generic.clear();
+        assert!(uv.object_with_float_limit(1024).is_ok());
+    }
+
     #[test]
     fn roundtrips_unicode_names_graphs_and_numeric_transforms() {
         for name in ["A", "Animație", "骨格", "🦊", &"x".repeat(120)] {
@@ -1221,4 +1520,13 @@ mod scene_reader;
 #[cfg(feature = "scene-codec")]
 pub(super) fn decode_scene_profile(payload: &[u8]) -> Result<super::scene::SceneProject> {
     scene_reader::decode(payload)
+}
+#[cfg(feature = "scene-codec")]
+pub(super) fn materialize_scene_wire(payload: &[u8]) -> Result<super::scene::SceneWire> {
+    scene_reader::materialize(payload)
+}
+
+#[cfg(feature = "scene-codec")]
+pub(super) fn validate_scene_payload_structure(payload: &[u8]) -> Result<()> {
+    scene_reader::validate_structure(payload)
 }

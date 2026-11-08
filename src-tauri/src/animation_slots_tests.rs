@@ -381,16 +381,19 @@ fn imported_duplicate_slot_frames_select_last_but_explicit_key_id_edits_earlier_
                 slot: 0,
                 keys: vec![
                     SlotRgbaKey {
+                        dark_values: [0.; 3],
                         frame: 6.,
                         values: [0.25; 4],
                         curve: SlotRgbaCurve::Linear,
                     },
                     SlotRgbaKey {
+                        dark_values: [0.; 3],
                         frame: 6.,
                         values: [0.75; 4],
                         curve: SlotRgbaCurve::Stepped,
                     },
                     SlotRgbaKey {
+                        dark_values: [0.; 3],
                         frame: 24.,
                         values: [1.; 4],
                         curve: SlotRgbaCurve::Linear,

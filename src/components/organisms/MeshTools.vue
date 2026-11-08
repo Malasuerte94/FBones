@@ -8,9 +8,14 @@ import AppIcon from '../atoms/AppIcon.vue';
 const w=useWorkspace(),{t}=useI18n(),mesh=computed(()=>w.selectedSlot?.mesh),animate=computed(()=>w.editorMode==='animate'),deform=computed(()=>animate.value?w.selectedAttachment?.mesh??w.selectedAttachment?.clipping:null),binding=computed(()=>animate.value?deform.value:mesh.value);
 const point=computed(()=>binding.value&&w.selectedVertex!==null?bindingPoints(w.renderedBones,binding.value)[w.selectedVertex]:undefined);
 const editable=computed(()=>w.canEdit&&!w.busy&&!w.traceOpen&&(!animate.value||!!w.activeAnimation));
+const zeroImageSize=computed(()=>!!mesh.value&&!!w.selectedSlot?.region&&(w.selectedSlot.region.width===0||w.selectedSlot.region.height===0));
 const pending=new Map<string,Promise<boolean>>();
 function editMesh(){if(animate.value){w.meshEditUvs=false;w.setMode(w.selectedAttachment?.clipping?'clipping':'meshes');}else w.setMode('meshes');w.meshTool='move';}
 async function convert(){if(animate.value)return;const slot=w.selectedSlot;if(slot&&await w.editRig({type:'convertMesh',id:slot.id}))editMesh();}
+const resetMesh=computed(()=>{
+ const documentId=w.project?.documentId,slotId=w.selectedSlot?.id,attachmentId=w.selectedAttachment?.id;
+ return()=>{if(animate.value||!editable.value||zeroImageSize.value||!mesh.value||slotId===undefined||w.project?.documentId!==documentId||w.selectedSlot?.id!==slotId||w.selectedAttachment?.id!==attachmentId)return;void w.editRig({type:'resetMesh',id:slotId});};
+});
 function position(axis:'x'|'y',event:Event):Promise<boolean>{
   const slot=w.selectedSlot,vertex=w.selectedVertex,current=point.value,input=event.target as HTMLInputElement,value=Number(input.value);
   if(!slot||vertex===null||!current||!editable.value)return Promise.resolve(false);
@@ -47,7 +52,8 @@ function cancelPosition(axis:'x'|'y',event:KeyboardEvent){(event.target as HTMLI
         <AppButton :disabled="!w.canEdit||w.busy||w.traceOpen||w.selectedVertex===null" @click="w.editRig({type:'deleteVertex',id:w.selectedSlot.id,vertex:w.selectedVertex!})">{{ t('deleteVertex') }}</AppButton>
         <AppButton :disabled="!editable" @click="w.openTrace(false)">{{ t('trace') }}</AppButton>
         <AppButton :disabled="!editable" @click="w.openTrace(true)">{{ t('innerTrace') }}</AppButton>
-        <AppButton class="col-span-2" :disabled="!editable" @click="w.editRig({type:'resetMesh',id:w.selectedSlot.id})">{{ t('resetQuad') }}</AppButton>
+        <AppButton class="col-span-2" :disabled="!editable||zeroImageSize" :title="zeroImageSize?t('zeroImageSizeResetHint'):undefined" data-testid="mesh-reset" @click="resetMesh">{{ t('resetQuad') }}</AppButton>
+        <p v-if="zeroImageSize" role="status" class="col-span-2 text-[10px] leading-4 text-muted" data-testid="mesh-reset-unavailable">{{t('zeroImageSizeResetHint')}}</p>
       </div>
       <dl v-if="mesh" class="mt-4 grid grid-cols-2 gap-y-2 border-t border-line pt-3 text-muted"><dt>{{ t('triangles') }}</dt><dd class="text-right">{{ mesh.triangles.length/3 }}</dd><dt>{{ t('hull') }}</dt><dd class="text-right">{{ mesh.hull }}</dd><dt>{{ t('binding') }}</dt><dd class="text-right">{{ t(mesh.weighted?'weighted':'rigid') }}</dd></dl>
     </template>

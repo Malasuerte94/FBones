@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 use std::{
     collections::{HashMap, VecDeque},
     fs,
-    io::{self, BufRead, Write},
+    io::{self, BufRead, Read, Write},
     path::{Component, Path, PathBuf},
 };
 
@@ -295,6 +295,7 @@ impl Host {
         absent.mix = [0.; 6];
         absent.properties = stored.properties.clone();
         let model = SceneProject {
+            wire: None,
             audio_root: "./audio".into(),
             events: vec![],
             editor_flag_53: false,
@@ -306,6 +307,9 @@ impl Host {
             images_root: "./images/".into(),
             slots: vec![],
             attachment_order: vec![],
+            attachment_sequences: vec![],
+            attachment_colors: vec![],
+            slot_dark_colors: vec![],
             constraints: vec![Constraint::Transform(stored), Constraint::Transform(absent)],
         };
         let name = "transform-ranges.fbones";
@@ -327,7 +331,389 @@ impl Host {
             "e2e_info" => Ok(
                 json!({"version":env!("CARGO_PKG_VERSION"),"sceneEditing":true,"transport":"native-session-jsonl"}),
             ),
+            "e2e_seed_import_metadata_fixture" => {
+                let model = crate::scene_import_metadata_fixture::project();
+                let bytes = fbones_format::minimal::scene::encode_scene(&model)?;
+                let directory = self.path("import-metadata-fixture")?;
+                fs::create_dir(&directory)?;
+                fs::create_dir(directory.join("source-images"))?;
+                for (index, key) in crate::animation_sequence::all_image_keys(&model)?
+                    .iter()
+                    .enumerate()
+                {
+                    let mut png = Vec::new();
+                    {
+                        let mut encoder = png::Encoder::new(&mut png, 8, 8);
+                        encoder.set_color(png::ColorType::Rgba);
+                        let mut writer = encoder
+                            .write_header()
+                            .map_err(|error| invalid(error.to_string()))?;
+                        writer
+                            .write_image_data(
+                                &[30 + index as u8 * 25, 70, 220 - index as u8 * 20, 255]
+                                    .repeat(64),
+                            )
+                            .map_err(|error| invalid(error.to_string()))?;
+                    }
+                    let target = directory.join("source-images").join(format!("{key}.png"));
+                    fs::create_dir_all(
+                        target
+                            .parent()
+                            .ok_or_else(|| invalid("Missing image parent."))?,
+                    )?;
+                    let mut file = fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(target)?;
+                    file.write_all(&png)?;
+                    file.sync_all()?;
+                }
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(directory.join("source.fbones"))?;
+                file.write_all(&bytes)?;
+                file.sync_all()?;
+                Ok(json!("import-metadata-fixture/source.fbones"))
+            }
+            "e2e_import_metadata_state" => {
+                let path = self.path(
+                    a.path
+                        .as_deref()
+                        .ok_or_else(|| invalid("Choose an own project path."))?,
+                )?;
+                let mut bytes = Vec::new();
+                fs::File::open(path)?
+                    .take(fbones_format::MAX_FILE_BYTES as u64 + 1)
+                    .read_to_end(&mut bytes)?;
+                let envelope = fbones_format::ProjectEnvelope::inspect(bytes)?;
+                let model =
+                    fbones_format::minimal::scene::decode_scene(&envelope.decoded_payload()?)?;
+                Ok(crate::scene_import_metadata_fixture::metadata_view(&model))
+            }
+            "e2e_seed_two_color_fixture" => {
+                let model = crate::scene_two_color_fixture::project();
+                let bytes = fbones_format::minimal::scene::encode_scene(&model)?;
+                let directory = self.path("two-color-fixture")?;
+                fs::create_dir(&directory)?;
+                fs::create_dir(directory.join("images"))?;
+                for key in crate::animation_sequence::all_image_keys(&model)? {
+                    let mut png = Vec::new();
+                    {
+                        let mut encoder = png::Encoder::new(&mut png, 8, 8);
+                        encoder.set_color(png::ColorType::Rgba);
+                        let mut writer = encoder
+                            .write_header()
+                            .map_err(|error| invalid(error.to_string()))?;
+                        let pixels = (0..64)
+                            .flat_map(|pixel| match pixel % 4 {
+                                0 => [0, 0, 0, 255],
+                                1 => [255, 255, 255, 255],
+                                2 => [64, 128, 200, 128],
+                                _ => [255, 0, 0, 0],
+                            })
+                            .collect::<Vec<_>>();
+                        writer
+                            .write_image_data(&pixels)
+                            .map_err(|error| invalid(error.to_string()))?;
+                    }
+                    let mut file = fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(directory.join("images").join(format!("{key}.png")))?;
+                    file.write_all(&png)?;
+                    file.sync_all()?;
+                }
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(directory.join("source.fbones"))?;
+                file.write_all(&bytes)?;
+                file.sync_all()?;
+                Ok(json!("two-color-fixture/source.fbones"))
+            }
+            "e2e_seed_constraint_declarations_fixture" => {
+                let model = crate::scene_constraint_declarations_fixture::project();
+                let bytes = fbones_format::minimal::scene::encode_scene(&model)?;
+                let directory = self.path("constraint-declarations-fixture")?;
+                fs::create_dir(&directory)?;
+                fs::create_dir(directory.join("source-images"))?;
+                for (index, key) in crate::animation_sequence::all_image_keys(&model)?
+                    .iter()
+                    .enumerate()
+                {
+                    let mut png = Vec::new();
+                    {
+                        let mut encoder = png::Encoder::new(&mut png, 8, 8);
+                        encoder.set_color(png::ColorType::Rgba);
+                        let mut writer = encoder
+                            .write_header()
+                            .map_err(|error| invalid(error.to_string()))?;
+                        writer
+                            .write_image_data(
+                                &[30 + index as u8 * 25, 70, 220 - index as u8 * 20, 255]
+                                    .repeat(64),
+                            )
+                            .map_err(|error| invalid(error.to_string()))?;
+                    }
+                    let mut file = fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(directory.join("source-images").join(format!("{key}.png")))?;
+                    file.write_all(&png)?;
+                    file.sync_all()?;
+                }
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(directory.join("source.fbones"))?;
+                file.write_all(&bytes)?;
+                file.sync_all()?;
+                Ok(json!("constraint-declarations-fixture/source.fbones"))
+            }
+            "e2e_seed_string_form_fixture" => {
+                let model = crate::scene_string_form_fixture::project();
+                let bytes = fbones_format::minimal::scene::encode_scene(&model)?;
+                let directory = self.path("string-form-fixture")?;
+                fs::create_dir(&directory)?;
+                fs::create_dir(directory.join("source-images"))?;
+                for (index, key) in crate::animation_sequence::all_image_keys(&model)?
+                    .iter()
+                    .enumerate()
+                {
+                    let mut png = Vec::new();
+                    {
+                        let mut encoder = png::Encoder::new(&mut png, 8, 8);
+                        encoder.set_color(png::ColorType::Rgba);
+                        let mut writer = encoder
+                            .write_header()
+                            .map_err(|error| invalid(error.to_string()))?;
+                        writer
+                            .write_image_data(
+                                &[30 + index as u8 * 25, 70, 220 - index as u8 * 20, 255]
+                                    .repeat(64),
+                            )
+                            .map_err(|error| invalid(error.to_string()))?;
+                    }
+                    let mut file = fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(directory.join("source-images").join(format!("{key}.png")))?;
+                    file.write_all(&png)?;
+                    file.sync_all()?;
+                }
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(directory.join("source.fbones"))?;
+                file.write_all(&bytes)?;
+                file.sync_all()?;
+                Ok(json!("string-form-fixture/source.fbones"))
+            }
+            "e2e_seed_slot_capacity_fixture" => {
+                let model = crate::scene_slot_capacity_fixture::project(512, true);
+                let bytes = fbones_format::minimal::scene::encode_scene(&model)?;
+                let directory = self.path("slot-capacity-fixture")?;
+                fs::create_dir(&directory)?;
+                fs::create_dir(directory.join("images"))?;
+                for (index, key) in crate::animation_sequence::all_image_keys(&model)?
+                    .iter()
+                    .enumerate()
+                {
+                    let mut png = Vec::new();
+                    {
+                        let mut encoder = png::Encoder::new(&mut png, 8, 8);
+                        encoder.set_color(png::ColorType::Rgba);
+                        let mut writer = encoder
+                            .write_header()
+                            .map_err(|error| invalid(error.to_string()))?;
+                        writer
+                            .write_image_data(&[90, 140 + index as u8 * 40, 220, 255].repeat(64))
+                            .map_err(|error| invalid(error.to_string()))?;
+                    }
+                    let mut file = fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(directory.join("images").join(format!("{key}.png")))?;
+                    file.write_all(&png)?;
+                    file.sync_all()?;
+                }
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(directory.join("source.fbones"))?;
+                file.write_all(&bytes)?;
+                file.sync_all()?;
+                Ok(json!("slot-capacity-fixture/source.fbones"))
+            }
+            "e2e_seed_large_mesh_fixture" => {
+                let model = crate::scene_large_mesh_fixture::project(32, 16);
+                let bytes = fbones_format::minimal::scene::encode_scene(&model)?;
+                let directory = self.path("large-mesh-fixture")?;
+                fs::create_dir(&directory)?;
+                fs::create_dir(directory.join("images"))?;
+                for (index, key) in crate::animation_sequence::all_image_keys(&model)?
+                    .iter()
+                    .enumerate()
+                {
+                    let mut png = Vec::new();
+                    {
+                        let mut encoder = png::Encoder::new(&mut png, 8, 8);
+                        encoder.set_color(png::ColorType::Rgba);
+                        let mut writer = encoder
+                            .write_header()
+                            .map_err(|error| invalid(error.to_string()))?;
+                        writer
+                            .write_image_data(&[40 + index as u8 * 50, 90, 210, 255].repeat(64))
+                            .map_err(|error| invalid(error.to_string()))?;
+                    }
+                    let mut file = fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(directory.join("images").join(format!("{key}.png")))?;
+                    file.write_all(&png)?;
+                    file.sync_all()?;
+                }
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(directory.join("source.fbones"))?;
+                file.write_all(&bytes)?;
+                file.sync_all()?;
+                Ok(json!("large-mesh-fixture/source.fbones"))
+            }
+            "e2e_seed_partial_translate_fixture" => {
+                let model = crate::scene_partial_translate_fixture::project();
+                let bytes = fbones_format::minimal::scene::encode_scene(&model)?;
+                let directory = self.path("partial-translate-fixture")?;
+                fs::create_dir(&directory)?;
+                fs::create_dir(directory.join("images"))?;
+                for (index, key) in crate::animation_sequence::all_image_keys(&model)?
+                    .iter()
+                    .enumerate()
+                {
+                    let mut png = Vec::new();
+                    {
+                        let mut encoder = png::Encoder::new(&mut png, 8, 8);
+                        encoder.set_color(png::ColorType::Rgba);
+                        let mut writer = encoder
+                            .write_header()
+                            .map_err(|error| invalid(error.to_string()))?;
+                        writer
+                            .write_image_data(
+                                &[30 + index as u8 * 25, 70, 220 - index as u8 * 20, 255]
+                                    .repeat(64),
+                            )
+                            .map_err(|error| invalid(error.to_string()))?;
+                    }
+                    let mut file = fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(directory.join("images").join(format!("{key}.png")))?;
+                    file.write_all(&png)?;
+                    file.sync_all()?;
+                }
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(directory.join("source.fbones"))?;
+                file.write_all(&bytes)?;
+                file.sync_all()?;
+                Ok(json!("partial-translate-fixture/source.fbones"))
+            }
+            "e2e_seed_split_fixture" => {
+                let model = crate::scene_split_fixture::project();
+                let bytes = fbones_format::minimal::scene::encode_scene(&model)?;
+                let directory = self.path("split-fixture")?;
+                fs::create_dir(&directory)?;
+                fs::create_dir(directory.join("images"))?;
+                for (index, key) in crate::animation_sequence::all_image_keys(&model)?
+                    .iter()
+                    .enumerate()
+                {
+                    let mut png = Vec::new();
+                    {
+                        let mut encoder = png::Encoder::new(&mut png, 8, 8);
+                        encoder.set_color(png::ColorType::Rgba);
+                        let mut writer = encoder
+                            .write_header()
+                            .map_err(|error| invalid(error.to_string()))?;
+                        writer
+                            .write_image_data(
+                                &[30 + index as u8 * 25, 70, 220 - index as u8 * 20, 255]
+                                    .repeat(64),
+                            )
+                            .map_err(|error| invalid(error.to_string()))?;
+                    }
+                    let mut file = fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(directory.join("images").join(format!("{key}.png")))?;
+                    file.write_all(&png)?;
+                    file.sync_all()?;
+                }
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(directory.join("source.fbones"))?;
+                file.write_all(&bytes)?;
+                file.sync_all()?;
+                Ok(json!("split-fixture/source.fbones"))
+            }
+            "e2e_seed_sequence_fixture" => {
+                let model = crate::scene_sequence_fixture::project();
+                let bytes = fbones_format::minimal::scene::encode_scene(&model)?;
+                let directory = self.path("sequence-fixture")?;
+                fs::create_dir(&directory)?;
+                fs::create_dir(directory.join("images"))?;
+                for (index, key) in crate::animation_sequence::all_image_keys(&model)?
+                    .iter()
+                    .enumerate()
+                {
+                    let mut png = Vec::new();
+                    {
+                        let mut encoder = png::Encoder::new(&mut png, 8, 8);
+                        encoder.set_color(png::ColorType::Rgba);
+                        let mut writer = encoder
+                            .write_header()
+                            .map_err(|error| invalid(error.to_string()))?;
+                        writer
+                            .write_image_data(
+                                &[30 + index as u8 * 25, 70, 220 - index as u8 * 20, 255]
+                                    .repeat(64),
+                            )
+                            .map_err(|error| invalid(error.to_string()))?;
+                    }
+                    let mut file = fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(directory.join("images").join(format!("{key}.png")))?;
+                    file.write_all(&png)?;
+                    file.sync_all()?;
+                }
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(directory.join("source.fbones"))?;
+                file.write_all(&bytes)?;
+                file.sync_all()?;
+                Ok(json!("sequence-fixture/source.fbones"))
+            }
             "e2e_seed_transform_ranges" => self.seed_transform_ranges(),
+            "e2e_seed_wire_fixture" => {
+                let name = "wire-preservation.fbones";
+                let path = self.path(name)?;
+                let bytes = fbones_format::minimal::scene::encode_scene(
+                    &crate::scene_wire_fixture::project(),
+                )?;
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(path)?;
+                file.write_all(&bytes)?;
+                file.sync_all()?;
+                Ok(json!(name))
+            }
             "e2e_dialog" => {
                 if !["folder", "open", "save"].contains(&a.kind.as_str()) {
                     return Err(invalid("Unknown dialog kind."));
@@ -368,6 +754,13 @@ impl Host {
                     path
                 };
                 value(self.session.save_snapshot(snapshot, path))
+            }
+            "export_runtime" => {
+                let snapshot = self.session.prepare_runtime_export(a.expected_revision)?;
+                let Some(parent) = self.dialog("folder")? else {
+                    return Ok(Value::Null);
+                };
+                value(self.session.write_runtime_export(snapshot, &parent))
             }
             "e2e_prepare_save" => {
                 let snapshot = self.session.prepare_save(a.save_as)?;

@@ -14,9 +14,11 @@
     "dev:web": "vite --host 127.0.0.1",
     "build": "tauri build",
     "build:web": "vue-tsc --noEmit && vite build",
+    "build:runtime": "node packages/runtime/build.mjs",
     "typecheck": "vue-tsc --noEmit",
     "typecheck:ui": "vue-tsc --noEmit -p tsconfig.e2e.json",
     "test": "node tests/run.mjs",
+    "test:runtime": "node packages/runtime/tests/runtime.test.mjs && node scripts/verify-runtime-export.mjs",
     "test:ui": "node scripts/run-ui-tests.mjs",
     "test:ui:report": "playwright show-report .local/playwright/report",
     "tauri": "tauri"

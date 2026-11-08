@@ -4,12 +4,15 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {build} from 'esbuild';
+import {Color} from 'pixi.js';
 import {previewAttachmentTransform,previewAttachmentBinding} from '../src/domain/sceneSelection.ts';
 import {previewBindingWeights,bindingWeightColor} from '../src/domain/binding.ts';
 
 const built=await build({stdin:{contents:"import {ImageLayer} from './src/viewport/ImageLayer.ts'; globalThis.Layer=ImageLayer;",resolveDir:process.cwd()},bundle:true,write:false,platform:'browser',format:'iife',target:'es2022',plugins:[{name:'selection-recorder',setup(b){
  b.onResolve({filter:/^pixi\.js$/},()=>({path:'pixi',namespace:'recorder'}));
  b.onLoad({filter:/.*/,namespace:'recorder'},()=>({contents:`
+  export const Color=globalThis.ActualPixiColor;
+  export class ColorMatrixFilter {}
   export class Container {children=[];addChild(...items){this.children.push(...items)}setChildIndex(node,index){this.children.splice(this.children.indexOf(node),1);this.children.splice(index,0,node)}destroy(){}}
   export class Graphics {ops=[];clear(){this.ops=[];return this}poly(points){this.ops.push({kind:'poly',points:[...points]});return this}fill(style){this.ops.push({kind:'fill',style});return this}stroke(style){this.ops.push({kind:'stroke',style});return this}circle(x,y,radius){this.ops.push({kind:'circle',x,y,radius});return this}moveTo(x,y){this.ops.push({kind:'moveTo',x,y});return this}lineTo(x,y){this.ops.push({kind:'lineTo',x,y});return this}destroy(){}}
   export class Texture {static from(){return {width:20,height:20,destroy(){}}}}
@@ -24,7 +27,7 @@ function region(id,x,slot=0){return{id,slot,name:'part'+id,type:'region',region:
 function clip(id,x){return{id,slot:0,name:'mask'+id,type:'clipping',region:null,mesh:null,imageAvailable:false,clipping:{endSlot:1,convex:true,inverse:false,color:0x8040ffff,weighted:false,bones:[0],vertices:[[x,0],[x+20,0],[x+20,20],[x,20]].map(positions=>({weights:[1],positions})),edges:[0,1,1,2,2,3,3,0]}};}
 const plain=value=>JSON.parse(JSON.stringify(value));
 function setup(slots){
- const context=vm.createContext({console}),requests=[];vm.runInContext(built.outputFiles[0].text,context);
+ const context=vm.createContext({console,ActualPixiColor:Color}),requests=[];vm.runInContext(built.outputFiles[0].text,context);
  const layer=new context.Layer(async(name)=>{requests.push(name);throw new Error('Unexpected image request');},()=>{});
  // Establish the document once, then inject the one active texture. Inactive
  // selection must neither allocate sprites nor attempt a resource load.

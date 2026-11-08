@@ -68,6 +68,7 @@ fn rgba(slot: usize) -> SlotTimeline {
             let frame = i as f32 * 6.;
             let curve = if i == 1 || i == 3 {
                 SlotRgbaCurve::Bezier {
+                    dark_controls: None,
                     controls: std::array::from_fn(|axis| {
                         let a = f64::from(color[axis]) / 255.;
                         let b = f64::from(colors[i + 1][axis]) / 255.;
@@ -87,6 +88,7 @@ fn rgba(slot: usize) -> SlotTimeline {
             SlotRgbaKey {
                 frame,
                 values: color.map(|v| f32::from(v) / 255.),
+                dark_values: [0.; 3],
                 curve,
             }
         })

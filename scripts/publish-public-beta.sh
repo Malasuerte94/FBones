@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Publish only the reviewed source snapshot, never the private working directory.
 set -euo pipefail
-release_tag=v0.9.4-beta.2
+release_tag=${2:-v0.9.4-beta.3}
+[[ "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[1-9][0-9]*$ ]] || { echo 'Expected a versioned beta tag.' >&2; exit 1; }
 release_repo=Malasuerte94/FBones
 script_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-release_dir=${1:-"$script_root/.local/public-beta/current"}
+release_dir=${1:-"$script_root/.local/public-beta/$release_tag"}
 release_dir=$(cd -- "$release_dir" && pwd)
 source_dir="$release_dir/repository"
 archive="$release_dir/fbones-$release_tag-source.tar.gz"
@@ -30,7 +31,7 @@ origin_url=$(git -C "$source_dir" remote get-url origin 2>/dev/null || true)
 if [[ -z "$origin_url" ]]; then
   git -C "$source_dir" remote add origin "https://github.com/$release_repo.git"
 else
-  [[ "$origin_url" == "https://github.com/$release_repo.git" ]] || { echo 'Unexpected origin; refusing to publish.' >&2; exit 1; }
+  [[ "$origin_url" == "https://github.com/$release_repo.git" || "$origin_url" == "git@github.com:$release_repo.git" ]] || { echo 'Unexpected origin; refusing to publish.' >&2; exit 1; }
 fi
 # Use gh credentials for this command only; do not change global Git configuration.
 git -C "$source_dir" -c credential.helper= -c 'credential.helper=!gh auth git-credential' \
@@ -43,7 +44,7 @@ for attempt in {1..30}; do
   release_run=$(gh run list --repo "$release_repo" --workflow desktop.yml \
     --commit "$release_commit" --event push --limit 30 \
     --json databaseId,headBranch \
-    --jq 'map(select(.headBranch == "v0.9.4-beta.2")) | .[0].databaseId // empty')
+    --jq "map(select(.headBranch == \"$release_tag\")) | .[0].databaseId // empty")
   [[ -n "$release_run" ]] && break
   sleep 2
 done

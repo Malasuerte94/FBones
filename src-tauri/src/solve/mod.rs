@@ -301,7 +301,7 @@ fn validate_constraints(scene: &SceneProject, mode: StepMode) -> Result<(), Solv
                 }
             }
             Constraint::Transform(c) => {
-                if c.mix.iter().any(|m| !(0.0..=1.0).contains(m))
+                if c.mix.iter().any(|m| !m.is_finite())
                     || c.properties.len() > 6
                     || c.source >= scene.rig.bones.len()
                     || c.offsets.iter().any(|v| !v.is_finite())

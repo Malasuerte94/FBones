@@ -49,6 +49,8 @@ fn named_translate_tracks_frames_curves_duplicates_and_exact_bits_roundtrip_with
     let setup = p.rig.clone();
     p.animations[0].tracks.push(track());
     p.animations.push(Animation {
+        split_modes: Vec::new(),
+        sequence_tracks: vec![],
         slot_tracks: vec![],
         draw_order: vec![],
         deform_tracks: vec![],

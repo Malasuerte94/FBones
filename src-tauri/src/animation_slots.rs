@@ -34,6 +34,10 @@ pub enum SlotKeyInput {
         slot: u64,
         frame: f32,
         values: [f32; 4],
+        #[serde(default, rename = "darkValues")]
+        dark_values: Option<[f32; 3]>,
+        #[serde(default, rename = "darkControls")]
+        dark_controls: Option<[[f32; 4]; 3]>,
         curve: CurveInput,
         #[serde(default)]
         controls: Option<[[f32; 4]; 4]>,
@@ -65,10 +69,14 @@ pub struct AttachmentKeyView {
     pub attachment: Option<u64>,
 }
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RgbaKeyView {
     pub id: u64,
     pub frame: f32,
     pub values: [f32; 4],
+    pub dark_values: [f32; 3],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dark_controls: Option<[[f32; 4]; 3]>,
     pub curve: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub controls: Option<[[f32; 4]; 4]>,
@@ -90,6 +98,7 @@ pub struct SlotPoseView {
     pub slot: u64,
     pub attachment: Option<u64>,
     pub color: [f64; 4],
+    pub dark: [f64; 3],
 }
 pub(crate) fn slot(track: &SlotTimeline) -> usize {
     match track {
@@ -160,13 +169,18 @@ pub(crate) fn views(frame: &SceneFrame, a: usize) -> Vec<SlotTrackView> {
                             id: ids[k],
                             frame: key.frame,
                             values: key.values,
+                            dark_values: key.dark_values,
+                            dark_controls: match key.curve {
+                                SlotRgbaCurve::Bezier { dark_controls, .. } => dark_controls,
+                                _ => None,
+                            },
                             curve: match key.curve {
                                 SlotRgbaCurve::Linear => "linear",
                                 SlotRgbaCurve::Stepped => "stepped",
                                 SlotRgbaCurve::Bezier { .. } => "bezier",
                             },
                             controls: match key.curve {
-                                SlotRgbaCurve::Bezier { controls } => Some(controls),
+                                SlotRgbaCurve::Bezier { controls, .. } => Some(controls),
                                 _ => None,
                             },
                         })
@@ -180,7 +194,10 @@ fn curve(input: CurveInput, controls: Option<[[f32; 4]; 4]>) -> Result<SlotRgbaC
     match (input, controls) {
         (CurveInput::Linear, None) => Ok(SlotRgbaCurve::Linear),
         (CurveInput::Stepped, None) => Ok(SlotRgbaCurve::Stepped),
-        (CurveInput::Bezier, Some(controls)) => Ok(SlotRgbaCurve::Bezier { controls }),
+        (CurveInput::Bezier, Some(controls)) => Ok(SlotRgbaCurve::Bezier {
+            controls,
+            dark_controls: None,
+        }),
         _ => Err(invalid(
             "Only RGBA Bezier keys require four axes of controls.",
         )),
@@ -216,7 +233,7 @@ pub(crate) fn validate(frame: &SceneFrame) -> Result<(), AppError> {
                 continue;
             };
             for (i, key) in keys.iter().enumerate() {
-                if let SlotRgbaCurve::Bezier { controls } = key.curve {
+                if let SlotRgbaCurve::Bezier { controls, .. } = key.curve {
                     let right = keys
                         .get(i + 1)
                         .filter(|right| right.frame > key.frame)
@@ -326,6 +343,8 @@ pub(crate) fn set_keys(
                 values,
                 curve: kind,
                 controls,
+                dark_values,
+                dark_controls,
                 ..
             } => {
                 if values
@@ -336,11 +355,56 @@ pub(crate) fn set_keys(
                         "RGBA key values must be finite between zero and one.",
                     ));
                 }
+                let setup = frame.project.slot_dark_color(s);
+                if dark_controls.is_some() {
+                    return Err(invalid(
+                        "Dark Bezier controls are outside the current two-color profile.",
+                    ));
+                }
+                if setup.enabled && !matches!(kind, CurveInput::Linear) {
+                    return Err(invalid(
+                        "Enabled two-color tracks currently support linear keys only.",
+                    ));
+                }
+                let previous = existing.and_then(|t| match &old[t] {
+                    SlotTimeline::Rgba { keys, .. } => Some(keys.as_slice()),
+                    _ => None,
+                });
+                let addressed = target
+                    .and_then(|id| {
+                        existing
+                            .and_then(|t| old_ids[t].iter().position(|candidate| *candidate == id))
+                    })
+                    .and_then(|k| previous.and_then(|keys| keys.get(k)));
+                let dark_values = if let Some(values) = dark_values {
+                    values
+                } else if let Some(key) = addressed {
+                    key.dark_values
+                } else if setup.enabled {
+                    previous
+                        .map(|keys| dark_value(keys, f64::from(position)))
+                        .transpose()?
+                        .flatten()
+                        .unwrap_or_else(|| {
+                            std::array::from_fn(|axis| f64::from(setup.color[axis]) / 255.)
+                        })
+                        .map(|value| value as f32)
+                } else {
+                    [0.; 3]
+                };
+                if dark_values
+                    .iter()
+                    .any(|value| !value.is_finite() || !(0.0..=1.0).contains(value))
+                    || !setup.enabled && dark_values.iter().any(|value| value.to_bits() != 0)
+                {
+                    return Err(invalid("Dark RGB keys require finite 0–1 values; disabled slots require exact zero dark lanes."));
+                }
                 SlotTimeline::Rgba {
                     slot: s,
                     keys: vec![SlotRgbaKey {
                         frame: position,
                         values,
+                        dark_values,
                         curve: curve(kind, controls)?,
                     }],
                 }
@@ -401,7 +465,18 @@ pub(crate) fn set_keys(
             ) => {
                 let mut key = added.remove(0);
                 if target.is_some() {
-                    key.frame = keys[position_index].frame;
+                    let stored = &keys[position_index];
+                    key.frame = stored.frame;
+                    for (value, old) in key.values.iter_mut().zip(stored.values) {
+                        if *value == old {
+                            *value = old;
+                        }
+                    }
+                    for (value, old) in key.dark_values.iter_mut().zip(stored.dark_values) {
+                        if *value == old {
+                            *value = old;
+                        }
+                    }
                     keys[position_index] = key;
                 } else {
                     keys.insert(position_index, key);
@@ -537,7 +612,11 @@ pub(crate) fn move_keys(
                     })
                     .collect::<Vec<_>>();
                 for (i, key) in old.iter().enumerate() {
-                    let SlotRgbaCurve::Bezier { mut controls } = key.curve else {
+                    let SlotRgbaCurve::Bezier {
+                        mut controls,
+                        dark_controls,
+                    } = key.curve
+                    else {
                         continue;
                     };
                     let at = moved.iter().position(|(_, _, id)| *id == ids[i]).unwrap();
@@ -552,7 +631,10 @@ pub(crate) fn move_keys(
                         c[0] += left;
                         c[2] += right;
                     }
-                    after[at].curve = SlotRgbaCurve::Bezier { controls };
+                    after[at].curve = SlotRgbaCurve::Bezier {
+                        controls,
+                        dark_controls,
+                    };
                 }
                 *keys = after;
             }
@@ -614,7 +696,7 @@ fn rgba_value(keys: &[SlotRgbaKey], frame: f64) -> Option<[f64; 4]> {
             f64::from(left.values[axis])
                 + (f64::from(right.values[axis]) - f64::from(left.values[axis])) * t
         }
-        SlotRgbaCurve::Bezier { controls } => {
+        SlotRgbaCurve::Bezier { controls, .. } => {
             let [cx1, cy1, cx2, cy2] = controls[axis].map(f64::from);
             let (mut low, mut high) = (0., 1.);
             for _ in 0..48 {
@@ -634,6 +716,35 @@ fn rgba_value(keys: &[SlotRgbaKey], frame: f64) -> Option<[f64; 4]> {
             )
         }
     }))
+}
+fn dark_value(keys: &[SlotRgbaKey], position: f64) -> Result<Option<[f64; 3]>, AppError> {
+    let Some(first) = keys.first() else {
+        return Ok(None);
+    };
+    if position < f64::from(first.frame) {
+        return Ok(None);
+    }
+    let end = keys.partition_point(|key| f64::from(key.frame) <= position);
+    let left = &keys[end - 1];
+    if !matches!(left.curve, SlotRgbaCurve::Linear) {
+        return Err(invalid(
+            "Enabled two-color sampling currently supports linear keys only.",
+        ));
+    }
+    if position == f64::from(left.frame) {
+        return Ok(Some(left.dark_values.map(f64::from)));
+    }
+    let value = if let Some(right) = keys.get(end) {
+        let mix =
+            (position - f64::from(left.frame)) / (f64::from(right.frame) - f64::from(left.frame));
+        std::array::from_fn(|axis| {
+            f64::from(left.dark_values[axis])
+                + (f64::from(right.dark_values[axis]) - f64::from(left.dark_values[axis])) * mix
+        })
+    } else {
+        left.dark_values.map(f64::from)
+    };
+    Ok(Some(value))
 }
 pub(crate) fn sample(
     frame: &SceneFrame,
@@ -659,6 +770,13 @@ fn sample_at_frame(
             slot: frame.slot_ids[s],
             attachment: slot.active_attachment.map(|a| frame.attachment_ids[s][a]),
             color: slot.color.map(|v| f64::from(v) / 255.),
+            dark: if frame.project.slot_dark_color(s).enabled {
+                std::array::from_fn(|axis| {
+                    f64::from(frame.project.slot_dark_color(s).color[axis]) / 255.
+                })
+            } else {
+                [0.; 3]
+            },
         })
         .collect::<Vec<_>>();
     if let Some(clip) = clip {
@@ -675,6 +793,11 @@ fn sample_at_frame(
                 SlotTimeline::Rgba { slot, keys } => {
                     if let Some(color) = rgba_value(keys, position) {
                         result[*slot].color = color;
+                    }
+                    if frame.project.slot_dark_color(*slot).enabled {
+                        if let Some(dark) = dark_value(keys, position)? {
+                            result[*slot].dark = dark;
+                        }
                     }
                 }
             }

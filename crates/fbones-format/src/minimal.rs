@@ -9,6 +9,12 @@ pub mod regions;
 pub mod scene;
 pub use reader::decode_minimal;
 
+#[cfg(feature = "scene-codec")]
+const MAX_DOMAIN_OBJECTS: usize = scene::MAX_SCENE_DOMAINS;
+#[cfg(not(feature = "scene-codec"))]
+const MAX_DOMAIN_OBJECTS: usize = 8192;
+const MAX_GENERIC_OBJECTS: usize = 16384;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Bone {
     pub name: String,
@@ -66,6 +72,12 @@ enum FieldKind {
     String,
     Object,
     FloatArray,
+    #[cfg(feature = "scene-codec")]
+    UInt64,
+    #[cfg(feature = "scene-codec")]
+    StringArray,
+    #[cfg(feature = "scene-codec")]
+    EnumArray,
     DomainLink(u32),
     Enum,
     #[cfg(feature = "scene-codec")]
@@ -81,6 +93,28 @@ enum Field {
     String(String, Option<&'static str>),
     #[cfg(feature = "scene-codec")]
     EventString(String, String),
+    #[cfg(feature = "scene-codec")]
+    WireString {
+        value: String,
+        group: Option<u32>,
+        encoding: Option<scene::WireStringForm>,
+        label: Option<String>,
+    },
+    #[cfg(feature = "scene-codec")]
+    NullableString(Option<String>),
+    #[cfg(feature = "scene-codec")]
+    UInt64(u64),
+    #[cfg(feature = "scene-codec")]
+    StringArray(Option<Vec<String>>),
+    #[cfg(feature = "scene-codec")]
+    EnumArray(Option<Vec<scene::WireEditorEnum>>),
+    #[cfg(feature = "scene-codec")]
+    OptionalFloatArray(Option<Vec<f32>>),
+    #[cfg(feature = "scene-codec")]
+    EditorEnum {
+        value: u32,
+        group: Option<u32>,
+    },
     Value(Object),
     FloatArray(Vec<f32>),
     DomainLink(u32, String),
@@ -100,7 +134,19 @@ impl Field {
             Self::Float(_) => FieldKind::Float,
             Self::String(..) => FieldKind::String,
             #[cfg(feature = "scene-codec")]
-            Self::EventString(..) => FieldKind::String,
+            Self::EventString(..) | Self::WireString { .. } => FieldKind::String,
+            #[cfg(feature = "scene-codec")]
+            Self::NullableString(_) => FieldKind::String,
+            #[cfg(feature = "scene-codec")]
+            Self::UInt64(_) => FieldKind::UInt64,
+            #[cfg(feature = "scene-codec")]
+            Self::StringArray(_) => FieldKind::StringArray,
+            #[cfg(feature = "scene-codec")]
+            Self::EnumArray(_) => FieldKind::EnumArray,
+            #[cfg(feature = "scene-codec")]
+            Self::OptionalFloatArray(_) => FieldKind::FloatArray,
+            #[cfg(feature = "scene-codec")]
+            Self::EditorEnum { .. } => FieldKind::Enum,
             Self::Value(_) => FieldKind::Object,
             Self::FloatArray(_) => FieldKind::FloatArray,
             Self::DomainLink(class, _) | Self::NullDomainLink(class) => {
@@ -121,7 +167,17 @@ enum Object {
     Vector([f32; 3]),
     Color([u8; 4]),
     EmptyMap,
+    #[cfg(feature = "scene-codec")]
+    Map(Vec<(Object, Object)>),
+    #[cfg(feature = "scene-codec")]
+    EditorString {
+        value: String,
+        group: Option<u32>,
+        encoding: Option<scene::WireStringForm>,
+    },
     Empty116,
+    #[cfg(feature = "scene-codec")]
+    BoneSplitModes(Vec<(String, u32)>),
     Record(Record),
     Link(u32, String),
     FloatList(Vec<f32>),
@@ -140,6 +196,12 @@ enum Object {
         owner: String,
         default_string: String,
         default_label: String,
+    },
+    #[cfg(feature = "scene-codec")]
+    SequenceAnimationTrack {
+        track: scene::SequenceTimeline,
+        slot: String,
+        target: (u32, String),
     },
     #[cfg(feature = "scene-codec")]
     SlotAnimationTrack {
@@ -202,6 +264,13 @@ impl<'a> Writer<'a> {
                     }
                 }
                 #[cfg(feature = "scene-codec")]
+                Object::Map(items) => {
+                    for (key, value) in items {
+                        visit(writer, key);
+                        visit(writer, value);
+                    }
+                }
+                #[cfg(feature = "scene-codec")]
                 Object::DrawOrderAnimationTrack { rows, .. } => {
                     for row in rows {
                         for item in row {
@@ -224,6 +293,46 @@ impl<'a> Writer<'a> {
             value >>= 7;
         }
         self.bytes.push(value as u8);
+    }
+    #[cfg(feature = "scene-codec")]
+    fn uint64(&mut self, mut value: u64) {
+        while value >= 128 {
+            self.bytes.push(value as u8 | 128);
+            value >>= 7;
+        }
+        self.bytes.push(value as u8);
+    }
+    #[cfg(feature = "scene-codec")]
+    fn editor_enum(&mut self, value: u32, group: Option<u32>) {
+        let label = group.map(|g| format!("editor-enum-{g}:{value}"));
+        if self.generic(label.as_deref()) {
+            self.uint(value);
+        }
+    }
+    #[cfg(feature = "scene-codec")]
+    fn editor_string(
+        &mut self,
+        value: &str,
+        group: Option<u32>,
+        encoding: Option<scene::WireStringForm>,
+        label: Option<&str>,
+    ) {
+        let alias = group.map(|g| format!("wire-string-{g}:{value}"));
+        let fresh = self.generic(alias.as_deref());
+        let index = alias
+            .as_ref()
+            .and_then(|a| self.generic_labels.get(a))
+            .copied()
+            .unwrap_or(self.generic_count - 1);
+        if let Some(label) = label {
+            self.generic_labels.insert(label.to_owned(), index);
+        }
+        if fresh {
+            match encoding {
+                Some(scene::WireStringForm::Utf8Length) => self.string_utf8(value),
+                None => self.string(value),
+            }
+        }
     }
 
     fn float(&mut self, value: f32) {
@@ -251,6 +360,9 @@ impl<'a> Writer<'a> {
             *self.bytes.last_mut().unwrap() |= 128;
             return;
         }
+        self.string_utf8(value);
+    }
+    fn string_utf8(&mut self, value: &str) {
         // Character count includes a null sentinel; the first byte reserves
         // bits 7 (UTF mode) and 6 (continuation). Java strings count UTF-16 units.
         let mut count = value.encode_utf16().count() as u32 + 1;
@@ -329,6 +441,64 @@ impl<'a> Writer<'a> {
                         self.string(value);
                     }
                 }
+                #[cfg(feature = "scene-codec")]
+                Field::WireString {
+                    value,
+                    group,
+                    encoding,
+                    label,
+                } => {
+                    self.editor_string(value, *group, *encoding, label.as_deref());
+                }
+                #[cfg(feature = "scene-codec")]
+                Field::NullableString(value) => {
+                    if let Some(value) = value {
+                        self.generic(None);
+                        self.string(value);
+                    } else {
+                        self.uint(0);
+                    }
+                }
+                #[cfg(feature = "scene-codec")]
+                Field::UInt64(value) => self.uint64(*value),
+                #[cfg(feature = "scene-codec")]
+                Field::EditorEnum { value, group } => self.editor_enum(*value, *group),
+                #[cfg(feature = "scene-codec")]
+                Field::StringArray(values) => {
+                    if let Some(values) = values {
+                        self.generic(None);
+                        self.uint(values.len() as u32 + 1);
+                        for value in values {
+                            self.string(value);
+                        }
+                    } else {
+                        self.uint(0);
+                    }
+                }
+                #[cfg(feature = "scene-codec")]
+                Field::EnumArray(values) => {
+                    if let Some(values) = values {
+                        self.generic(None);
+                        self.uint(values.len() as u32 + 1);
+                        for value in values {
+                            self.editor_enum(value.value, value.group);
+                        }
+                    } else {
+                        self.uint(0);
+                    }
+                }
+                #[cfg(feature = "scene-codec")]
+                Field::OptionalFloatArray(values) => {
+                    if let Some(values) = values {
+                        self.generic(None);
+                        self.uint(values.len() as u32 + 1);
+                        for value in values {
+                            self.float(*value);
+                        }
+                    } else {
+                        self.uint(0);
+                    }
+                }
                 Field::Value(value) => self.object(value),
                 Field::FloatArray(values) => {
                     self.generic(None);
@@ -381,27 +551,51 @@ impl<'a> Writer<'a> {
                 self.generic(None);
                 self.uint(0);
             }
+            #[cfg(feature = "scene-codec")]
+            Object::BoneSplitModes(rows) => {
+                self.uint(116);
+                self.generic(None);
+                self.uint(rows.len() as u32);
+                for (bone, mode) in rows {
+                    self.object(&Object::Link(12, bone.clone()));
+                    self.uint(*mode);
+                }
+            }
             Object::EmptyMap => {
                 self.uint(38);
                 self.generic(None);
                 self.uint(0);
             }
             #[cfg(feature = "scene-codec")]
+            Object::Map(entries) => {
+                self.uint(38);
+                self.generic(None);
+                self.uint(entries.len() as u32);
+                for (key, value) in entries {
+                    self.object(key);
+                    self.object(value);
+                }
+            }
+            #[cfg(feature = "scene-codec")]
+            Object::EditorString {
+                value,
+                group,
+                encoding,
+            } => {
+                self.uint(3);
+                self.editor_string(value, *group, *encoding, None);
+            }
+            #[cfg(feature = "scene-codec")]
             Object::AnimationTrack(track) => {
-                use scene::{BoneChannel, KeyCurve};
+                use scene::KeyCurve;
                 self.uint(132);
                 self.domain_count += 1;
                 self.uint(1);
-                let kind = match track.channel {
-                    BoneChannel::Rotate => 0,
-                    BoneChannel::Translate => 1,
-                    BoneChannel::Scale => 2,
-                    BoneChannel::Shear => 3,
-                };
+                let kind = track.channel.wire();
                 self.uint(kind);
                 self.generic(None);
                 self.uint(track.keys.len() as u32);
-                let dimensions = if kind == 0 { 1 } else { 2 };
+                let dimensions = track.channel.dimensions();
                 for (i, key) in track.keys.iter().enumerate() {
                     self.uint(133);
                     self.domain_count += 1;
@@ -444,6 +638,32 @@ impl<'a> Writer<'a> {
                 }
             }
             #[cfg(feature = "scene-codec")]
+            Object::SequenceAnimationTrack {
+                track,
+                slot,
+                target,
+            } => {
+                self.uint(132);
+                self.domain_count += 1;
+                self.uint(1);
+                self.uint(22);
+                self.generic(None);
+                self.uint(track.keys.len() as u32);
+                for key in &track.keys {
+                    self.uint(133);
+                    self.domain_count += 1;
+                    self.uint(1);
+                    self.float(key.frame);
+                    self.float(key.mode.wire() as f32);
+                    self.float(key.index as f32);
+                    self.float(key.delay.get());
+                    self.uint(0);
+                }
+                self.domain_link(slot);
+                self.uint(target.0);
+                self.domain_link(&target.1);
+            }
+            #[cfg(feature = "scene-codec")]
             Object::SlotAnimationTrack {
                 track,
                 attachments,
@@ -481,15 +701,21 @@ impl<'a> Writer<'a> {
                             self.domain_count += 1;
                             self.uint(1);
                             self.float(key.frame);
-                            for v in key.values.into_iter().chain([0.; 3]) {
+                            for v in key.values.into_iter().chain(key.dark_values) {
                                 self.float(v);
                             }
                             let own = match key.curve {
-                                SlotRgbaCurve::Bezier { controls } => Some(controls),
+                                SlotRgbaCurve::Bezier {
+                                    controls,
+                                    dark_controls,
+                                } => Some((controls, dark_controls)),
                                 _ => None,
                             };
                             let previous = i.checked_sub(1).and_then(|j| match keys[j].curve {
-                                SlotRgbaCurve::Bezier { controls } => Some(controls),
+                                SlotRgbaCurve::Bezier {
+                                    controls,
+                                    dark_controls,
+                                } => Some((controls, dark_controls)),
                                 _ => None,
                             });
                             self.uint(match key.curve {
@@ -500,12 +726,24 @@ impl<'a> Writer<'a> {
                             if own.is_some() || previous.is_some() {
                                 for axis in 0..7 {
                                     let incoming = previous
-                                        .filter(|_| axis < 4)
-                                        .map(|c| [c[axis][2], c[axis][3]])
+                                        .and_then(|(c, dark)| {
+                                            if axis < 4 {
+                                                Some(c[axis])
+                                            } else {
+                                                dark.map(|d| d[axis - 4])
+                                            }
+                                        })
+                                        .map(|c| [c[2], c[3]])
                                         .unwrap_or([2147483648.; 2]);
                                     let outgoing = own
-                                        .filter(|_| axis < 4)
-                                        .map(|c| [c[axis][0], c[axis][1]])
+                                        .and_then(|(c, dark)| {
+                                            if axis < 4 {
+                                                Some(c[axis])
+                                            } else {
+                                                dark.map(|d| d[axis - 4])
+                                            }
+                                        })
+                                        .map(|c| [c[0], c[1]])
                                         .unwrap_or([2147483648.; 2]);
                                     for v in incoming.into_iter().chain(outgoing) {
                                         self.float(v);
@@ -793,8 +1031,14 @@ fn bone(input: &Bone, index: usize) -> Object {
 }
 
 fn validate(project: &MinimalProject) -> Result<(), FormatError> {
+    validate_with_bone_limit(project, 128)
+}
+fn validate_with_bone_limit(
+    project: &MinimalProject,
+    bone_limit: usize,
+) -> Result<(), FormatError> {
     if project.bones.is_empty()
-        || project.bones.len() > 128
+        || project.bones.len() > bone_limit
         || project.name.is_empty()
         || project.name.len() > 1024
     {

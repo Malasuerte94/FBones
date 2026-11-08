@@ -78,7 +78,7 @@ pub fn draw_order_permutation(
     slot_count: usize,
     offsets: &[SlotOffset],
 ) -> Result<Vec<usize>, FormatError> {
-    if slot_count > 128 || offsets.len() > slot_count {
+    if slot_count > super::MAX_SCENE_SLOTS || offsets.len() > slot_count {
         return Err(FormatError::UnsupportedProfile);
     }
     let mut result = vec![None; slot_count];
@@ -112,7 +112,7 @@ pub fn draw_order_permutation(
 /// records from the end while preserving the requested complete permutation.
 pub fn draw_order_offsets(order: &[usize]) -> Result<Vec<SlotOffset>, FormatError> {
     let n = order.len();
-    if n > 128 {
+    if n > super::MAX_SCENE_SLOTS {
         return Err(FormatError::UnsupportedProfile);
     }
     let mut positions = vec![None; n];

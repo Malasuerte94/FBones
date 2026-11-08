@@ -26,7 +26,7 @@
 use crate::{project::AppError, rig::Pose};
 use fbones_format::minimal::{meshes::Mesh, Bone};
 
-const MAX_VERTICES: usize = 256;
+const MAX_VERTICES: usize = crate::mesh::MAX_VERTICES;
 const MAX_BONES: usize = 128;
 const DIFFUSION_STEPS: usize = 48;
 type Point = [f64; 2];
@@ -119,7 +119,7 @@ fn geometry(
 fn graph(mesh: BindingTopology<'_>, points: &[Point]) -> Result<Graph, AppError> {
     if !mesh.triangles.len().is_multiple_of(3)
         || !mesh.edges.len().is_multiple_of(2)
-        || mesh.triangles.len() > 1536
+        || mesh.triangles.len() > crate::mesh::MAX_TRIANGLE_INDICES
         || mesh.edges.len() > 4096
     {
         return Err(invalid("Use valid triangle and edge arrays."));

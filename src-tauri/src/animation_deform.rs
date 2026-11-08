@@ -605,13 +605,66 @@ pub(crate) fn requested_targets(
     }
     Ok(targets)
 }
+fn vertex_move_limit(attachment: &SceneAttachment) -> usize {
+    if attachment.mesh().is_some() {
+        crate::mesh::MAX_VERTICES
+    } else {
+        256
+    }
+}
+#[cfg(test)]
+#[test]
+fn large_mesh_world_targets_accept_512_but_clipping_requests_remain_256() {
+    let mesh = crate::scene_large_mesh_fixture::mesh(32, 16, true);
+    let attachment = SceneAttachment::Mesh(Box::new(mesh.clone()));
+    let poses = vec![crate::rig::zero(); 3];
+    let points = crate::mesh::world_vertices(&mesh, &poses);
+    let sampled = DeformPoseView {
+        attachment: 7,
+        offsets: vec![0.; 512 * 4],
+        world_vertices: points
+            .iter()
+            .map(|p| [f64::from(p[0]), f64::from(p[1])])
+            .collect(),
+    };
+    let moves: Vec<_> = points
+        .iter()
+        .enumerate()
+        .map(|(vertex, p)| WorldVertexMove {
+            vertex,
+            x: f64::from(p[0]) + 2.,
+            y: f64::from(p[1]) - 3.,
+        })
+        .collect();
+    let worlds = vec![Affine::IDENTITY; 3];
+    let offsets = world_target_offsets(&attachment, &moves, &sampled, &worlds).unwrap();
+    assert!(offsets.chunks_exact(4).all(|v| v == [2., -3., 2., -3.]));
+    let mut excessive = moves.clone();
+    excessive.push(moves[511].clone());
+    assert!(world_target_offsets(&attachment, &excessive, &sampled, &worlds).is_err());
+    let clipping = SceneAttachment::Clipping(fbones_format::minimal::scene::Clipping {
+        name: "Own polygon".into(),
+        end_slot: Some(0),
+        convex: true,
+        inverse: false,
+        color: [255; 4],
+        weighted: true,
+        bones: mesh.bones,
+        vertices: mesh.vertices,
+        edges: mesh.edges,
+    });
+    assert_eq!(vertex_move_limit(&clipping), 256);
+    assert!(world_target_offsets(&clipping, &moves[..257], &sampled, &worlds).is_err());
+    let duplicate = [moves[511].clone(), moves[511].clone()];
+    assert!(world_target_offsets(&attachment, &duplicate, &sampled, &worlds).is_err());
+}
 fn world_target_offsets(
     attachment: &SceneAttachment,
     moves: &[WorldVertexMove],
     sampled: &DeformPoseView,
     worlds: &[Affine],
 ) -> Result<Vec<f64>, AppError> {
-    if moves.is_empty() || moves.len() > 256 {
+    if moves.is_empty() || moves.len() > vertex_move_limit(attachment) {
         return Err(invalid("Choose bounded existing deform vertices."));
     }
     let (weighted, bones, rows) = binding(attachment)?;
@@ -684,10 +737,13 @@ pub(crate) fn from_world_targets(
         } => (*attachment, *frame, vertices.as_slice(), *curve, *controls),
         _ => return Err(invalid("Choose a deform world-target operation.")),
     };
-    if sampled.attachment != attachment_id || moves.is_empty() || moves.len() > 256 {
+    let (address, attachment) = target(frame, attachment_id)?;
+    if sampled.attachment != attachment_id
+        || moves.is_empty()
+        || moves.len() > vertex_move_limit(attachment)
+    {
         return Err(invalid("Choose bounded existing deform vertices."));
     }
-    let (address, attachment) = target(frame, attachment_id)?;
     let offsets = world_target_offsets(attachment, moves, sampled, worlds)?;
     let existing = clip
         .deform_tracks

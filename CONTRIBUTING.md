@@ -56,6 +56,7 @@ the architecture and additional tooling.
 | Native Session, history, files and authoring | `src-tauri/src/` |
 | Independent binary reader and writer | `crates/fbones-format/` |
 | Optional original-editor comparison tools | `crates/fbones-research/` |
+| Independent headless/Pixi runtime and package examples | `packages/runtime/` |
 | JavaScript and real-Rust UI regressions | `tests/`, `tests/e2e/` |
 
 Rust owns authored project state and persistence. Vue uses the typed bridge;
@@ -71,6 +72,7 @@ change, run the relevant parts of this integration set and report the results:
 ```sh
 pnpm typecheck
 pnpm build:web
+pnpm build:runtime
 pnpm test
 cargo test -p fbones-format --locked
 cargo test -p fbones-desktop --locked
@@ -83,6 +85,7 @@ Rust Session through the opt-in test host:
 
 ```sh
 cargo fetch --locked
+pnpm build:runtime
 pnpm test:ui
 ```
 
@@ -103,6 +106,12 @@ Rebuild after changing product Rust or frontend sources. Avoid rebuilding
 isolated sessions; they must never automate an existing user editor window.
 See [testing](docs/TESTING.md) for traces, evidence limits and native checks.
 Documentation-only contributions need link/content checks, not an app rebuild.
+
+Runtime changes also need `pnpm test:runtime` after building the current opt-in
+`fbones-e2e-host` binary (`cargo build -p fbones-desktop --features e2e-host
+--bin fbones-e2e-host --locked`). Its native export checks use generated fixtures;
+standalone package tests and real browser GPU checks cover different boundaries.
+See the [runtime guide](packages/runtime/README.md) for package usage and limits.
 
 ## Preserve project data
 

@@ -1,12 +1,68 @@
 # F105 — Animate mode, animations, timeline and keyframes
 
-Status: **ACTIVE —0.9.4 is published/opened with bounded Animate Physics
-preview. Advanced tools and broader compatibility remain open**.
-The user's latest instruction prioritizes Animate and a timeline close to Spine.
-F307 export-phase and F308 broader Match sampling remain open; neither blocks this
-new priority. This document does not declare complete Animate compatibility.
+Status: **WAITING for full animation and compatibility; supported reliability
+slice delivered.** Current release-drag, numeric entry and playback corrections
+are verified in [the integration note](../research/ANIMATION-RELIABILITY-INTEGRATION-2026-11-08.md).
+All114final browser cases pass; the current selected Windows build is actually
+opened. Independent developer runtime preview is tracked in
+[F109-runtime](F109-runtime.md). Full Graph/timing/mixing/onion-skin/fidelity and
+platform/original acceptance remain open. Earlier mascot/source proofs remain
+under [F004-import](F004-import-feedback.md). Current selection/launch/cleanup
+live in [STATE](../STATE.md); F307/F308 broader fidelity remains user-deferred.
 
-## Latest delivered milestone —0.9.4
+Current working0.9.4 resolves Scene Mesh512/UV1024/triangle3072, Scene slots/full
+draw-order512, known lexical string forms and independent IK/Transform/Physics
+declaration inventories. Stable execution/Tree/solver/prefix order stays separate
+from declarations. Native ID remap/prune/append/history and full canonical BEFORE
+provenance capture preserve aliases/layout/scalars; exact canonical elision returns
+toNone. Old canonical writer/legacy files and unrelated bounds remain unchanged.
+The earlier source-format stage did not change widgets/solver fidelity. Current
+reliability changes affect HUD presentation, renderer/timeline work and subtree
+evaluation cost; no solver equation, Physics/Match fidelity or codec guard changed.
+
+Actual production-store/real-Session workflows pass full Mesh512AutoKey, complete
+slot512order/high-slot color/None, text rename/forms and constraint execution
+reorder/key/rename/history/resource/non-baking Save/portable reopen. Independent
+raw-graph and expected typed/payload/envelope checks preserve original f32fields:
+Mesh8264,slots4162,strings229,declarations329; seven PNGs survive current source
+plus three portable folders. Metadata-only declarations give identical execution
+DTOs and nativeNone poses, without a separate TS/original numerical parity claim.
+
+Four actual sources stay editable with identical prior saved hashes; four remain
+inspection-only. E is fully modeled statically: a NEWignored CURRENT codec copy
+omitting ONLY the time predicate reproduces all728346payload bytes. Production
+still rejects its3genuinely reversing keys/4componentaxes. B inherited affine
+semantics, F larger budgets/curves, G Path/other unmodeled records remain. Binary
+equality is not effective sampling or independently encoded original acceptance.
+
+Existing X-only mode1Yabsence/default, separate pairs, linear Tint Black, bounded
+Sequence/settings/portable frames, exact bone-time/Setupmix/bounds, seven-family
+working intent/resource identity/frozen leases and Source-only zero-Mesh metadata
+stay verified. Bone256/cliptracks1024/projecttracks4096/projectkeys8192, aggregate
+geometry4096, binding/constraints128, Clip256 and legacy/placement128 remain separate.
+Graph/timing/mixing/onion skin, nonlinear two-color/separate RGB/alpha and broader
+compatibility remain tracked below. Shared Setup/Animate controls follow animare.
+
+Earlier declaration checkpoint:399JS+knownskip/318native/98Scene+16default/95legacy pass; product/UI TypeScript,
+production build/check/strictClippy/fmt/normalrelease pass.109UIcases are discovered
+but unrun because retained pre-page Chromium failure is unchanged. Own current
+normal launch exits101 atGTK; Windows/macOS/GPU/nativeOS/fresh original4.3.26 checks
+remain open. Current Windows manual-test delivery is selected;2delivery and2bootstrap
+checks pass, with no native launch/interaction claim. No public push/release changed.
+See [STATE](../STATE.md),
+[current integration](../research/ANIMATION-CONSTRAINT-DECLARATIONS-INTEGRATION-2026-11-07.md),
+[DATA](../research/ANIMATION-CONSTRAINT-DECLARATIONS-DATA-GATE-2026-11-07.md),
+[UI](../research/ANIMATION-CONSTRAINT-DECLARATIONS-UI-GATE-2026-11-07.md),
+[saved proof](../research/ANIMATION-CONSTRAINT-DECLARATIONS-SAVED-DATA-2026-11-07.md)
+and `analysis/animation-constraint-declarations-check.json`.
+
+Next obtain the user's current Windows canvas/animation feedback. If research is later resumed, obtain
+discriminating exact4.3.26 effective curve/inheritance evidence when platform
+capability and fresh owned isolation permit. Do not guess roots, clamp
+handles, drop data, raise unrelated caps or repeat unchanged failed/accepted routes.
+Full F105 stays open; broader Match/Physics fidelity remains deferred.
+
+## Earlier verified milestone —0.9.4
 
 The Main viewport and clean Preview now share animated Physics evaluation from
 saved bone keys and keyed coefficients. The frontend reuses the existing solver

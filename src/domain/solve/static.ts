@@ -20,7 +20,7 @@ export function applyTransform(scene:InternalScene,frame:Evaluation,c:TransformC
     }
    }
   }
-  if(c.localTarget){bone.applied=local;recompute(scene,frame);}else setWorld(scene,frame,index,world);
+  if(c.localTarget){bone.applied=local;recompute(scene,frame,index);}else setWorld(scene,frame,index,world);
  }
 }
 function single(scene:InternalScene,frame:Evaluation,index:number,target:[number,number],compress:boolean,stretch:boolean,mix:number):void{
@@ -28,7 +28,7 @@ function single(scene:InternalScene,frame:Evaluation,index:number,target:[number
  const desired=degrees(Math.atan2(dy,dx))-p.shearX+(p.scaleX<0?180:0);p.rotation+=wrap(desired-p.rotation)*mix;
  const length=scene.bones[index]!.length*p.scaleX,distance=Math.hypot(dx,dy);
  if(length>1e-8&&((compress&&distance<length)||(stretch&&distance>length)))p.scaleX*=1+(distance/length-1)*mix;
- recompute(scene,frame);
+ recompute(scene,frame,index);
 }
 export function applyIk(scene:InternalScene,frame:Evaluation,c:IkConstraintInput):void{
  if(c.mix===0)return;const t=frame.bones[scene.indices.get(c.target)!]!.world,target:[number,number]=[t.x,t.y],parent=scene.indices.get(c.bones[0]!)!;
@@ -37,7 +37,7 @@ export function applyIk(scene:InternalScene,frame:Evaluation,c:IkConstraintInput
  const[tx,ty]=point(inverse(parentWorld(scene,frame,parent)),...target);let dx=tx-upper.x,dy=ty-upper.y;
  const uniform=Math.abs(Math.abs(upper.scaleX)-Math.abs(upper.scaleY))<1e-6;if(!uniform||c.stretch)lower.y=0;
  const first=vector(affine(upper),lower.x,lower.y),l1=Math.hypot(...first);
- if(l1<1e-8){single(scene,frame,parent,target,false,c.stretch,c.mix);frame.bones[child]!.applied.rotation=0;recompute(scene,frame);return;}
+ if(l1<1e-8){single(scene,frame,parent,target,false,c.stretch,c.mix);frame.bones[child]!.applied.rotation=0;recompute(scene,frame,child);return;}
  const second=scene.bones[child]!.length*Math.abs(lower.scaleX),reach=l1+second*Math.abs(upper.scaleX),initialDistance=Math.hypot(dx,dy),soft=c.softness*Math.abs(upper.scaleX)*(Math.abs(lower.scaleX)+1)/2;
  if(soft>0&&initialDistance>reach-soft&&initialDistance>0){const u=Math.max(0,Math.min(1,(initialDistance-reach+soft)/(2*soft))),eased=reach-soft+soft*(2*u-u*u);dx*=eased/initialDistance;dy*=eased/initialDistance;}
  const distance=Math.hypot(dx,dy);if(c.stretch&&uniform&&distance>reach&&reach>1e-8)upper.scaleX*=1+(distance/reach-1)*c.mix;
@@ -46,5 +46,5 @@ export function applyIk(scene:InternalScene,frame:Evaluation,c:IkConstraintInput
  let beta=0,best=Math.abs(radius(0)-distance),previous=radius(0)-distance;
  for(let k=1;k<=192;k++){const next=Math.PI*k/192,error=radius(next)-distance;if(Math.abs(error)<best){best=Math.abs(error);beta=next;}if(previous*error<0){let lo=Math.PI*(k-1)/192,hi=next,sign=previous;for(let n=0;n<48;n++){const mid=(lo+hi)/2,f=radius(mid)-distance;if(sign*f<=0)hi=mid;else{lo=mid;sign=f;}}beta=(lo+hi)/2;break;}previous=error;}
  const[qx,qy]=endpoint(beta),desiredParent=degrees(Math.atan2(dy,dx)-Math.atan2(qy,qx)),desiredChild=degrees(axis(beta))-lower.shearX+(lower.scaleX<0?180:0);
- upper.rotation+=wrap(desiredParent-upper.rotation)*c.mix;lower.rotation+=wrap(desiredChild-lower.rotation)*c.mix;frame.bones[parent]!.applied=upper;frame.bones[child]!.applied=lower;recompute(scene,frame);
+ upper.rotation+=wrap(desiredParent-upper.rotation)*c.mix;lower.rotation+=wrap(desiredChild-lower.rotation)*c.mix;frame.bones[parent]!.applied=upper;frame.bones[child]!.applied=lower;recompute(scene,frame,parent);
 }

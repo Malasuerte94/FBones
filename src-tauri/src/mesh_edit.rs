@@ -158,7 +158,7 @@ impl Mapping {
 fn valid_uvs(uvs: &[f32], hull: usize, edges: &[u32], triangles: &[u16]) -> Result<(), AppError> {
     let n = uvs.len() / 2;
     if !uvs.len().is_multiple_of(2)
-        || !(3..=256).contains(&n)
+        || !(3..=mesh::MAX_VERTICES).contains(&n)
         || !(3..=n).contains(&hull)
         || uvs
             .iter()
@@ -169,9 +169,10 @@ fn valid_uvs(uvs: &[f32], hull: usize, edges: &[u32], triangles: &[u16]) -> Resu
         || !triangles.len().is_multiple_of(3)
         || triangles.iter().any(|v| *v as usize >= n)
     {
-        return Err(invalid(
-            "Use valid mesh UVs, topology and at most 256 vertices.",
-        ));
+        return Err(invalid(&format!(
+            "Use valid mesh UVs, topology and at most {} vertices.",
+            mesh::MAX_VERTICES
+        )));
     }
     Ok(())
 }
@@ -270,8 +271,11 @@ pub(crate) fn move_vertices(
     poses: &[Pose],
     edit_uvs: bool,
 ) -> Result<(), AppError> {
-    if targets.is_empty() || targets.len() > 256 {
-        return Err(invalid("Choose 1–256 mesh vertices."));
+    if targets.is_empty() || targets.len() > mesh::MAX_VERTICES {
+        return Err(invalid(&format!(
+            "Choose 1–{} mesh vertices.",
+            mesh::MAX_VERTICES
+        )));
     }
     let mut seen = std::collections::HashSet::new();
     if targets.iter().any(|(i, p)| {
@@ -336,8 +340,11 @@ fn polygon_contains(p: Point, polygon: &[Point]) -> bool {
 }
 fn push_uv(mesh: &Mesh, uv: Point, poses: &[Pose]) -> Result<(Mesh, usize, Vec<usize>), AppError> {
     let n = mesh.vertices.len();
-    if n >= 256 {
-        return Err(invalid("This mesh already has 256 vertices."));
+    if n >= mesh::MAX_VERTICES {
+        return Err(invalid(&format!(
+            "This mesh already has {} vertices.",
+            mesh::MAX_VERTICES
+        )));
     }
     let old = uv_points(mesh);
     let mut raw = mesh.uvs.clone();

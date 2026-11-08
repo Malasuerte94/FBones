@@ -1,5 +1,5 @@
 //! Exact observed constraint/Event timeline values; runtime state is not stored.
-use super::{Animation, Constraint, SceneProject};
+use super::{Animation, Constraint, SceneProject, MAX_TRACK_KEYS};
 use crate::FormatError;
 #[derive(Clone, Debug)]
 pub struct EventDefinition {
@@ -237,6 +237,16 @@ impl Animation {
                 owners.push(b)
             }
         }
+        for t in &self.sequence_tracks {
+            let b = p
+                .slots
+                .get(t.attachment.slot)
+                .ok_or(FormatError::UnsupportedProfile)?
+                .bone;
+            if !owners.contains(&b) {
+                owners.push(b)
+            }
+        }
         for t in &self.deform_tracks {
             let b = p
                 .slots
@@ -374,14 +384,16 @@ pub(super) fn validate_tracks(
     a: &Animation,
 ) -> Result<(usize, usize, usize), FormatError> {
     let fail = || FormatError::UnsupportedProfile;
-    if a.constraint_track_permutation(p)?
-        .iter()
-        .copied()
-        .ne(0..a.constraint_tracks.len())
-        || a.event_track_permutation(p.events.len())?
+    if p.wire.is_none()
+        && (a
+            .constraint_track_permutation(p)?
             .iter()
             .copied()
-            .ne(0..a.event_tracks.len())
+            .ne(0..a.constraint_tracks.len())
+            || a.event_track_permutation(p.events.len())?
+                .iter()
+                .copied()
+                .ne(0..a.event_tracks.len()))
     {
         return Err(fail());
     }
@@ -394,7 +406,7 @@ pub(super) fn validate_tracks(
             return Err(fail());
         }
         let keys = t.wire_keys();
-        if keys.is_empty() || keys.len() > 4096 {
+        if keys.is_empty() || keys.len() > MAX_TRACK_KEYS {
             return Err(fail());
         }
         count += keys.len();
@@ -445,7 +457,7 @@ pub(super) fn validate_tracks(
         if t.event >= p.events.len()
             || !events.insert(t.event)
             || t.keys.is_empty()
-            || t.keys.len() > 4096
+            || t.keys.len() > MAX_TRACK_KEYS
         {
             return Err(fail());
         }

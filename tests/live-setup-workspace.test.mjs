@@ -14,15 +14,15 @@ globalThis.__TAURI__={core:{invoke:async(command,args)=>{
   return result;
  }
  if(command==='save_project'){model={...model,revision:model.revision+1,dirty:false};return model;}
- if(command==='open_project'){if(cancelOpen)return null;model={...model,documentId:model.documentId+1,revision:model.revision+1,dirty:false};return model;}
- if(command==='create_project'){if(failCreate)throw Error('create failed');model={...model,documentId:model.documentId+1,revision:model.revision+1,name:args.name,dirty:false};return model;}
+ if(command==='open_project'){if(cancelOpen)return null;model={...model,documentId:model.documentId+1,logicalDocumentId:model.logicalDocumentId+1,revision:model.revision+1,dirty:false};return model;}
+ if(command==='create_project'){if(failCreate)throw Error('create failed');model={...model,documentId:model.documentId+1,logicalDocumentId:model.logicalDocumentId+1,revision:model.revision+1,name:args.name,dirty:false};return model;}
  if(command==='choose_images_folder'||command==='refresh_images_folder'){model={...model,documentId:model.documentId+1,revision:model.revision+1,dirty:command==='choose_images_folder'||model.dirty,canUndo:true,library:{root:'./other-images/',images:[],warnings:[]}};return model;}
  if(command==='edit_rig'&&args.edit.type==='undo'){model={...model,documentId:model.documentId+1,revision:model.revision+1,dirty:false,canUndo:false,canRedo:true,library:{root:'./images/',images:[],warnings:[]}};return model;}
  throw Error(`Unexpected ${command}`);
 }},window:{getCurrentWindow:()=>({setTitle:async()=>{}})}};
 const {useWorkspace}=await import('../src/stores/workspace.ts');
 const physics={id:4,order:0,name:'spring',type:'physics',bone:0,x:0,y:1,scaleX:0,rotate:null,shearX:0,step:Math.fround(1/60),inertia:.5,strength:100,damping:.85,mass:1,wind:0,gravity:20,mix:1,limit:5000,globals:{inertia:false,strength:false,damping:false,mass:false,wind:false,gravity:false,mix:false}};
-beforeEach(()=>{setActivePinia(createPinia());calls=[];pending=null;failEvaluation=false;cancelOpen=false;failCreate=false;model={...draftSummary('Live'),documentId:77,revision:2,sceneEditing:true,dirty:false,constraints:[physics]};});
+beforeEach(()=>{setActivePinia(createPinia());calls=[];pending=null;failEvaluation=false;cancelOpen=false;failCreate=false;model={...draftSummary('Live'),documentId:77,logicalDocumentId:11,revision:2,sceneEditing:true,dirty:false,constraints:[physics]};});
 const flush=async()=>{for(let i=0;i<8;i++)await Promise.resolve();await new Promise(setImmediate);};
 function seconds(w,n){for(let i=0;i<n*10;i++)w.advanceSimulation(.1);}
 test('Setup starts live, idle physics never authors, temporary holds and reset preserve explicit user intent',()=>{
@@ -82,18 +82,18 @@ test('native SaveAs-style compatible revision preserves explicit off and reset; 
  await w.request('open');assert.equal(w.simulationIntent,true);assert.equal(w.simulationRunning,true);
 });
 test('native asset generation changes from folder selection, refresh and folder Undo preserve explicit Simulate off',async()=>{
- const w=useWorkspace();w.project=model;w.pauseSimulation();const firstId=w.project.documentId;
- await w.chooseImagesFolder();assert.equal(calls.at(-1).command,'choose_images_folder');assert.equal(w.project.documentId,firstId+1);assert.equal(w.simulationIntent,false);assert.equal(w.simulationRunning,false);
+ const w=useWorkspace();w.project=model;w.pauseSimulation();const firstId=w.project.documentId,logicalId=w.project.logicalDocumentId;
+ await w.chooseImagesFolder();assert.equal(calls.at(-1).command,'choose_images_folder');assert.equal(w.project.documentId,firstId+1);assert.equal(w.project.logicalDocumentId,logicalId);assert.equal(w.simulationIntent,false);assert.equal(w.simulationRunning,false);
  w.advanceSimulation(1);assert.equal(w.simulationTime,0,'choosing a library must not silently restart physics');
- await w.editRig({type:'undo'});assert.equal(w.project.documentId,firstId+2);assert.equal(w.simulationIntent,false);assert.equal(w.project.library.root,'./images/');
- await w.refreshImagesFolder();assert.equal(w.project.documentId,firstId+3);assert.equal(w.simulationIntent,false);assert.equal(w.simulationRunning,false);
- w.runSimulation();await w.refreshImagesFolder();assert.equal(w.simulationIntent,true);assert.equal(w.simulationRunning,true,'resource refresh preserves enabled intent too');
+ await w.editRig({type:'undo'});assert.equal(w.project.documentId,firstId+2);assert.equal(w.project.logicalDocumentId,logicalId);assert.equal(w.simulationIntent,false);assert.equal(w.project.library.root,'./images/');
+ await w.refreshImagesFolder();assert.equal(w.project.documentId,firstId+3);assert.equal(w.project.logicalDocumentId,logicalId);assert.equal(w.simulationIntent,false);assert.equal(w.simulationRunning,false);
+ w.runSimulation();await w.refreshImagesFolder();assert.equal(w.simulationIntent,true);assert.equal(w.project.logicalDocumentId,logicalId);assert.equal(w.simulationRunning,true,'resource refresh preserves enabled intent too');
 });
 test('only successful New/Open operations default Simulate on; canceled or failed operations preserve the old intent',async()=>{
- const w=useWorkspace();w.project=model;w.pauseSimulation();cancelOpen=true;await w.request('open');assert.equal(w.simulationIntent,false);assert.equal(w.project.documentId,77);
- cancelOpen=false;await w.request('open');assert.equal(w.simulationIntent,true);assert.equal(w.project.documentId,78);
- w.pauseSimulation();failCreate=true;await w.create('New live project');assert.equal(w.simulationIntent,false);assert.equal(w.project.documentId,78);
- failCreate=false;await w.create('New live project');assert.equal(w.simulationIntent,true);assert.equal(w.project.documentId,79);
+ const w=useWorkspace();w.project=model;w.pauseSimulation();cancelOpen=true;await w.request('open');assert.equal(w.simulationIntent,false);assert.equal(w.project.documentId,77);assert.equal(w.project.logicalDocumentId,11);
+ cancelOpen=false;await w.request('open');assert.equal(w.simulationIntent,true);assert.equal(w.project.documentId,78);assert.equal(w.project.logicalDocumentId,12);
+ w.pauseSimulation();failCreate=true;await w.create('New live project');assert.equal(w.simulationIntent,false);assert.equal(w.project.documentId,78);assert.equal(w.project.logicalDocumentId,12);
+ failCreate=false;await w.create('New live project');assert.equal(w.simulationIntent,true);assert.equal(w.project.documentId,79);assert.equal(w.project.logicalDocumentId,13);
 });
 test('canceling a pending geometry freeze cannot restore old matrices or secretly stop default live physics',async()=>{
  const w=useWorkspace();w.project=model;w.advanceSimulation(.1);pending={};const preparing=w.freezePose();const rejected=assert.rejects(preparing,/canceled/),done=pending.resolve;

@@ -43,6 +43,7 @@ pub struct SceneFrame {
     pub event_ids: Vec<u64>,
     pub animation_constraint_key_ids: Vec<Vec<Vec<u64>>>,
     pub animation_event_key_ids: Vec<Vec<Vec<u64>>>,
+    pub animation_sequence_key_ids: Vec<Vec<Vec<u64>>>,
     /// Session/history provenance, never encoded as an invented format field.
     /// On open, the documented generated-name convention is inferred again.
     pub auto_physics_names: HashMap<u64, String>,
@@ -93,6 +94,14 @@ pub enum SceneEdit {
         id: u64,
         attachment: SceneAttachment,
     },
+    SetAttachmentColor {
+        id: u64,
+        color: u32,
+    },
+    SetAttachmentSequence {
+        id: u64,
+        sequence: Option<crate::animation_sequence::SettingsInput>,
+    },
     SetActive {
         slot: u64,
         attachment: Option<u64>,
@@ -114,6 +123,11 @@ pub enum SceneEdit {
     ReorderSlot {
         id: u64,
         index: usize,
+    },
+    SetSlotDarkColor {
+        id: u64,
+        enabled: bool,
+        color: u32,
     },
     SetSlotColor {
         id: u64,
@@ -359,6 +373,7 @@ impl SceneHistory {
             .collect::<Result<Vec<_>, _>>()?;
         let mut animation_constraint_key_ids = vec![];
         let mut animation_event_key_ids = vec![];
+        let mut animation_sequence_key_ids = vec![];
         for animation in &project.animations {
             animation_ids.push(allocate(&mut ids.animation)?);
             let mut tracks = vec![];
@@ -383,6 +398,10 @@ impl SceneHistory {
                 &mut ids.animation_key,
             )?);
             animation_constraint_key_ids.push(crate::animation_constraints::allocate_ids(
+                animation,
+                &mut ids.animation_key,
+            )?);
+            animation_sequence_key_ids.push(crate::animation_sequence::allocate_ids(
                 animation,
                 &mut ids.animation_key,
             )?);
@@ -424,6 +443,7 @@ impl SceneHistory {
                 event_ids,
                 animation_constraint_key_ids,
                 animation_event_key_ids,
+                animation_sequence_key_ids,
                 auto_physics_names,
                 focus,
             },
@@ -477,7 +497,9 @@ impl SceneHistory {
         // explicit address for Undo without relying on the last native gesture.
         if let SceneEdit::RenameAttachment { id, .. }
         | SceneEdit::DeleteAttachment { id }
-        | SceneEdit::ReplaceAttachment { id, .. } = &edit
+        | SceneEdit::ReplaceAttachment { id, .. }
+        | SceneEdit::SetAttachmentSequence { id, .. }
+        | SceneEdit::SetAttachmentColor { id, .. } = &edit
         {
             let a = next.attachment_address(*id)?;
             let focus = SceneFocus {
@@ -497,6 +519,12 @@ impl SceneHistory {
                 &mut ids.event,
                 edit,
             )?,
+            SceneEdit::SetAttachmentColor { id, color } => {
+                crate::attachment_color::set(&mut next, id, color)?
+            }
+            SceneEdit::SetAttachmentSequence { id, sequence } => {
+                crate::animation_sequence::set_settings(&mut next, id, sequence)?
+            }
             SceneEdit::CreateSlot { bone, name } => {
                 let bone_index = next.bone_index(bone)?;
                 let name = unique_name(
@@ -543,8 +571,11 @@ impl SceneHistory {
                         "The attachment destination belongs to a different bone.",
                     ));
                 }
-                if target.is_none() && next.project.slots.len() + images.len() > 128 {
-                    return Err(invalid("This profile supports 128 slots."));
+                let slot_limit = fbones_format::minimal::scene::MAX_SCENE_SLOTS;
+                if target.is_none() && next.project.slots.len() + images.len() > slot_limit {
+                    return Err(invalid(&format!(
+                        "This profile supports {slot_limit} slots."
+                    )));
                 }
                 let inverse = poses(&next.project.rig.bones)[bone_index].inverse()?;
                 for image in images {
@@ -704,6 +735,17 @@ impl SceneHistory {
                 let i = next.slot_index(id)?;
                 next.project.slots[i].name = name;
             }
+            SceneEdit::SetSlotDarkColor { id, enabled, color } => {
+                let slot = next.slot_index(id)?;
+                let focus = SceneFocus {
+                    bone: next.bone_ids[next.project.slots[slot].bone],
+                    slot: Some(id),
+                    ..SceneFocus::default()
+                };
+                before.focus = focus.clone();
+                next.focus = focus;
+                crate::slot_dark_color::set(&mut next, id, enabled, color)?;
+            }
             SceneEdit::SetSlotColor { id, color } => {
                 let i = next.slot_index(id)?;
                 next.project.slots[i].color = color;
@@ -828,14 +870,19 @@ impl SceneHistory {
             crate::animation_deform::remap_references(&before, &mut next)?;
             crate::animation_slots::remap_references(&before, &mut next)?;
             crate::animation_constraints::remap(&before, &mut next)?;
+            crate::animation_sequence::remap_references(&before, &mut next)?;
+            crate::attachment_color::remap(&before, &mut next)?;
+            crate::slot_dark_color::remap(&before, &mut next)?;
         }
         crate::animation_slots::canonicalize(&mut next)?;
         crate::animation_deform::canonicalize(&mut next)?;
         crate::animation_constraints::canonicalize(&mut next)?;
         crate::animation_events::canonicalize(&mut next)?;
+        crate::animation_sequence::canonicalize(&mut next)?;
         crate::animation_slots::validate(&next)?;
         crate::animation_deform::validate(&next)?;
         next.follow_physics_bone_names(&before);
+        crate::scene_wire::reconcile(&before, &mut next)?;
         check_active_clipping(&next.project)?;
         encode_scene_payload(&next.project)?;
         if next.project == self.frame.project {

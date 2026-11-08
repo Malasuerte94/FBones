@@ -57,6 +57,7 @@ fn scene() -> SceneProject {
         },
     ];
     SceneProject {
+        wire: None,
         rig,
         images_root: "./images".into(),
         audio_root: "./audio".into(),
@@ -66,6 +67,9 @@ fn scene() -> SceneProject {
         animations: vec![clip],
         slots: vec![],
         attachment_order: vec![],
+        attachment_sequences: vec![],
+        attachment_colors: vec![],
+        slot_dark_colors: vec![],
         constraints: vec![Constraint::Physics(c)],
     }
 }

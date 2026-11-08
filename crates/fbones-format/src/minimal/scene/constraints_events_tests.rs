@@ -297,6 +297,11 @@ fn event_domains_count_toward_real_reader_budget_and_unsupported_global_targets_
             ..key.clone()
         })
         .collect();
+    let bytes = encode_scene_payload(&p).unwrap();
+    assert_eq!(decode_scene(&bytes).unwrap(), p);
+    let mut second = p.animations[0].clone();
+    second.name = "second events".into();
+    p.animations.push(second);
     assert!(encode_scene_payload(&p).is_err());
     let mut p = scene();
     if let ConstraintTimeline::PhysicsReset { constraint, .. } =

@@ -1,18 +1,24 @@
+import type {SequenceSettings,SequenceWorkingPose,SequenceKey} from './animationSequence.ts';
+import {animationFamilyChannels,type AnimationChannel,type AnimationFamily} from './animation.ts';
 /** Controlled timeline view data; native session owns identities and authoring. */
-export type TimelineChannel='rotate'|'translate'|'scale'|'shear';
+export type TimelineChannel=AnimationChannel;
+export type TimelineFamily=AnimationFamily;
 export type TimelineSlotChannel='attachment'|'rgba';
-export type TimelineProperty=TimelineChannel|TimelineSlotChannel|'drawOrder'|'deform'|'ik'|'transformMix'|'physics'|'physicsReset'|'event';
+export type TimelineProperty=TimelineChannel|TimelineSlotChannel|'drawOrder'|'deform'|'ik'|'transformMix'|'physics'|'physicsReset'|'event'|'sequence';
 export type TimelineInterpolation='linear'|'stepped'|'bezier';
 export interface TimelineAnimation {id:number;name:string}
 export interface TimelineBone {id:number;name:string}
 /** Two absolute frame/value control points, belonging to the outgoing segment. */
 export type TimelineBezierControls=[number,number,number,number];
-export interface TimelineKey {id:number;frame:number;values:number[];interpolation:TimelineInterpolation;controls?:TimelineBezierControls[]|null;attachment?:number|null;order?:number[]|null;progressControls?:TimelineBezierControls|null;ikFlags?:TimelineIkFlags;eventPayload?:TimelineEventPayload}
+export interface TimelineKey {id:number;frame:number;values:number[];interpolation:TimelineInterpolation;controls?:TimelineBezierControls[]|null;attachment?:number|null;order?:number[]|null;progressControls?:TimelineBezierControls|null;ikFlags?:TimelineIkFlags;eventPayload?:TimelineEventPayload;sequencePayload?:SequenceWorkingPose}
 export interface TimelineTrack {id:string;boneId:number;channel:TimelineChannel;keys:TimelineKey[]}
-export interface TimelineSlot {id:number;name:string;boneId:number;attachments:{id:number;name:string}[]}
+export interface TimelineSlot {id:number;name:string;boneId:number;tintBlack?:boolean;attachments:{id:number;name:string;sequence?:SequenceSettings|null}[]}
 export type TimelineSlotTrack={id:string;slotId:number;channel:'attachment';keys:{id:number;frame:number;attachment:number|null}[]}|{id:string;slotId:number;channel:'rgba';keys:TimelineKey[]};
-export const timelineChannels:TimelineChannel[]=['rotate','translate','scale','shear'];
-export const timelineChannelColor:Record<TimelineProperty,string>={rotate:'#7ec958',translate:'#70c7e6',scale:'#ef7777',shear:'#e2cb60',attachment:'#bca3e5',rgba:'#e7a9cb',drawOrder:'#c4b6dd',deform:'#e78bb9',ik:'#e2cb60',transformMix:'#70c7e6',physics:'#d8af72',physicsReset:'#d8af72',event:'#bc90d7'};
+/** Four shared transform families; stored split axes only replace property rows. */
+export const timelineChannels:TimelineFamily[]=['rotate','translate','scale','shear'];
+export function timelineBoneChannels(storedChannels:readonly TimelineChannel[]):TimelineChannel[]{return timelineChannels.flatMap(family=>animationFamilyChannels(storedChannels,family));}
+export function isTimelineBoneChannel(channel:TimelineProperty):channel is TimelineChannel{return ['rotate','translate','translateX','translateY','scale','scaleX','scaleY','shear'].includes(channel);}
+export const timelineChannelColor:Record<TimelineProperty,string>={rotate:'#7ec958',translate:'#70c7e6',translateX:'#70c7e6',translateY:'#70c7e6',scale:'#ef7777',scaleX:'#ef7777',scaleY:'#ef7777',shear:'#e2cb60',attachment:'#bca3e5',rgba:'#e7a9cb',drawOrder:'#c4b6dd',deform:'#e78bb9',ik:'#e2cb60',transformMix:'#70c7e6',physics:'#d8af72',physicsReset:'#d8af72',event:'#bc90d7',sequence:'#9ac77a'};
 export function timelineFrameAt(clientX:number,left:number,scroll:number,pixelsPerFrame:number,snap=true):number{
  const frame=Math.max(0,(clientX-left+scroll)/pixelsPerFrame);
  return snap?Math.round(frame):Math.round(frame*1000)/1000;
@@ -89,3 +95,5 @@ export interface TimelineEventPayload {int:number;float:number;string:string;vol
 export interface TimelineEvent extends TimelineEventPayload {id:number;name:string;audio:string}
 export interface TimelineEventKey extends TimelineEventPayload {id:number;frame:number}
 export interface TimelineEventTrack {id:string;eventId:number;keys:TimelineEventKey[]}
+
+export interface TimelineSequenceTrack {id:string;slotId:number;attachmentId:number;keys:SequenceKey[]}

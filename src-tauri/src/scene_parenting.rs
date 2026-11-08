@@ -11,7 +11,9 @@ pub(super) fn apply(
     parent: u64,
     world: &[Pose],
 ) -> Result<(), AppError> {
-    if bones.len() > 128 || attachments.len() > 512 || (bones.is_empty() && attachments.is_empty())
+    if bones.len() > MAX_SCENE_BONES
+        || attachments.len() > 512
+        || (bones.is_empty() && attachments.is_empty())
     {
         return Err(invalid("Choose a bounded bone or attachment selection."));
     }
@@ -67,8 +69,11 @@ pub(super) fn apply(
             slot.bone != target && selected > 0 && selected < slot.attachments.len()
         })
         .count();
-    if next.project.slots.len() + split_count > 128 {
-        return Err(invalid("This profile supports at most 128 slots."));
+    let slot_limit = fbones_format::minimal::scene::MAX_SCENE_SLOTS;
+    if next.project.slots.len() + split_count > slot_limit {
+        return Err(invalid(&format!(
+            "This profile supports at most {slot_limit} slots."
+        )));
     }
     let old_slot_ids = next.slot_ids.clone();
     let traversal = next

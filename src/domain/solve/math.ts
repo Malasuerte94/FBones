@@ -16,5 +16,11 @@ export function finite(value:Affine|LocalPose):boolean{return Object.values(valu
 export function heading(m:Affine):number{return degrees(Math.atan2(m.b,m.a));}
 export function rotateBasis(m:Affine,angle:number):void{const s=Math.sin(radians(angle)),c=Math.cos(radians(angle));[m.a,m.b]=[c*m.a-s*m.b,s*m.a+c*m.b];[m.c,m.d]=[c*m.c-s*m.d,s*m.c+c*m.d];}
 export function parentWorld(scene:InternalScene,frame:Evaluation,index:number):Affine{const p=scene.parents[index];return p===null?identity:frame.bones[p]!.world;}
-export function recompute(scene:InternalScene,frame:Evaluation):void{for(let i=0;i<frame.bones.length;i++){const bone=frame.bones[i]!;bone.world=compose(parentWorld(scene,frame,i),affine(bone.applied));if(!finite(bone.world))fail('NonFinite');}}
-export function setWorld(scene:InternalScene,frame:Evaluation,index:number,world:Affine):void{const bone=frame.bones[index]!;bone.applied=fromAffine(compose(inverse(parentWorld(scene,frame,index)),world),bone.applied);recompute(scene,frame);}
+/** A local constraint changes only its target and descendants. Visit parents
+ * before children without rebuilding every unrelated branch for each spring. */
+export function recompute(scene:InternalScene,frame:Evaluation,root?:number):void{
+ const update=(i:number)=>{const bone=frame.bones[i]!;bone.world=compose(parentWorld(scene,frame,i),affine(bone.applied));if(!finite(bone.world))fail('NonFinite');};
+ if(root===undefined){for(let i=0;i<frame.bones.length;i++)update(i);return;}
+ const pending=[root];while(pending.length){const i=pending.pop()!;update(i);const children=scene.children[i]!;for(let n=children.length-1;n>=0;n--)pending.push(children[n]!);}
+}
+export function setWorld(scene:InternalScene,frame:Evaluation,index:number,world:Affine):void{const bone=frame.bones[index]!;bone.applied=fromAffine(compose(inverse(parentWorld(scene,frame,index)),world),bone.applied);recompute(scene,frame,index);}

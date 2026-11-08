@@ -9,6 +9,7 @@ import AppButton from './components/atoms/AppButton.vue';
 import AppIcon from './components/atoms/AppIcon.vue';
 import ModalDialog from './components/molecules/ModalDialog.vue';
 import PhysicsPreviewControls from './components/molecules/PhysicsPreviewControls.vue';
+import ProjectInspectionNotice from './components/molecules/ProjectInspectionNotice.vue';
 import ProjectViewport from './components/organisms/ProjectViewport.vue';
 import AnimationTimeline from './components/organisms/AnimationTimeline.vue';
 import AnimationTools from './components/organisms/AnimationTools.vue';
@@ -34,7 +35,9 @@ import { toolEditMode } from './domain/toolMode';
 
 const { t } = useI18n();
 const w = useWorkspace();
-const timelineSlots=computed(()=>w.sceneSlots.map(slot=>({id:slot.id,boneId:slot.bone,name:slot.name,attachments:slot.attachments.map(attachment=>({id:attachment.id,name:attachment.name}))})));
+const timelineSlots=computed(()=>(w.project?.slots??[]).map(slot=>({id:slot.id,boneId:slot.bone,name:slot.name,tintBlack:slot.tintBlack,attachments:slot.attachments?.map(attachment=>({id:attachment.id,name:attachment.name,sequence:attachment.sequence}))??(slot.region?[{id:slot.id,name:slot.region.name}]:[])})));
+const timelineSelectedConstraints=computed(()=>w.selectedConstraintId===null?[]:[w.selectedConstraintId]);
+const timelineInterpolations:Array<'linear'|'stepped'|'bezier'>=['linear','stepped','bezier'];
 const boneEditor=useBoneFieldEditor(()=>t('invalidTransform'));
 const timeline=ref<InstanceType<typeof AnimationTimeline>>();
 async function newAnimation(){await w.setEditorMode('animate');await nextTick();if(w.editorMode==='animate')timeline.value?.beginName('create');}
@@ -97,18 +100,19 @@ let disposed = false;
 
 function command(id: string) {
   if(w.parentPicking)w.cancelParentPick();
-  if(constraintCreator.value||clippingCreator.value||eventCreator.value){if(['save','copy','undo','redo','import'].includes(id))return;constraintCreator.value=null;clippingCreator.value=false;eventCreator.value=false;}
+  if(constraintCreator.value||clippingCreator.value||eventCreator.value){if(['save','copy','export-runtime','undo','redo','import'].includes(id))return;constraintCreator.value=null;clippingCreator.value=false;eventCreator.value=false;}
   if(w.clippingDraft){if(['save','copy','undo','redo','import'].includes(id)){w.showNotice(t('clippingFinishFirst'));return;}if(['new','open','close','quit'].includes(id))w.cancelClipping();}
   document.querySelectorAll<HTMLDetailsElement>('details.editor-menu[open]').forEach(el=>{el.open=false;});
   if(w.traceOpen){if(['save','copy','undo','redo','import'].includes(id)){w.showNotice(t('traceFinishFirst'));return;}if(['new','open','close','quit'].includes(id))w.cancelTrace();}
   if (w.newDialog && ['save', 'copy', 'undo', 'redo', 'import'].includes(id)) return;
   if (w.discardDialog && ['undo', 'redo', 'import'].includes(id)) return;
-  if (['save', 'copy', 'undo', 'redo', 'import'].includes(id)) (document.activeElement as HTMLElement | null)?.blur();
+  if (['save', 'copy', 'export-runtime', 'undo', 'redo', 'import'].includes(id)) (document.activeElement as HTMLElement | null)?.blur();
   if (id === 'undo' || id === 'redo') void w.editRig({ type: id });
   if(id==='new')openNew();
   if (['open', 'close', 'quit'].includes(id)) void w.request(id as Intent);
   if (id === 'copy') void w.copy();
   if (id === 'save') void w.save();
+  if (id === 'export-runtime') void w.exportRuntime();
   if (id === 'import') void w.chooseImagesFolder();
 }
 function keyboard(event: KeyboardEvent) {
@@ -126,7 +130,7 @@ function keyboard(event: KeyboardEvent) {
   if(w.editorMode==='animate'&&!event.ctrlKey&&!event.metaKey){
     if(event.key===' '){if(target.closest('button')){event.stopPropagation();return;}event.preventDefault();event.stopPropagation();if(w.animationPlaying)w.pauseAnimation();else w.playAnimation();return;}
     if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();w.seekAnimation(w.animationFrame+(event.key==='ArrowRight'?1:-1));return;}
-    if(event.key.toLowerCase()==='k'){event.preventDefault();if(w.selectedEventId!==null)void w.insertEventAnimationKey(w.selectedEventId);else if(w.selectedConstraint)void w.insertConstraintAnimationKeys({constraintId:w.selectedConstraint.id,kind:w.selectedConstraint.type==='transform'?'transformMix':w.selectedConstraint.type});else if(w.selectedSlotId!==null)void w.insertSlotAnimationKeys({slotId:w.selectedSlotId,channel:'attachment'});else void w.insertAnimationKeys('translate');return;}
+    if(event.key.toLowerCase()==='k'){event.preventDefault();if(w.selectedEventId!==null)void w.insertEventAnimationKey(w.selectedEventId);else if(w.selectedConstraint)void w.insertConstraintAnimationKeys({constraintId:w.selectedConstraint.id,kind:w.selectedConstraint.type==='transform'?'transformMix':w.selectedConstraint.type});else if(w.selectedAttachment?.sequence)void w.insertSequenceAnimationKey(w.selectedAttachment.id);else if(w.selectedSlotId!==null)void w.insertSlotAnimationKeys({slotId:w.selectedSlotId,channel:'attachment'});else void w.keyAnimationChanges(w.tool==='pose'||w.tool==='rotate'?'rotate':w.tool==='scale'?'scale':w.tool==='shear'?'shear':'translate');return;}
     if(['p','b','n','l'].includes(event.key.toLowerCase()))return;
     if(event.key==='Delete'||event.key==='Backspace')return;
   }
@@ -172,7 +176,7 @@ onBeforeUnmount(() => {
     <header class="editor-header">
       <div class="mr-2 flex items-center gap-1.5 text-accent"><AppIcon name="logo" class="!size-5"/><span class="font-semibold tracking-wide text-ink">{{ t('appName') }}</span></div>
       <details class="editor-menu"><summary>{{ t('fileMenu') }}</summary><div class="menu-popover">
-        <button @click="openNew">{{ t('newProject') }}<span>Ctrl+N</span></button><button @click="command('open')">{{ t('openProject') }}<span>Ctrl+O</span></button><button :disabled="!w.project?.canSave" @click="command('save')">{{ t('save') }}<span>Ctrl+S</span></button><button :disabled="!w.project?.canCopy" @click="command('copy')">{{ t('saveAs') }}<span>Ctrl+Shift+S</span></button><hr/><button :disabled="!w.project" @click="command('close')">{{ t('closeProject') }}<span>Ctrl+W</span></button>
+        <button @click="openNew">{{ t('newProject') }}<span>Ctrl+N</span></button><button @click="command('open')">{{ t('openProject') }}<span>Ctrl+O</span></button><button :disabled="!w.project?.canSave" @click="command('save')">{{ t('save') }}<span>Ctrl+S</span></button><button :disabled="!w.project?.canCopy" @click="command('copy')">{{ t('saveAs') }}<span>Ctrl+Shift+S</span></button><button data-testid="export-runtime" :disabled="!desktop||!w.canEdit||!w.sceneEditing||w.busy||!!w.inspectorError||!!w.animationKeyError||!!w.eventKeyError||!!w.sequenceFieldError||!!w.attachmentColorError||w.traceOpen||!!w.clippingDraft" @click="command('export-runtime')">{{ t('exportRuntime') }}</button><hr/><button :disabled="!w.project" @click="command('close')">{{ t('closeProject') }}<span>Ctrl+W</span></button>
       </div></details>
       <AppButton variant="ghost" :disabled="w.busy" :aria-label="t('newProject')" :title="t('newProject')" @click="openNew"><AppIcon name="plus"/></AppButton>
       <AppButton variant="ghost" :disabled="w.busy" :aria-label="t('openProject')" :title="t('openProject')" @click="command('open')"><AppIcon name="folder"/></AppButton>
@@ -202,6 +206,12 @@ onBeforeUnmount(() => {
     <div class="flex min-h-0 flex-1">
       <div class="animation-editor-stage">
       <ProjectViewport class="editor-viewport min-w-48 flex-1">
+        <div v-if="w.openingProject" class="absolute inset-0 z-50 flex items-center justify-center bg-canvas/70 p-4" data-testid="project-opening" aria-hidden="true">
+          <div class="flex max-w-sm items-start gap-3 rounded-sm border border-line bg-panel px-4 py-3 shadow-lg">
+            <span aria-hidden="true" class="mt-0.5 size-4 shrink-0 animate-spin rounded-full border-2 border-line border-t-accent motion-reduce:animate-none"/>
+            <div><p class="text-xs font-semibold text-ink">{{t('openingProject')}}</p><p class="mt-1 text-[11px] leading-4 text-muted">{{t('openingProjectDetail')}}</p></div>
+          </div>
+        </div>
         <div class="pointer-events-none absolute top-3 left-4 text-2xl font-light uppercase tracking-wide text-ink/35">{{ t(w.editorMode) }}</div>
         <div v-if="!w.project" class="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
           <section class="pointer-events-auto w-full max-w-sm rounded-sm border border-line bg-panel p-6 shadow-xl">
@@ -213,7 +223,7 @@ onBeforeUnmount(() => {
           <div v-if="w.parentPicking" class="pointer-events-none absolute top-3 left-1/2 z-20 flex max-w-[95%] -translate-x-1/2 items-center gap-3 rounded-sm border border-accent bg-shell px-3 py-2 text-xs shadow-md" data-testid="parent-pick-hint"><span>{{t('parentPickHint')}}</span><button class="pointer-events-auto dock-tab" @click="w.cancelParentPick">{{t('cancel')}}</button></div>
           <PhysicsPreviewControls v-if="w.editorMode==='setup'&&hasPhysics&&!w.project.inspectionOnly" class="pointer-events-auto absolute top-3 right-3 w-56 max-w-[calc(100%-2rem)]" :running="w.simulationRunning" :enabled="w.simulationIntent" :time="w.simulationTime" :error="w.simulationError" :disabled="w.busy||w.traceOpen||!!w.clippingDraft" @run="w.runSimulation" @pause="w.pauseSimulation" @step="w.stepSimulation" @reset="w.resetSimulation"/>
           <p v-if="w.editorMode==='animate'&&w.animationPhysicsError" role="alert" data-testid="animation-physics-viewport-error" class="pointer-events-auto absolute top-3 right-3 max-w-64 rounded-sm border border-danger/50 bg-panel p-2 text-[11px] leading-4 text-danger">{{w.animationPhysicsError}}</p>
-          <div v-if="w.project.inspectionOnly" class="pointer-events-none absolute top-3 right-3 bg-shell/90 px-2 py-1 text-xs text-warning">{{ t('inspectionOnly') }}</div>
+          <ProjectInspectionNotice v-if="w.project.inspectionOnly&&!w.openingProject" :name="w.project.name" :busy="w.busy" :can-copy="w.project.canCopy" @open="command('open')" @copy="command('copy')"/>
           <AnimationTools v-if="w.editMode==='bones'&&!w.traceOpen&&!w.clippingDraft" :editor="boneEditor"/>
           <div v-if="w.editMode!=='bones'&&!w.traceOpen&&!w.clippingDraft" class="viewport-controls">
           <div v-if="w.editorMode==='animate'" class="context-toolbar mesh-context" aria-label="Animation deformation tools"><div class="flex items-center gap-1"><AppIcon name="mesh" class="text-accent"/><span class="min-w-0 flex-1 truncate">{{w.selectedAttachment?.name??'Deform'}}</span><button class="dock-tab" data-testid="viewport-deform-key" :disabled="!w.canEdit||w.busy||!w.activeAnimation||!(w.selectedAttachment?.mesh||w.selectedAttachment?.clipping)" aria-label="Key deformation" @click="w.selectedAttachment&&w.insertDeformKey(w.selectedAttachment.id)"><AppIcon name="key" class="!size-3"/></button></div><div class="mt-1 flex items-center gap-1 border-t border-line pt-1"><span class="text-[10px] text-muted">Move vertices · Deform</span><button class="dock-tab ml-auto" @click="mode('bones')">{{t('done')}}</button></div></div>
@@ -245,10 +255,10 @@ onBeforeUnmount(() => {
       <template v-if="w.editorMode==='animate'&&w.project">
         <div class="animation-resize-bar" role="separator" aria-label="Resize timeline" aria-orientation="horizontal" tabindex="0" data-testid="timeline-resize" @pointerdown="resizeTimeline" @keydown="timelineResizeKey"/>
         <div class="animation-bottom-pane" :style="{height:timelineHeight+'px'}">
-          <AnimationTimeline ref="timeline" :animations="w.animations" :active-animation-id="w.animationId" :bones="w.project.bones" :selected-bone-ids="w.selectedSlotId===null?w.selectedIds:[]" :tracks="w.animationTracks" :slots="timelineSlots" :slot-tracks="w.animationSlotTracks" :draw-order-keys="w.animationDrawOrderKeys" :deform-tracks="w.animationDeformTracks" :selected-slot-ids="w.selectedSlotIds" :constraints="w.animationTimelineConstraints" :selected-constraint-ids="w.selectedConstraintId===null?[]:[w.selectedConstraintId]" :constraint-tracks="w.animationConstraintTracks" :events="w.eventDefinitions" :event-tracks="w.animationEventTracks" :current-frame="w.animationFrame" :duration-frames="w.animationDuration" :fps="w.animationFps" :playing="w.animationPlaying" :loop="w.animationLoop" :auto-key="w.animationAutoKey" :disabled="w.busy||!w.canEdit" :supported-channels="w.animationChannels" :supported-interpolations="['linear','stepped','bezier']" :can-paste="w.animationCanPaste"
+          <AnimationTimeline ref="timeline" :animations="w.animations" :active-animation-id="w.animationId" :bones="w.project.bones" :selected-bone-ids="w.selectedSlotId===null?w.selectedIds:[]" :tracks="w.animationTracks" :slots="timelineSlots" :slot-tracks="w.animationSlotTracks" :sequence-tracks="w.animationSequenceTracks" :draw-order-keys="w.animationDrawOrderKeys" :deform-tracks="w.animationDeformTracks" :selected-slot-ids="w.selectedSlotIds" :constraints="w.animationTimelineConstraints" :selected-constraint-ids="timelineSelectedConstraints" :constraint-tracks="w.animationConstraintTracks" :events="w.eventDefinitions" :event-tracks="w.animationEventTracks" :current-frame="w.animationFrame" :duration-frames="w.animationDuration" :stored-duration-frames="w.animationStoredDuration" :preview-end-frames="w.animationPreviewEnd" :automatic-preview-end-frames="w.animationAutomaticPreviewEnd" :preview-budget-exceeded="w.animationPreviewExceedsBudget" :fps="w.animationFps" :playing="w.animationPlaying" :loop="w.animationLoop" :loop-start="w.animationLoopStart" :loop-end="w.animationLoopEnd" :auto-key="w.animationAutoKey" :disabled="w.busy||!w.canEdit" :supported-channels="w.animationChannels" :supported-interpolations="timelineInterpolations" :can-paste="w.animationCanPaste"
             @draft-validity="invalid=>w.animationKeyError=invalid?'Enter valid animation values before saving.':''" @select-animation="w.selectAnimation" @create-animation="w.createAnimation" @rename-animation="w.renameAnimation" @delete-animation="w.deleteAnimation" @duplicate-animation="w.duplicateAnimation" @copy-keys="w.copyAnimationKeys" @paste-keys="w.pasteAnimationKeys"
             @seek="w.seekAnimation" @play="w.playAnimation" @pause="w.pauseAnimation" @toggle-loop="w.animationLoop=!w.animationLoop" @toggle-auto-key="w.animationAutoKey=!w.animationAutoKey"
-            @select-constraint="w.selectConstraint" @insert-constraint-keys="w.insertConstraintAnimationKeys" @update-constraint-key="w.updateConstraintAnimationKey" @select-event="w.selectEvent" @insert-event-key="w.insertEventAnimationKey" @update-event-key="w.updateEventAnimationKey"
+            @select-constraint="w.selectConstraint" @insert-constraint-keys="w.insertConstraintAnimationKeys" @update-constraint-key="w.updateConstraintAnimationKey" @select-sequence-attachment="w.selectAttachment" @insert-sequence-key="w.insertSequenceAnimationKey" @update-sequence-key="w.updateSequenceAnimationKey" @select-event="w.selectEvent" @insert-event-key="w.insertEventAnimationKey" @update-event-key="w.updateEventAnimationKey"
             @select-bone="timelineSelectBone" @select-slot="(id,additive)=>w.selectSlot(id,{toggle:additive})" @select-attachment="(id,additive)=>{w.selectAttachment(id,{toggle:additive});showMesh=true}" @insert-draw-order-key="w.insertDrawOrderKey" @update-draw-order-key="w.updateDrawOrderKey" @insert-deform-key="change=>w.insertDeformKey(change.attachmentId)" @update-deform-curve="w.updateDeformCurve" @insert-slot-keys="w.insertSlotAnimationKeys" @update-slot-key="w.updateSlotAnimationKey" @insert-keys="w.insertAnimationKeys" @move-keys="w.moveAnimationKeys" @delete-keys="w.deleteAnimationKeys" @set-interpolation="w.setAnimationInterpolation" @update-key="w.updateAnimationKey" @update-bezier="w.updateAnimationBezier" @set-fps="w.setAnimationFps" @loop-range="w.setAnimationLoopRange"/>
         </div>
       </template>
@@ -280,4 +290,5 @@ onBeforeUnmount(() => {
     <ModalDialog v-if="w.discardDialog" :title="t('unsavedTitle')" :busy="w.busy" @cancel="w.cancelDiscard"><p class="text-sm leading-6 text-muted">{{ t('unsavedText') }}</p><div class="mt-6 flex justify-end gap-3"><AppButton :disabled="w.busy" @click="w.cancelDiscard">{{ t('cancel') }}</AppButton><AppButton :disabled="w.busy" @click="w.discardAndContinue">{{ t('discard') }}</AppButton><AppButton v-if="w.project?.canSave" variant="primary" :disabled="w.busy" @click="w.saveAndContinue">{{ t('saveAndContinue') }}</AppButton></div></ModalDialog>
     <div v-if="w.notice" role="alert" class="fixed right-5 bottom-12 z-40 flex max-w-lg items-start gap-4 rounded-lg border border-line bg-raised p-4 text-sm shadow-xl" :class="w.noticeError ? 'text-danger' : 'text-ink'"><span>{{ w.notice }}</span><button :aria-label="t('dismiss')" class="p-0.5 text-muted hover:text-ink" @click="w.notice = ''"><AppIcon name="close" /></button></div>
   </main>
+  <div v-if="w.openingProject" class="sr-only" data-testid="project-opening-announcement" role="status" aria-live="polite" aria-atomic="true">{{t('openingProject')}} {{t('openingProjectDetail')}}</div>
 </template>

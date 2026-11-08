@@ -150,8 +150,15 @@
 .animation-transform-row[data-channel='shear'] .animation-transform-name>span {color:var(--color-bone);}
 .animation-transform-row input {width:60px;min-width:0;flex:1;border:0;border-radius:0;background:var(--color-panel);color:var(--color-ink);font-size:11px;text-align:center;-moz-appearance:textfield;}
 .animation-transform-row input::-webkit-inner-spin-button {display:none;}
+.animation-transform-cell {position:relative;display:flex;width:60px;min-width:0;flex:1;}
+.animation-transform-cell input {width:100%;height:100%;}
+.animation-transform-cell:not(:focus-within)>input {color:transparent;}
+.animation-transform-compact {position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;white-space:nowrap;pointer-events:none;color:var(--color-ink);}
+.animation-transform-cell:focus-within>.animation-transform-compact {display:none;}
+.animation-transform-cell.disabled>.animation-transform-compact {opacity:.4;}
 .animation-key-tool {width:24px;flex-shrink:0;background:var(--color-raised);color:var(--color-accent);border-radius:0 2px 2px 0;}
 @media(max-width:1000px){.animation-tools {left:8px;transform:none;gap:3px;}.animation-tool-stack{min-width:58px;}.animation-transform-rows{min-width:180px;}.animation-transform-name{min-width:70px;}.animation-transform-row input{width:42px;}}
+@media(max-width:1000px){.animation-transform-cell{width:42px;}}
 .animation-preview {display:flex;min-height:0;height:100%;flex:1;flex-direction:column;background:var(--color-panel);font-size:11px;}
 .animation-preview-content {display:flex;min-height:0;flex:1;gap:4px;padding:4px;}
 .animation-preview-canvas {position:relative;min-width:0;min-height:0;flex:1;overflow:hidden;}

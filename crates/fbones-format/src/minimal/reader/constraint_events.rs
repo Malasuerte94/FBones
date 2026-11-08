@@ -5,14 +5,14 @@ impl Reader<'_> {
     pub(super) fn constraint_event_track(&mut self, kind: u32) -> Result<BTreeMap<u32, Value>> {
         let keys = self.generic(204, |r| {
             let count = r.uint()?;
-            if count == 0 || count > 4096 {
+            if count == 0 || count > super::super::scene::MAX_TRACK_KEYS as u32 {
                 return unsupported();
             }
             let mut raw = Vec::new();
             let mut events = Vec::new();
             let mut previous = 0;
             for _ in 0..count {
-                if r.uint()? != 133 || r.uint()? != 1 || r.domain.len() >= 8192 {
+                if r.uint()? != 133 || r.uint()? != 1 || r.domain.len() >= MAX_DOMAIN_OBJECTS {
                     return unsupported();
                 }
                 r.domain.push(Domain {

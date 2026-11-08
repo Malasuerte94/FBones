@@ -9,6 +9,9 @@ const env={...process.env,FBONES_E2E_HOST:process.env.FBONES_E2E_HOST??defaultNa
 async function run(command,args){return new Promise((resolve,reject)=>{const child=spawn(command,args,{stdio:'inherit',env});child.on('error',reject);child.on('exit',(code,signal)=>code===0?resolve():reject(Error(`${command} failed (${code??signal}).`)));});}
 try{
   if(!skipBuild){
+    // The shipped-runtime GPU case imports its distributable ESM bundle. A
+    // clean checkout has no ignored package dist/, so build it before serving.
+    await run('pnpm',['build:runtime']);
     await run('pnpm',['build:web']);
     if(!browserOnly){
       if(!env.CARGO_HOME&&existsSync('.tools/cargo'))env.CARGO_HOME=resolve('.tools/cargo');

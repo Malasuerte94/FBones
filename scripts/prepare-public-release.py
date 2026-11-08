@@ -9,15 +9,16 @@ import shutil
 import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
-TAG = 'v0.9.4-beta.2'
+DEFAULT_TAG = 'v0.9.4-beta.3'
 FILES = (
     '.gitignore', 'AGENTS.md', 'README.md', 'CONTRIBUTING.md', 'LICENSE',
     'THIRD_PARTY_NOTICES.md', 'Cargo.toml', 'Cargo.lock', 'package.json',
     'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'index.html', 'vite.config.ts',
     'tsconfig.json', 'tsconfig.e2e.json', 'playwright.config.ts',
 )
-TREES = ('.github', 'src', 'src-tauri', 'crates', 'tests', 'scripts', 'docs')
-SKIP_PARTS = {'gen', '__pycache__', 'node_modules', 'target', '.git', '.local', '.tools'}
+TREES = ('.github', 'src', 'src-tauri', 'crates', 'tests', 'scripts', 'docs', 'packages/runtime')
+SKIP_PARTS = {'gen', '__pycache__', 'node_modules', 'target', 'dist', '.git', '.local', '.tools'}
+OWN_TEXT_FILES = {'packages/runtime/LICENSE'}
 EXTENSIONS = {'.md', '.json', '.rs', '.toml', '.ts', '.mts', '.mjs', '.vue',
               '.css', '.html', '.yaml', '.yml', '.py', '.sh', '.ps1', '.bat',
               '.svg', '.png', '.ico', '.icns'}
@@ -38,6 +39,15 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def release_tag(value):
+    if not re.fullmatch(r'v\d+\.\d+\.\d+-beta\.[1-9]\d*', value):
+        raise ValueError('Expected a versioned beta tag, for example v0.9.4-beta.3.')
+    version = value[1:].split('-beta.')[0]
+    if json.loads((ROOT / 'package.json').read_text())['version'] != version:
+        raise ValueError('Release tag must match the application package version.')
+    return value
+
+
 def selected_files():
     for name in FILES:
         yield ROOT / name
@@ -52,7 +62,7 @@ def selected_files():
             if path.is_symlink():
                 raise ValueError(f'Symlink requires explicit review: {relative}')
             if path.is_file():
-                if path.suffix not in EXTENSIONS:
+                if path.suffix not in EXTENSIONS and relative.as_posix() not in OWN_TEXT_FILES:
                     raise ValueError(f'Unreviewed extension: {relative}')
                 yield path
 
@@ -109,7 +119,8 @@ def neutral_metadata(member):
     return member
 
 
-def export(output):
+def export(output, tag):
+    tag = release_tag(tag)
     if output.exists():
         raise ValueError('Output already exists; choose a fresh directory.')
     repository = output / 'repository'
@@ -129,12 +140,12 @@ def export(output):
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(path, destination)
         rows.append({'path': relative, 'bytes': len(data), 'sha256': digest(data)})
-    manifest = {'release': TAG, 'kind': 'source-only', 'files': rows}
+    manifest = {'release': tag, 'kind': 'source-only', 'files': rows}
     (repository / 'PUBLIC_SOURCE_MANIFEST.json').write_text(json.dumps(manifest, indent=2) + '\n')
     verify(repository)
-    archive = output / f'fbones-{TAG}-source.tar.gz'
+    archive = output / f'fbones-{tag}-source.tar.gz'
     with tarfile.open(archive, 'w:gz') as bundle:
-        bundle.add(repository, arcname=f'FBones-{TAG}', filter=neutral_metadata)
+        bundle.add(repository, arcname=f'FBones-{tag}', filter=neutral_metadata)
     verify_archive(repository, archive)
     checksum = digest(archive.read_bytes())
     (output / 'SHA256SUMS').write_text(f'{checksum}  {archive.name}\n')
@@ -146,6 +157,7 @@ def export(output):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, default=ROOT / '.local' / 'public-beta' / 'current')
+    parser.add_argument('--tag', default=DEFAULT_TAG, help='New beta tag matching the application version.')
     parser.add_argument('--verify', type=Path)
     parser.add_argument('--archive', type=Path, help='Also compare an archive to the verified source.')
     args = parser.parse_args()
@@ -155,7 +167,7 @@ def main():
             if args.archive:
                 verify_archive(args.verify.resolve(), args.archive.resolve())
         else:
-            export(args.output.resolve())
+            export(args.output.resolve(), args.tag)
     except (ValueError, OSError) as error:
         parser.exit(1, f'{error}\n')
 

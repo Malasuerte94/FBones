@@ -1,4 +1,4 @@
-import { Container, Graphics, Sprite, Texture, Mesh, MeshGeometry, Matrix } from 'pixi.js';
+import { Container, Graphics, Sprite, Texture, Mesh, MeshGeometry, Matrix, Color, ColorMatrixFilter } from 'pixi.js';
 import type { AttachmentView, BoneView, SlotView } from '../domain/project.ts';
 import { worldRegions } from '../domain/images.ts';
 import { meshPoints } from '../domain/meshes.ts';
@@ -7,6 +7,7 @@ import {pixiSlotBlend} from '../domain/slotBlend.ts';
 import {activeAttachment,clippingPolygon,clippingScopes} from '../domain/clipping.ts';
 import {selectedAttachmentGeometry,renderedAttachmentId} from '../domain/sceneSelection.ts';
 import {bindingWeightColor} from '../domain/binding.ts';
+import {activeAttachmentColor,slotAttachmentColor,slotTwoColorMatrix} from '../domain/attachmentColor.ts';
 
 /** Own textures rather than the global URL cache: a closed document can release
  * GPU memory even while a previous image load is still resolving. */
@@ -15,6 +16,7 @@ export class ImageLayer {
   readonly overlay = new Graphics();
   private textures = new Map<string, Texture>();
   private sprites = new Map<number, Sprite | Mesh<MeshGeometry>>();
+  private darkFilters=new Map<number,ColorMatrixFilter>();
   private loading = new Set<string>();
   private masks=new Map<number,Graphics>();
   private clippingIssue='';
@@ -22,9 +24,9 @@ export class ImageLayer {
   private epoch = 0;
   constructor(private load: (documentId: number, name: string) => Promise<string>, private invalidate: () => void,
     private onError?: (message: string) => void) {}
-  private dispose(node: Sprite | Mesh<MeshGeometry>) { node.mask=null;if(node instanceof Mesh) node.geometry.destroy(); node.destroy(); }
+  private dispose(node: Sprite | Mesh<MeshGeometry>,id:number) { node.mask=null;node.filters=[];this.darkFilters.get(id)?.destroy();this.darkFilters.delete(id);if(node instanceof Mesh) node.geometry.destroy(); node.destroy(); }
   private clear() {
-    for (const sprite of this.sprites.values()) this.dispose(sprite);
+    for (const [id,sprite] of this.sprites) this.dispose(sprite,id);
     for (const texture of this.textures.values()) texture.destroy(true);
     for(const mask of this.masks.values())mask.destroy();this.masks.clear();
     this.sprites.clear(); this.textures.clear(); this.loading.clear(); this.overlay.clear();this.clippingIssue='';
@@ -49,7 +51,7 @@ export class ImageLayer {
     selection:{ids?:readonly number[];inspected?:AttachmentView|null;vertices?:readonly number[]}={}) {
     if (documentId !== this.documentId) { this.epoch++; this.clear(); this.documentId = documentId; }
     for (const [id, sprite] of this.sprites) {
-      if (!slots.some(s => s.id === id)) { this.dispose(sprite); this.sprites.delete(id); }
+      if (!slots.some(s => s.id === id)) { this.dispose(sprite,id); this.sprites.delete(id); }
       else sprite.visible = false;
       sprite.mask=null;
     }
@@ -73,7 +75,7 @@ export class ImageLayer {
       const points = slot.mesh ? meshPoints(bones,slot.mesh).map(p=>screen(p.x,p.y)) : null;
       if (texture) {
         let node = this.sprites.get(slot.id);
-        if (node && (!!slot.mesh !== (node instanceof Mesh))) { this.dispose(node); this.sprites.delete(slot.id); node=undefined; }
+        if (node && (!!slot.mesh !== (node instanceof Mesh))) { this.dispose(node,slot.id); this.sprites.delete(slot.id); node=undefined; }
         if (slot.mesh && points) {
           const positions = new Float32Array(points.flatMap(p=>[p.x,p.y]));
           if(!node) { node=new Mesh({texture,geometry:new MeshGeometry({positions,uvs:new Float32Array(slot.mesh.uvs),indices:new Uint32Array(slot.mesh.triangles)})}); this.sprites.set(slot.id,node);this.container.addChild(node); }
@@ -94,8 +96,24 @@ export class ImageLayer {
           const polygon=clippingPolygon(bones,clipping).map(p=>screen(p.x,p.y));
           if(polygon.length>=3){mask.poly(polygon.flatMap(p=>[p.x,p.y])).fill(0xffffff);node.setMask({mask,inverse:clipping.inverse});usedMasks.add(slot.id);}
         }
-        node.blendMode=pixiSlotBlend(slot.blend);
-        const color=slot.color??0xffffffff;node.tint=(color>>>8)&0xffffff;node.alpha=Math.max(0,Math.min(1,slot.animatedColor?.[3]??(color&255)/255));
+        const blend=pixiSlotBlend(slot.blend),color=slot.color??0xffffffff,light=slotAttachmentColor(slot),matrix=slotTwoColorMatrix(slot);
+        if(matrix){
+          let filter=this.darkFilters.get(slot.id);
+          if(!filter){filter=new ColorMatrixFilter({resolution:'inherit',antialias:'inherit'});this.darkFilters.set(slot.id,filter);}
+          if(matrix.some((v,i)=>v!==filter!.matrix[i])){filter.matrix=matrix;filter.resources.colorMatrixUniforms.update();}
+          // ColorMatrixFilter composites with its own blend state. The input
+          // must be normal/white so it retains RGB even at a zero light channel.
+          node.tint=0xffffff;node.blendMode='normal';filter.blendMode=blend;
+          if(!Array.isArray(node.filters)||node.filters[0]!==filter)node.filters=[filter];
+        }else{
+          node.filters=[];node.blendMode=blend;
+          if(activeAttachmentColor(slot)===0xffffffff)node.tint=(color>>>8)&0xffffff;
+          else{
+            const rgb=Color.shared.setValue(light).toUint8RgbArray();
+            node.tint=(rgb[0]!<<16)|(rgb[1]!<<8)|rgb[2]!;
+          }
+        }
+        node.alpha=light[3];
         this.container.setChildIndex(node,order++);
       }
       if(points && slot.mesh) {

@@ -82,7 +82,7 @@ fn validate(binding: DenseBindingRef<'_>, poses: &[Pose]) -> Result<(), AppError
     if binding.bones.is_empty()
         || binding.bones.len() > 128
         || binding.vertices.is_empty()
-        || binding.vertices.len() > 256
+        || binding.vertices.len() > crate::mesh::MAX_VERTICES
         || binding
             .bones
             .iter()

@@ -154,7 +154,11 @@ pub(crate) fn triangulate_with_metric(
     {
         return Err(invalid());
     }
-    if !(3..=256).contains(&n) || hull < 3 || hull > n || !constraints.len().is_multiple_of(2) {
+    if !(3..=crate::mesh::MAX_VERTICES).contains(&n)
+        || hull < 3
+        || hull > n
+        || !constraints.len().is_multiple_of(2)
+    {
         return Err(invalid());
     }
     for i in 0..n {

@@ -43,6 +43,10 @@ fn model() -> SceneProject {
     .map(TransformFrom::identity)
     .into();
     SceneProject {
+        wire: None,
+        attachment_sequences: vec![],
+        attachment_colors: vec![],
+        slot_dark_colors: vec![],
         rig,
         images_root: "./images/".into(),
         audio_root: "./audio".into(),
@@ -235,4 +239,52 @@ fn two_different_caches_keep_generic_arena_accounting_and_complete_payload_guard
     record.fields.push((127, super::super::Field::Bool(true)));
     let richer = super::super::encode_record_payload(&record, p.rig.identity);
     assert!(decode_scene(&richer).is_err());
+}
+
+#[test]
+fn transform_setup_mix_extended_finite_bits_survive_without_touching_other_fields() {
+    let mut p = model();
+    set_bits(&mut p, [Some((-0.0f32).to_bits()); 24]);
+    constraint_mut(&mut p).mix = [-0., -1., -1., 1.25, 2., 0.375];
+    let before = p.clone();
+    let bytes = encode_scene_payload(&p).unwrap();
+    let decoded = decode_scene(&bytes).unwrap();
+    assert_eq!(decoded, p);
+    assert_eq!(
+        constraint(&decoded).mix.map(f32::to_bits),
+        constraint(&p).mix.map(f32::to_bits)
+    );
+    assert_eq!(encode_scene_payload(&decoded).unwrap(), bytes);
+    constraint_mut(&mut p).mix[1] = -1.25;
+    let updated = decode_scene(&encode_scene_payload(&p).unwrap()).unwrap();
+    assert_eq!(
+        constraint(&updated).mix.map(f32::to_bits),
+        [-0f32, -1.25, -1., 1.25, 2., 0.375].map(f32::to_bits)
+    );
+    constraint_mut(&mut p).mix = constraint(&before).mix;
+    assert_eq!(
+        p, before,
+        "Only the explicitly edited Setup mix lane may change"
+    );
+}
+
+#[test]
+fn transform_setup_mix_nonfinite_raw_payloads_still_reject_and_ik_range_is_unchanged() {
+    let original = model();
+    for value in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+        for axis in 0..6 {
+            let mut p = original.clone();
+            constraint_mut(&mut p).mix[axis] = value;
+            assert!(encode_scene_payload(&p).is_err());
+            let raw =
+                super::super::encode_record_payload(&write::project_record(&p), p.rig.identity);
+            assert!(decode_scene(&raw).is_err());
+        }
+    }
+    let mut p = original;
+    constraint_mut(&mut p).mix = [-1.; 6];
+    let mut ik = IkConstraint::new("independent IK".into(), vec![2], 1);
+    ik.mix = -1.;
+    p.constraints.push(Constraint::Ik(ik));
+    assert!(encode_scene_payload(&p).is_err());
 }

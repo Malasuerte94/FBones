@@ -43,3 +43,29 @@ test('the actual viewport entry installs static Pixi implementations under the s
   assert.equal(typeof context.viewportFactory, 'function');
   assert.equal(context.passed, true);
 });
+
+test('actual Region and Mesh two-color filter construction and cleanup work with string code generation blocked',async()=>{
+ // Actual Pixi8.8 classes/programs/uniform groups and ImageLayer, with only a
+ // no-context canvas adapter. No WebGL/WebGPU draw or pixel proof is claimed.
+ const context=await runUnderStrictCsp(`
+  import {createViewport} from './src/viewport/createViewport.ts';
+  import {ImageLayer} from './src/viewport/ImageLayer.ts';
+  import {DOMAdapter,Texture,BufferImageSource,WebGLRenderer} from 'pixi.js';
+  DOMAdapter.set({...DOMAdapter.get(),createCanvas:()=>({getContext:()=>null})});
+  WebGLRenderer.prototype._unsafeEvalCheck.call({});
+  const layer=new ImageLayer(async()=>{throw Error('No image request');},()=>{});
+  const bones=[{id:0,parent:null,name:'own',x:0,y:0,rotation:0,length:0}];
+  layer.draw(1,bones,[],null,(x,y)=>({x,y}),1);
+  layer.textures.set('own',new Texture({source:new BufferImageSource({resource:new Uint8Array([0,0,0,255]),width:1,height:1})}));
+  const region={name:'own',image:'own',x:0,y:0,rotation:0,scaleX:1,scaleY:1,width:32,height:24};
+  const mesh={weighted:false,bones:[0],uvs:[0,0,1,0,0,1],triangles:[0,1,2],edges:[],hull:3,vertices:[[0,0],[32,0],[0,24]].map(positions=>({weights:[1],positions}))};
+  const slots=[null,mesh].map((value,id)=>({id,name:'own'+id,bone:0,blend:'additive',visible:true,imageAvailable:true,region,mesh:value,color:0x00000080,tintBlack:true,darkColor:0x008040ff}));
+  layer.draw(1,bones,slots,null,(x,y)=>({x,y}),1);
+  const filters=[...layer.darkFilters.values()];
+  globalThis.filterCount=filters.length;
+  globalThis.filterState=filters.map(f=>({matrix:[...f.matrix],blend:f.blendMode,gl:!!f.glProgram,gpu:!!f.gpuProgram}));
+  layer.destroy();globalThis.remaining=layer.darkFilters.size;globalThis.passed=true;
+ `);
+ assert.equal(context.passed,true);assert.equal(context.filterCount,2);assert.equal(context.remaining,0);
+ for(const filter of context.filterState){assert.equal(filter.blend,'add');assert.equal(filter.gl,true);assert.equal(filter.gpu,true);assert.equal(filter.matrix[9],128/255);assert.equal(filter.matrix[14],64/255);}
+});

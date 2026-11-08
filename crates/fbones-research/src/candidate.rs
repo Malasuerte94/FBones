@@ -132,7 +132,13 @@ pub fn region_model(
             }
         };
         slots.push(Slot {
-            blend: fbones_format::minimal::regions::BlendMode::from_name(input.get("blend").and_then(Value::as_str).unwrap_or("normal")).ok_or("Unsupported slot blend")?,
+            blend: fbones_format::minimal::regions::BlendMode::from_name(
+                input
+                    .get("blend")
+                    .and_then(Value::as_str)
+                    .unwrap_or("normal"),
+            )
+            .ok_or("Unsupported slot blend")?,
             color: color(input.get("color"), [255; 4])?,
             name: name.into(),
             bone,

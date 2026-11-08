@@ -91,6 +91,7 @@ fn scene(case: &Value) -> SceneProject {
         rig.bones.push(b);
     }
     let mut scene = SceneProject {
+        wire: None,
         audio_root: "./audio".into(),
         events: vec![],
         editor_flag_53: false,
@@ -102,6 +103,9 @@ fn scene(case: &Value) -> SceneProject {
         images_root: String::new(),
         slots: vec![],
         attachment_order: vec![],
+        attachment_sequences: vec![],
+        attachment_colors: vec![],
+        slot_dark_colors: vec![],
         constraints: vec![],
     };
     scene
@@ -394,6 +398,7 @@ fn simple() -> (SceneProject, Evaluation) {
         }],
     }];
     let scene = SceneProject {
+        wire: None,
         audio_root: "./audio".into(),
         events: vec![],
         editor_flag_53: false,
@@ -405,6 +410,9 @@ fn simple() -> (SceneProject, Evaluation) {
         images_root: String::new(),
         slots: vec![],
         attachment_order: vec![],
+        attachment_sequences: vec![],
+        attachment_colors: vec![],
+        slot_dark_colors: vec![],
         constraints: vec![Constraint::Transform(constraint)],
     };
     let frame = sampled(&scene);

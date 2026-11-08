@@ -1,10 +1,16 @@
 //! Typed animation authoring and sampling. Setup channels are never replaced.
 use crate::{project::AppError, rig::RigEdit, scene_edit::SceneFrame, solve};
 use fbones_format::minimal::scene::{
-    Animation, BoneChannel, BoneKeyframe, BoneTimeline, KeyCurve, SceneProject,
+    Animation, BoneChannel, BoneKeyframe, BoneSplitMode, BoneTimeline, KeyCurve, SceneProject,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+#[cfg(test)]
+#[path = "animation_bone_curve_time_tests.rs"]
+mod curve_time_tests;
+#[cfg(test)]
+#[path = "animation_split_tests.rs"]
+mod split_tests;
 #[cfg(test)]
 #[path = "animation_tests.rs"]
 mod tests;
@@ -23,6 +29,10 @@ pub enum ChannelInput {
     Translate,
     Scale,
     Shear,
+    TranslateX,
+    TranslateY,
+    ScaleX,
+    ScaleY,
 }
 impl ChannelInput {
     fn model(self) -> BoneChannel {
@@ -31,6 +41,10 @@ impl ChannelInput {
             Self::Translate => BoneChannel::Translate,
             Self::Scale => BoneChannel::Scale,
             Self::Shear => BoneChannel::Shear,
+            Self::TranslateX => BoneChannel::TranslateX,
+            Self::TranslateY => BoneChannel::TranslateY,
+            Self::ScaleX => BoneChannel::ScaleX,
+            Self::ScaleY => BoneChannel::ScaleY,
         }
     }
 }
@@ -85,9 +99,16 @@ pub struct TrackView {
     pub keys: Vec<KeyView>,
 }
 #[derive(Clone, Debug, Serialize)]
+pub struct SplitModeView {
+    pub bone: u64,
+    pub mode: u32,
+}
+#[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnimationView {
     pub id: u64,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub split_modes: Vec<SplitModeView>,
     pub name: String,
     /// Duration in stored frames, not seconds.
     pub duration: f32,
@@ -97,6 +118,7 @@ pub struct AnimationView {
     pub deform_tracks: Vec<crate::animation_deform::DeformTrackView>,
     pub constraint_tracks: Vec<crate::animation_constraints::ConstraintTrackView>,
     pub event_tracks: Vec<crate::animation_events::EventTrackView>,
+    pub sequence_tracks: Vec<crate::animation_sequence::SequenceTrackView>,
 }
 fn channel_name(channel: BoneChannel) -> &'static str {
     match channel {
@@ -104,6 +126,10 @@ fn channel_name(channel: BoneChannel) -> &'static str {
         BoneChannel::Translate => "translate",
         BoneChannel::Scale => "scale",
         BoneChannel::Shear => "shear",
+        BoneChannel::TranslateX => "translateX",
+        BoneChannel::TranslateY => "translateY",
+        BoneChannel::ScaleX => "scaleX",
+        BoneChannel::ScaleY => "scaleY",
     }
 }
 pub(crate) fn views(frame: &SceneFrame) -> Vec<AnimationView> {
@@ -114,6 +140,14 @@ pub(crate) fn views(frame: &SceneFrame) -> Vec<AnimationView> {
         .enumerate()
         .map(|(a, clip)| AnimationView {
             id: frame.animation_ids[a],
+            split_modes: clip
+                .split_modes
+                .iter()
+                .map(|row| SplitModeView {
+                    bone: frame.bone_ids[row.bone],
+                    mode: row.mode.wire(),
+                })
+                .collect(),
             name: clip.name.clone(),
             duration: clip
                 .tracks
@@ -129,7 +163,8 @@ pub(crate) fn views(frame: &SceneFrame) -> Vec<AnimationView> {
                 .fold(
                     crate::animation_slots::duration(clip)
                         .max(crate::animation_constraints::duration(clip))
-                        .max(crate::animation_events::duration(clip)),
+                        .max(crate::animation_events::duration(clip))
+                        .max(crate::animation_sequence::duration(clip)),
                     f32::max,
                 ),
             slot_tracks: crate::animation_slots::views(frame, a),
@@ -137,6 +172,7 @@ pub(crate) fn views(frame: &SceneFrame) -> Vec<AnimationView> {
             deform_tracks: crate::animation_deform::views(frame, a),
             constraint_tracks: crate::animation_constraints::views(frame, a),
             event_tracks: crate::animation_events::views(frame, a),
+            sequence_tracks: crate::animation_sequence::views(frame, a),
             tracks: clip
                 .tracks
                 .iter()
@@ -179,6 +215,7 @@ pub(crate) fn is_edit(edit: &RigEdit) -> bool {
             | RigEdit::DeleteEvent { .. }
             | RigEdit::SetAnimationConstraintKeys { .. }
             | RigEdit::SetAnimationEventKeys { .. }
+            | RigEdit::SetAnimationSequenceKeys { .. }
             | RigEdit::CreateAnimation { .. }
             | RigEdit::DuplicateAnimation { .. }
             | RigEdit::SetAnimationFps { .. }
@@ -251,6 +288,12 @@ fn selected_keys(frame: &SceneFrame, a: usize, keys: &[u64]) -> Result<HashSet<u
                 .copied(),
         )
         .chain(frame.animation_event_key_ids[a].iter().flatten().copied())
+        .chain(
+            frame.animation_sequence_key_ids[a]
+                .iter()
+                .flatten()
+                .copied(),
+        )
         .collect();
     if !wanted.is_subset(&available) {
         return Err(invalid("An animation key no longer exists."));
@@ -292,28 +335,46 @@ fn validate_curves(project: &SceneProject) -> Result<(), AppError> {
                         .ok_or_else(|| {
                             invalid("A Bezier key needs a following key at a later frame.")
                         })?;
-                    if track.channel == BoneChannel::Rotate
-                        && controls[1].map(f32::to_bits) != [0; 4]
-                    {
-                        return Err(invalid("Rotate Bezier keys use one axis of controls."));
+                    if track.channel.dimensions() == 1 && controls[1].map(f32::to_bits) != [0; 4] {
+                        return Err(invalid("Single-axis Bezier keys use one axis of controls."));
                     }
-                    let axes = if track.channel == BoneChannel::Rotate {
-                        1
-                    } else {
-                        2
-                    };
+                    let axes = track.channel.dimensions();
                     if controls[..axes].iter().any(|axis| {
                         axis.iter().any(|v| !v.is_finite() || v.abs() > 1_000_000.)
-                            || axis[0] < key.frame
-                            || axis[0] > right.frame
-                            || axis[2] < key.frame
-                            || axis[2] > right.frame
+                            || !fbones_format::minimal::scene::bezier_time_monotone(
+                                key.frame,
+                                right.frame,
+                                axis[0],
+                                axis[2],
+                            )
                     }) {
-                        return Err(invalid("Use finite Bezier handles with frame coordinates inside their segment."));
+                        return Err(invalid("Use finite Bezier handles whose time coordinate increases across the segment."));
                     }
                 }
             }
         }
+    }
+    Ok(())
+}
+fn check_representation(
+    animation: &Animation,
+    bone: usize,
+    channel: BoneChannel,
+) -> Result<(), AppError> {
+    let mode = animation
+        .split_modes
+        .iter()
+        .find(|row| row.bone == bone)
+        .map(|row| row.mode);
+    let permitted = match channel {
+        BoneChannel::TranslateX | BoneChannel::TranslateY => mode == Some(BoneSplitMode::Translate),
+        BoneChannel::ScaleX | BoneChannel::ScaleY => mode == Some(BoneSplitMode::Scale),
+        BoneChannel::Translate => mode != Some(BoneSplitMode::Translate),
+        BoneChannel::Scale => mode != Some(BoneSplitMode::Scale),
+        BoneChannel::Rotate | BoneChannel::Shear => true,
+    };
+    if !permitted {
+        return Err(invalid("Use this bone's existing combined or split-axis representation; conversion is not supported."));
     }
     Ok(())
 }
@@ -331,6 +392,7 @@ fn set_keys(
     for key in keys {
         let bone = frame.bone_index(key.bone)?;
         let channel = key.channel.model();
+        check_representation(&frame.project.animations[a], bone, channel)?;
         let position = checked_frame(key.frame)?;
         let existing_track = frame.project.animations[a]
             .tracks
@@ -375,6 +437,11 @@ fn set_keys(
             }
             values[1] = 0.;
         }
+        if channel.dimensions() == 1 && channel != BoneChannel::Rotate && values[1].to_bits() != 0 {
+            return Err(invalid(
+                "Scalar keys require exact positive-zero padding in the second value lane.",
+            ));
+        }
         checked.push((
             bone,
             channel,
@@ -391,7 +458,7 @@ fn set_keys(
         .map(|(t, track)| (track.clone(), frame.animation_key_ids[a][t].clone()))
         .collect();
     let explicitly_edited: HashSet<_> = checked.iter().filter_map(|key| key.5).collect();
-    for (bone, channel, position, values, curve, target) in checked {
+    for (bone, channel, position, mut values, mut curve, target) in checked {
         let t = if let Some(t) = frame.project.animations[a]
             .tracks
             .iter()
@@ -421,7 +488,22 @@ fn set_keys(
                 .iter()
                 .position(|id| *id == target)
                 .ok_or_else(|| invalid("The selected animation key changed during the batch."))?;
-            let position = track.keys[k].frame;
+            let stored = &track.keys[k];
+            let position = stored.frame;
+            if channel.dimensions() == 1 && channel != BoneChannel::Rotate {
+                if values[0] == stored.values[0] {
+                    values[0] = stored.values[0];
+                }
+                if let (KeyCurve::Bezier { controls }, KeyCurve::Bezier { controls: old }) =
+                    (&mut curve, stored.curve)
+                {
+                    for (value, previous) in controls[0].iter_mut().zip(old[0]) {
+                        if *value == previous {
+                            *value = previous;
+                        }
+                    }
+                }
+            }
             track.keys[k] = BoneKeyframe {
                 frame: position,
                 values,
@@ -455,27 +537,9 @@ fn set_keys(
             )?;
         }
     }
-    if frame
-        .project
-        .animations
-        .iter()
-        .flat_map(|a| &a.tracks)
-        .map(|t| t.keys.len())
-        .sum::<usize>()
-        > MAX_KEYS
-    {
-        return Err(invalid("The project animation key budget is exhausted."));
-    }
-    if frame
-        .project
-        .animations
-        .iter()
-        .map(|a| a.tracks.len())
-        .sum::<usize>()
-        > 512
-    {
-        return Err(invalid("The project animation track budget is exhausted."));
-    }
+    // SceneHistory validates the complete candidate through the format encoder
+    // before publishing history. Its all-family project/per-clip budgets also
+    // govern slot, Sequence, draw-order, deform, constraint and Event edits.
     Ok(())
 }
 pub(crate) fn apply(
@@ -499,6 +563,11 @@ pub(crate) fn apply(
         RigEdit::SetAnimationConstraintKeys { animation, keys } => {
             let a = animation_index(frame, animation)?;
             crate::animation_constraints::set_keys(frame, next_key, a, keys)?;
+            frame.focus.animation = Some(animation);
+        }
+        RigEdit::SetAnimationSequenceKeys { animation, keys } => {
+            let a = animation_index(frame, animation)?;
+            crate::animation_sequence::set_keys(frame, next_key, a, keys)?;
             frame.focus.animation = Some(animation);
         }
         RigEdit::SetAnimationEventKeys { animation, keys } => {
@@ -526,6 +595,7 @@ pub(crate) fn apply(
             frame.animation_deform_key_ids.push(vec![]);
             frame.animation_constraint_key_ids.push(vec![]);
             frame.animation_event_key_ids.push(vec![]);
+            frame.animation_sequence_key_ids.push(vec![]);
             frame.focus.animation = Some(id);
         }
         RigEdit::DuplicateAnimation { id, name } => {
@@ -552,6 +622,7 @@ pub(crate) fn apply(
             let deform_key_ids = crate::animation_deform::allocate_ids(&clip, next_key)?;
             let constraint_key_ids = crate::animation_constraints::allocate_ids(&clip, next_key)?;
             let event_key_ids = crate::animation_events::allocate_ids(&clip, next_key)?;
+            let sequence_key_ids = crate::animation_sequence::allocate_ids(&clip, next_key)?;
             frame.project.animations.push(clip);
             frame.animation_ids.push(duplicate_id);
             frame.animation_key_ids.push(key_ids);
@@ -560,6 +631,7 @@ pub(crate) fn apply(
             frame.animation_deform_key_ids.push(deform_key_ids);
             frame.animation_constraint_key_ids.push(constraint_key_ids);
             frame.animation_event_key_ids.push(event_key_ids);
+            frame.animation_sequence_key_ids.push(sequence_key_ids);
             frame.focus.animation = Some(duplicate_id);
         }
         RigEdit::RenameAnimation { id, name } => {
@@ -583,6 +655,7 @@ pub(crate) fn apply(
             frame.animation_deform_key_ids.remove(a);
             frame.animation_constraint_key_ids.remove(a);
             frame.animation_event_key_ids.remove(a);
+            frame.animation_sequence_key_ids.remove(a);
             if frame.focus.animation == Some(id) {
                 frame.focus.animation = frame.animation_ids.first().copied();
             }
@@ -605,6 +678,7 @@ pub(crate) fn apply(
             crate::animation_deform::delete_keys(frame, a, &wanted)?;
             crate::animation_constraints::delete_keys(frame, a, &wanted)?;
             crate::animation_events::delete_keys(frame, a, &wanted);
+            crate::animation_sequence::delete_keys(frame, a, &wanted);
             for t in (0..frame.project.animations[a].tracks.len()).rev() {
                 let track = &mut frame.project.animations[a].tracks[t];
                 let ids = &mut frame.animation_key_ids[a][t];
@@ -637,6 +711,7 @@ pub(crate) fn apply(
             deform_keys,
             constraint_keys,
             event_keys,
+            sequence_keys,
         } => {
             if bone_keys.is_empty()
                 && slot_keys.is_empty()
@@ -644,6 +719,7 @@ pub(crate) fn apply(
                 && deform_keys.is_empty()
                 && constraint_keys.is_empty()
                 && event_keys.is_empty()
+                && sequence_keys.is_empty()
             {
                 return Err(invalid("Choose a nonempty key batch."));
             }
@@ -662,6 +738,9 @@ pub(crate) fn apply(
             }
             if !constraint_keys.is_empty() {
                 crate::animation_constraints::set_keys(frame, next_key, a, constraint_keys)?;
+            }
+            if !sequence_keys.is_empty() {
+                crate::animation_sequence::set_keys(frame, next_key, a, sequence_keys)?;
             }
             if !event_keys.is_empty() {
                 crate::animation_events::set_keys(frame, next_key, a, event_keys)?;
@@ -696,6 +775,7 @@ pub(crate) fn apply(
             crate::animation_deform::move_keys(frame, a, &wanted, delta_frames)?;
             crate::animation_constraints::move_keys(frame, a, &wanted, delta_frames)?;
             crate::animation_events::move_keys(frame, a, &wanted, delta_frames)?;
+            crate::animation_sequence::move_keys(frame, a, &wanted, delta_frames)?;
             for t in 0..frame.project.animations[a].tracks.len() {
                 let track = &mut frame.project.animations[a].tracks[t];
                 let ids = &mut frame.animation_key_ids[a][t];
@@ -733,11 +813,7 @@ pub(crate) fn apply(
                     }
                     let left_delta = moved[at].0.frame - key.frame;
                     let right_delta = moved[at + 1].0.frame - track.keys[i + 1].frame;
-                    let axes = if track.channel == BoneChannel::Rotate {
-                        1
-                    } else {
-                        2
-                    };
+                    let axes = track.channel.dimensions();
                     for axis in &mut controls[..axes] {
                         axis[0] += left_delta;
                         axis[2] += right_delta;
@@ -817,7 +893,7 @@ pub(crate) fn sample(
             if let KeyCurve::Bezier { controls } = left.curve {
                 [
                     bezier(left, right, controls[0], frame, 0),
-                    if track.channel == BoneChannel::Rotate {
+                    if track.channel.dimensions() == 1 {
                         0.
                     } else {
                         bezier(left, right, controls[1], frame, 1)
@@ -846,6 +922,10 @@ pub(crate) fn sample(
                 pose.y += value[1];
             }
             BoneChannel::Rotate => pose.rotation += value[0],
+            BoneChannel::TranslateX => pose.x += value[0],
+            BoneChannel::TranslateY => pose.y += value[0],
+            BoneChannel::ScaleX => pose.scale_x *= value[0],
+            BoneChannel::ScaleY => pose.scale_y *= value[0],
             BoneChannel::Scale => {
                 pose.scale_x *= value[0];
                 pose.scale_y *= value[1];

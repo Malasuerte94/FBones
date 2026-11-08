@@ -5,6 +5,7 @@ use crate::rig::{
     local, poses, set_pose, zero, BoneView, MeshView, Pose, RegionView, RigEdit, SlotView,
     TransformMode, VertexView,
 };
+use fbones_format::minimal::scene::MAX_SCENE_BONES;
 use serde::Serialize;
 use std::collections::HashMap;
 #[path = "scene_parenting.rs"]
@@ -33,6 +34,9 @@ pub struct AttachmentView {
     pub mesh: Option<MeshView>,
     pub clipping: Option<ClippingView>,
     pub image_available: bool,
+    pub color: u32,
+    pub sequence: Option<crate::animation_sequence::SettingsInput>,
+    pub sequence_available_frames: Vec<u32>,
 }
 fn image_key(r: &Region) -> &str {
     if r.path.is_empty() {
@@ -72,6 +76,17 @@ fn region_view(r: &Region) -> RegionView {
         width: r.width,
         height: r.height,
     }
+}
+struct ResourceFrameRebase {
+    images: bool,
+    audio: bool,
+    wire: Option<fbones_format::minimal::scene::SceneWire>,
+}
+pub(crate) struct ResourceRebase {
+    images_root: String,
+    audio_root: String,
+    undo: Vec<ResourceFrameRebase>,
+    redo: Vec<ResourceFrameRebase>,
 }
 pub struct SceneRigHistory {
     pub history: SceneHistory,
@@ -141,9 +156,34 @@ impl SceneRigHistory {
                                 .collect(),
                             edges: c.edges.clone(),
                         }),
-                        image_available: attachment
-                            .image()
-                            .is_some_and(|r| cache.get(image_key(r)).is_some()),
+                        color: u32::from_be_bytes(p.attachment_color(AttachmentAddress {
+                            slot: s,
+                            attachment: a,
+                        })),
+                        sequence: crate::animation_sequence::settings(
+                            p,
+                            AttachmentAddress {
+                                slot: s,
+                                attachment: a,
+                            },
+                        )
+                        .map(Into::into),
+                        sequence_available_frames: crate::animation_sequence::available_frames(
+                            p,
+                            AttachmentAddress {
+                                slot: s,
+                                attachment: a,
+                            },
+                            cache,
+                        ),
+                        image_available: crate::animation_sequence::setup_available(
+                            p,
+                            AttachmentAddress {
+                                slot: s,
+                                attachment: a,
+                            },
+                            cache,
+                        ),
                     })
                     .collect::<Vec<_>>();
                 let active = slot.active_attachment.map(|a| &attachments[a]);
@@ -154,6 +194,8 @@ impl SceneRigHistory {
                     visible: active.is_some(),
                     color: u32::from_be_bytes(slot.color),
                     blend: slot.blend.as_str().into(),
+                    tint_black: p.slot_dark_color(s).enabled,
+                    dark_color: u32::from_be_bytes(p.slot_dark_color(s).color),
                     region: active.and_then(|a| a.region.clone()),
                     mesh: active.and_then(|a| a.mesh.clone()),
                     image_available: active.is_some_and(|a| a.image_available),
@@ -188,28 +230,73 @@ impl SceneRigHistory {
         self.history.frame.project = project.clone();
         self.history.mark_saved();
     }
-    pub fn rebase_images_root(&mut self, old: &str, new: &str) {
-        for f in self
-            .history
-            .undo
-            .iter_mut()
-            .chain(self.history.redo.iter_mut())
-        {
-            if f.project.images_root == old {
-                f.project.images_root = new.into();
-            }
-        }
+    /// Prepare every history metadata change before filesystem replacement.
+    pub(crate) fn prepare_resource_rebase(
+        &self,
+        old_images: &str,
+        new_images: &str,
+        old_audio: &str,
+        new_audio: &str,
+    ) -> Result<ResourceRebase, AppError> {
+        let prepare = |frame: &SceneFrame| -> Result<ResourceFrameRebase, AppError> {
+            let images = old_images != new_images && frame.project.images_root == old_images;
+            let audio = old_audio != new_audio && frame.project.audio_root == old_audio;
+            let wire = if images || audio {
+                let mut project = frame.project.clone();
+                if images {
+                    project.images_root = new_images.into();
+                }
+                if audio {
+                    project.audio_root = new_audio.into();
+                }
+                fbones_format::minimal::scene::normalize_wire_strings(&mut project)?;
+                encode_scene_payload(&project)?;
+                project.wire
+            } else {
+                frame.project.wire.clone()
+            };
+            Ok(ResourceFrameRebase {
+                images,
+                audio,
+                wire,
+            })
+        };
+        Ok(ResourceRebase {
+            images_root: new_images.into(),
+            audio_root: new_audio.into(),
+            undo: self
+                .history
+                .undo
+                .iter()
+                .map(prepare)
+                .collect::<Result<_, _>>()?,
+            redo: self
+                .history
+                .redo
+                .iter()
+                .map(prepare)
+                .collect::<Result<_, _>>()?,
+        })
     }
-    pub fn rebase_audio_root(&mut self, old: &str, new: &str) {
-        for f in self
-            .history
-            .undo
-            .iter_mut()
-            .chain(self.history.redo.iter_mut())
-        {
-            if f.project.audio_root == old {
-                f.project.audio_root = new.into();
+    /// The Session holds its lock between preparing this plan and applying it.
+    /// No fallible encoding/metadata work is allowed after the file is written.
+    pub(crate) fn apply_resource_rebase(&mut self, plan: ResourceRebase) {
+        debug_assert_eq!(self.history.undo.len(), plan.undo.len());
+        debug_assert_eq!(self.history.redo.len(), plan.redo.len());
+        let apply = |frame: &mut SceneFrame, prepared: ResourceFrameRebase| {
+            if prepared.images {
+                frame.project.images_root = plan.images_root.clone();
             }
+            if prepared.audio {
+                frame.project.audio_root = plan.audio_root.clone();
+            }
+            frame.project.wire = prepared.wire;
+        };
+        for (frame, prepared) in self.history.undo.iter_mut().zip(plan.undo) {
+            apply(frame, prepared);
+        }
+        for (frame, prepared) in self.history.redo.iter_mut().zip(plan.redo) {
+            apply(frame, prepared);
         }
     }
     pub fn apply(&mut self, project: &mut SceneProject, edit: RigEdit) -> Result<bool, AppError> {
@@ -279,10 +366,19 @@ impl SceneRigHistory {
             RigEdit::SetActiveAttachment { slot, attachment } => {
                 SceneEdit::SetActive { slot, attachment }
             }
+            RigEdit::SetAttachmentColor { id, color } => {
+                SceneEdit::SetAttachmentColor { id, color }
+            }
+            RigEdit::SetAttachmentSequence { id, sequence } => {
+                SceneEdit::SetAttachmentSequence { id, sequence }
+            }
             RigEdit::RenameAttachment { id, name } => SceneEdit::RenameAttachment { id, name },
             RigEdit::DeleteAttachment { id } => SceneEdit::DeleteAttachment { id },
             RigEdit::ReorderSlot { id, index } => SceneEdit::ReorderSlot { id, index },
             RigEdit::DeleteSlot { id } => SceneEdit::DeleteSlot { id },
+            RigEdit::SetSlotDarkColor { id, enabled, color } => {
+                SceneEdit::SetSlotDarkColor { id, enabled, color }
+            }
             RigEdit::SetSlotColor { id, color } => SceneEdit::SetSlotColor {
                 id,
                 color: color.to_be_bytes(),
@@ -470,8 +566,15 @@ pub(super) fn apply(
                 next.focus.vertex = Some(vertex);
             }
             RigEdit::PaintAttachmentWeights { bone, changes, .. } => {
-                if changes.is_empty() || changes.len() > 256 {
-                    return Err(invalid("Choose 1–256 distinct weight changes."));
+                let limit = if attachment.mesh().is_some() {
+                    crate::mesh::MAX_VERTICES
+                } else {
+                    256
+                };
+                if changes.is_empty() || changes.len() > limit {
+                    return Err(invalid(&format!(
+                        "Choose 1–{limit} distinct weight changes."
+                    )));
                 }
                 let bone = find(bone)?;
                 let mut seen = std::collections::HashSet::new();
@@ -594,8 +697,11 @@ pub(super) fn apply(
                 RigEdit::MoveVertices {
                     vertices, edit_uvs, ..
                 } => {
-                    if vertices.is_empty() || vertices.len() > 256 {
-                        return Err(invalid("Choose 1–256 vertices."));
+                    if vertices.is_empty() || vertices.len() > crate::mesh::MAX_VERTICES {
+                        return Err(invalid(&format!(
+                            "Choose 1–{} vertices.",
+                            crate::mesh::MAX_VERTICES
+                        )));
                     }
                     let mut seen = std::collections::HashSet::new();
                     if vertices.iter().any(|v| !seen.insert(v.vertex)) {
@@ -622,8 +728,11 @@ pub(super) fn apply(
                     )?);
                 }
                 RigEdit::PaintWeights { bone, changes, .. } => {
-                    if changes.is_empty() || changes.len() > 256 {
-                        return Err(invalid("Choose 1–256 weight changes."));
+                    if changes.is_empty() || changes.len() > crate::mesh::MAX_VERTICES {
+                        return Err(invalid(&format!(
+                            "Choose 1–{} weight changes.",
+                            crate::mesh::MAX_VERTICES
+                        )));
                     }
                     let bone = find(bone)?;
                     let mut seen = std::collections::HashSet::new();
@@ -665,6 +774,11 @@ pub(super) fn apply(
                     crate::mesh_edit::retessellate(mesh, &world)?;
                 }
                 RigEdit::ResetMesh { .. } => {
+                    if mesh.image.width <= 0.0 || mesh.image.height <= 0.0 {
+                        return Err(invalid(
+                            "A mesh with zero stored image size cannot be reset to a quad.",
+                        ));
+                    }
                     *mesh = fbones_format::minimal::meshes::quad(mesh.image.clone(), owner);
                     next.focus.vertex = None;
                 }
@@ -877,8 +991,8 @@ pub(super) fn apply(
             c.color = color.to_be_bytes();
         }
         RigEdit::SetBoneColors { colors } => {
-            if colors.is_empty() || colors.len() > 128 {
-                return Err(invalid("Choose 1–128 bone colors."));
+            if colors.is_empty() || colors.len() > MAX_SCENE_BONES {
+                return Err(invalid(&format!("Choose 1–{MAX_SCENE_BONES} bone colors.")));
             }
             let mut seen = std::collections::HashSet::new();
             for c in &colors {
@@ -913,7 +1027,7 @@ pub(super) fn apply(
             shear_y,
         } => {
             if ids.is_empty()
-                || ids.len() > 128
+                || ids.len() > MAX_SCENE_BONES
                 || [
                     pivot_x, pivot_y, dx, dy, rotation, scale_x, scale_y, shear_x, shear_y,
                 ]
@@ -1024,8 +1138,10 @@ pub(super) fn apply(
             rotation,
             length,
         } => {
-            if next.project.rig.bones.len() >= 128 {
-                return Err(invalid("This version supports up to 128 bones."));
+            if next.project.rig.bones.len() >= MAX_SCENE_BONES {
+                return Err(invalid(&format!(
+                    "This profile supports up to {MAX_SCENE_BONES} bones."
+                )));
             }
             let parent_index = find(parent)?;
             let name = (1..)
@@ -1311,6 +1427,17 @@ fn remap_bones(before: &SceneFrame, next: &mut SceneFrame) -> Result<(), AppErro
         for track in &mut animation.tracks {
             track.bone = index(track.bone)?;
         }
+        // Mode rows carry bone identities independently of owner/track order.
+        // Keep surviving rows in their original order; ordinary dangling-key
+        // deletion remains rejected above rather than dropping animation data.
+        animation.split_modes.retain_mut(|row| {
+            if let Some(Some(bone)) = map.get(row.bone) {
+                row.bone = *bone;
+                true
+            } else {
+                false
+            }
+        });
     }
     for slot in &mut next.project.slots {
         slot.bone = index(slot.bone)?;
@@ -1555,8 +1682,22 @@ fn move_attachment(
     }
     // Explicit FBones policy: retain destination activation, including none.
     // Selecting the moved item must not replace a different rendered image.
-    next.project.slots[destination].attachments.push(attachment);
-    next.attachment_ids[destination].push(id);
+    // Local inventory indices are reconstructed from global inventory order on
+    // decode. Insert at that same rank so Save/reopen preserves typed addresses.
+    let insertion = order
+        .iter()
+        .take_while(|candidate| **candidate != id)
+        .filter(|candidate| next.attachment_ids[destination].contains(candidate))
+        .count();
+    next.project.slots[destination]
+        .attachments
+        .insert(insertion, attachment);
+    next.attachment_ids[destination].insert(insertion, id);
+    if let Some(active) = &mut next.project.slots[destination].active_attachment {
+        if *active >= insertion {
+            *active += 1;
+        }
+    }
     next.project.attachment_order = order
         .into_iter()
         .map(|id| next.attachment_address(id))

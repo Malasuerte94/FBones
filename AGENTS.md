@@ -96,6 +96,40 @@ evidence before asking the user for information.
   never global setup/agent registration. Audit sources and rationale:
   `docs/research/RE-WORKFLOW-REVIEW-2026-10-30.md`.
 
+## Mandatory cleanup and disk-space discipline
+
+**Very important user requirement: always clean up after your work.** At the end
+of every session, remove your own generated artifacts that are no longer used.
+Do not leave obsolete build variants, incremental compilation caches, temporary
+copies, scratch outputs or abandoned test bundles accumulating between sessions.
+Routine cleanup of verified disposable artifacts is authorized; do not ask for
+confirmation each time.
+
+- Measure disk usage before substantial builds/research and again at session end.
+  Check both Linux free space and the Windows drive hosting the WSL VHDX: Linux
+  can report free space while the host drive is nearly full. If space is tight,
+  clean disposable artifacts before starting another large build or capture.
+- In particular, monitor `target/debug/incremental`, `target/debug/deps`, native
+  build outputs and cross-platform target directories. Reuse consistent Cargo
+  profiles/features where possible. Remove obsolete variants after their checks
+  are complete; prune or disable incremental caches for one-off research/test
+  builds when retaining them has no continuing benefit. Do not blindly run a full
+  `cargo clean` after every build or delete another active task's outputs.
+- Remove your own temporary fixtures, unused copies and scratch research outputs
+  once they are no longer needed for a result, regression or reproducible next
+  step. Retain the concise findings, required manifests and raw evidence that
+  existing research records cite, including useful negative results.
+- Preserve source files, personal/original projects and backups, original tools
+  and packages, active test inputs, current deliveries and anything still needed
+  to reproduce accepted evidence. For Windows build cleanup, verify ownership,
+  current-build selection and active processes before removing an unused build;
+  never remove a selected or mapped executable. Uncertain ownership or relevance
+  means retain it and report the unresolved item.
+- Coordinate cleanup with active agents/builds/tests. Report what was removed,
+  how much space was recovered and any significant retained disposable backlog.
+  Include the cleanup result in the normal session checkpoint when one is due;
+  do not create extra history files just to record cleanup.
+
 ## Original instances and research data
 
 Use dedicated own instances/copies. Protect **all** personal/original projects

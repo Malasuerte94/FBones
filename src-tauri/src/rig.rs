@@ -53,6 +53,8 @@ pub struct SlotView {
     pub visible: bool,
     pub color: u32,
     pub blend: String,
+    pub tint_black: bool,
+    pub dark_color: u32,
     pub region: Option<RegionView>,
     pub image_available: bool,
     pub mesh: Option<MeshView>,
@@ -167,6 +169,27 @@ pub enum RigEdit {
         keys: Vec<crate::animation_constraints::ConstraintKeyInput>,
     },
     #[cfg(feature = "scene-editing")]
+    SetAnimationSequenceKeys {
+        animation: u64,
+        keys: Vec<crate::animation_sequence::SequenceKeyInput>,
+    },
+    #[cfg(feature = "scene-editing")]
+    SetSlotDarkColor {
+        id: u64,
+        enabled: bool,
+        color: u32,
+    },
+    #[cfg(feature = "scene-editing")]
+    SetAttachmentColor {
+        id: u64,
+        color: u32,
+    },
+    #[cfg(feature = "scene-editing")]
+    SetAttachmentSequence {
+        id: u64,
+        sequence: Option<crate::animation_sequence::SettingsInput>,
+    },
+    #[cfg(feature = "scene-editing")]
     SetAnimationEventKeys {
         animation: u64,
         keys: Vec<crate::animation_events::EventKeyInput>,
@@ -222,6 +245,8 @@ pub enum RigEdit {
         constraint_keys: Vec<crate::animation_constraints::ConstraintKeyInput>,
         #[serde(default)]
         event_keys: Vec<crate::animation_events::EventKeyInput>,
+        #[serde(default)]
+        sequence_keys: Vec<crate::animation_sequence::SequenceKeyInput>,
     },
     #[cfg(feature = "scene-editing")]
     SetAnimationDrawOrderKeys {
@@ -791,6 +816,8 @@ impl RigHistory {
                 visible: slot.visible,
                 color: u32::from_be_bytes(slot.color),
                 blend: slot.blend.as_str().into(),
+                tint_black: false,
+                dark_color: 255,
                 image_available: slot
                     .attachment
                     .as_ref()
@@ -1710,6 +1737,10 @@ impl RigHistory {
             | RigEdit::DeleteEvent { .. }
             | RigEdit::SetAnimationConstraintKeys { .. }
             | RigEdit::SetAnimationEventKeys { .. }
+            | RigEdit::SetAnimationSequenceKeys { .. }
+            | RigEdit::SetAttachmentSequence { .. }
+            | RigEdit::SetAttachmentColor { .. }
+            | RigEdit::SetSlotDarkColor { .. }
             | RigEdit::CreateAnimation { .. }
             | RigEdit::DuplicateAnimation { .. }
             | RigEdit::SetAnimationFps { .. }

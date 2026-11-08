@@ -2,8 +2,10 @@
 #[derive(Clone, Debug, PartialEq)]
 pub struct Animation {
     pub name: String,
+    pub split_modes: Vec<BoneSplitConfig>,
     pub tracks: Vec<BoneTimeline>,
     pub slot_tracks: Vec<SlotTimeline>,
+    pub sequence_tracks: Vec<super::SequenceTimeline>,
     pub draw_order: Vec<super::DrawOrderKey>,
     pub deform_tracks: Vec<super::DeformTimeline>,
     pub constraint_tracks: Vec<super::ConstraintTimeline>,
@@ -13,8 +15,10 @@ impl Animation {
     pub fn new(name: String) -> Self {
         Self {
             name,
+            split_modes: Vec::new(),
             tracks: Vec::new(),
             slot_tracks: Vec::new(),
+            sequence_tracks: Vec::new(),
             draw_order: Vec::new(),
             deform_tracks: Vec::new(),
             constraint_tracks: Vec::new(),
@@ -39,6 +43,15 @@ impl Animation {
                 .bone;
             if !owners.contains(&bone) {
                 owners.push(bone);
+            }
+        }
+        for track in &self.sequence_tracks {
+            let bone = slots
+                .get(track.attachment.slot)
+                .ok_or(crate::FormatError::UnsupportedProfile)?
+                .bone;
+            if !owners.contains(&bone) {
+                owners.push(bone)
             }
         }
         let mut ranks = Vec::new();
@@ -126,12 +139,14 @@ impl PartialEq for SlotAttachmentKey {
 pub struct SlotRgbaKey {
     pub frame: f32,
     pub values: [f32; 4],
+    pub dark_values: [f32; 3],
     pub curve: SlotRgbaCurve,
 }
 impl PartialEq for SlotRgbaKey {
     fn eq(&self, other: &Self) -> bool {
         self.frame.to_bits() == other.frame.to_bits()
             && self.values.map(f32::to_bits) == other.values.map(f32::to_bits)
+            && self.dark_values.map(f32::to_bits) == other.dark_values.map(f32::to_bits)
             && self.curve == other.curve
     }
 }
@@ -139,29 +154,115 @@ impl PartialEq for SlotRgbaKey {
 pub enum SlotRgbaCurve {
     Linear,
     Stepped,
-    Bezier { controls: [[f32; 4]; 4] },
+    Bezier {
+        controls: [[f32; 4]; 4],
+        dark_controls: Option<[[f32; 4]; 3]>,
+    },
 }
 impl PartialEq for SlotRgbaCurve {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Linear, Self::Linear) | (Self::Stepped, Self::Stepped) => true,
-            (Self::Bezier { controls: a }, Self::Bezier { controls: b }) => a
-                .iter()
-                .flatten()
-                .map(|v| v.to_bits())
-                .eq(b.iter().flatten().map(|v| v.to_bits())),
+            (
+                Self::Bezier {
+                    controls: a,
+                    dark_controls: ad,
+                },
+                Self::Bezier {
+                    controls: b,
+                    dark_controls: bd,
+                },
+            ) => {
+                a.iter()
+                    .flatten()
+                    .map(|v| v.to_bits())
+                    .eq(b.iter().flatten().map(|v| v.to_bits()))
+                    && match (ad, bd) {
+                        (None, None) => true,
+                        (Some(a), Some(b)) => a
+                            .iter()
+                            .flatten()
+                            .map(|v| v.to_bits())
+                            .eq(b.iter().flatten().map(|v| v.to_bits())),
+                        _ => false,
+                    }
+            }
             _ => false,
         }
     }
 }
 impl Eq for SlotRgbaCurve {}
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum BoneChannel {
     Rotate,
     Translate,
     Scale,
     Shear,
+    TranslateX,
+    TranslateY,
+    ScaleX,
+    ScaleY,
 }
+impl BoneChannel {
+    pub fn dimensions(self) -> usize {
+        match self {
+            Self::Rotate | Self::TranslateX | Self::TranslateY | Self::ScaleX | Self::ScaleY => 1,
+            Self::Translate | Self::Scale | Self::Shear => 2,
+        }
+    }
+    pub fn wire(self) -> u32 {
+        match self {
+            Self::Rotate => 0,
+            Self::Translate => 1,
+            Self::Scale => 2,
+            Self::Shear => 3,
+            Self::TranslateX => 14,
+            Self::TranslateY => 15,
+            Self::ScaleX => 16,
+            Self::ScaleY => 17,
+        }
+    }
+    pub fn from_wire(value: u32) -> Result<Self, crate::FormatError> {
+        match value {
+            0 => Ok(Self::Rotate),
+            1 => Ok(Self::Translate),
+            2 => Ok(Self::Scale),
+            3 => Ok(Self::Shear),
+            14 => Ok(Self::TranslateX),
+            15 => Ok(Self::TranslateY),
+            16 => Ok(Self::ScaleX),
+            17 => Ok(Self::ScaleY),
+            _ => Err(crate::FormatError::UnsupportedProfile),
+        }
+    }
+}
+/// The observed configuration values are explicit modes, not a bitmask.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum BoneSplitMode {
+    Translate,
+    Scale,
+}
+impl BoneSplitMode {
+    pub fn wire(self) -> u32 {
+        match self {
+            Self::Translate => 1,
+            Self::Scale => 2,
+        }
+    }
+    pub fn from_wire(value: u32) -> Result<Self, crate::FormatError> {
+        match value {
+            1 => Ok(Self::Translate),
+            2 => Ok(Self::Scale),
+            _ => Err(crate::FormatError::UnsupportedProfile),
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct BoneSplitConfig {
+    pub bone: usize,
+    pub mode: BoneSplitMode,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct BoneTimeline {
     pub bone: usize,
@@ -232,7 +333,19 @@ pub(super) fn records(
                     (9, UInt(0)),
                     (3, Bool(false)),
                     (10, object(Object::Color([255; 4]))),
-                    (8, object(Object::Empty116)),
+                    (
+                        8,
+                        object(if a.split_modes.is_empty() {
+                            Object::Empty116
+                        } else {
+                            Object::BoneSplitModes(
+                                a.split_modes
+                                    .iter()
+                                    .map(|row| (format!("bone-{}", row.bone), row.mode.wire()))
+                                    .collect(),
+                            )
+                        }),
+                    ),
                     (6, Bool(true)),
                     (
                         2,
@@ -268,6 +381,26 @@ pub(super) fn records(
                                     group.1.push(item);
                                 } else {
                                     groups.push((bone, vec![item]));
+                                }
+                            }
+                            for track in &a.sequence_tracks {
+                                let address = track.attachment;
+                                let bone = slots[address.slot].bone;
+                                let item = Object::SequenceAnimationTrack {
+                                    track: track.clone(),
+                                    slot: format!("slot-{}", address.slot),
+                                    target: (
+                                        slots[address.slot].attachments[address.attachment].class(),
+                                        format!(
+                                            "attachment-{}-{}",
+                                            address.slot, address.attachment
+                                        ),
+                                    ),
+                                };
+                                if let Some(group) = groups.iter_mut().find(|g| g.0 == bone) {
+                                    group.1.push(item)
+                                } else {
+                                    groups.push((bone, vec![item]))
                                 }
                             }
                             for t in &a.deform_tracks {
@@ -399,7 +532,7 @@ pub(super) fn records(
                                     ],
                                 }));
                             }
-                            result
+                            super::wire::ordered_groups(project, i, result)
                         })),
                     ),
                     (0, DomainLink(11, "skeleton".into())),

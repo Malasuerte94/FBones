@@ -16,6 +16,7 @@ import {useAnimationWorkspace} from '../composables/useAnimationWorkspace.ts';
 import type {EventDefinition,EventPatch,FiredEvent} from '../domain/animationEvents.ts';
 import {EventAudioPlayer,type AudioReceipt} from '../domain/eventAudio.ts';
 import {evaluate as evaluateScene,PhysicsState} from '../domain/solve/index.ts';
+import {logicalDocumentKey} from '../domain/resourceContinuity.ts';
 
 export type Intent = 'new' | 'open' | 'close' | 'quit';
 
@@ -24,6 +25,7 @@ export const useWorkspace = defineStore('workspace', () => {
   const editorMode=ref<'setup'|'animate'>('setup');
   const animationLocalBones=shallowRef<BoneView[]>([]);
   const busy = ref(false);
+  const openingProject = ref(false);
   const editing = ref(false);
   const ready = ref(false);
   const newDialog = ref(false);
@@ -33,6 +35,7 @@ export const useWorkspace = defineStore('workspace', () => {
   const inspectorError = ref('');
   const animationKeyError=ref('');
   const eventKeyError=ref('');
+  const sequenceFieldError=ref(''),attachmentColorError=ref('');
   const grid = ref(true);
   const zoom = ref(100);
   const resetCount = ref(0);
@@ -117,7 +120,7 @@ export const useWorkspace = defineStore('workspace', () => {
   const traceOpen=ref(false),traceBusy=ref(false),tracePreview=shallowRef<TracePreview|null>(null);
   const traceOptions=reactive<TraceOptions>({alphaThreshold:16,tolerance:1,spacing:24,inner:false,innerThreshold:0.15,innerTolerance:2,innerSpacing:24,maxVertices:192});
   const viewSlots=computed(()=>{
-    const current=editorMode.value==='animate'?animation.drawOrderSlots.value:slots.value;
+    const current=animation.sequenceSlots.value;
     const preview=tracePreview.value;
     if(!preview||project.value?.revision!==preview.expectedRevision)return current;
     return current.map(s=>{
@@ -158,7 +161,7 @@ export const useWorkspace = defineStore('workspace', () => {
   const weightSelectionKey=computed(()=>{
     if(!project.value||!selectedBinding.value)return null;
     const id=sceneEditing.value?selectedAttachmentId.value:selectedSlotId.value;
-    return id===null?null:`${project.value.documentId}:${sceneEditing.value?'attachment':'slot'}:${id}`;
+    return id===null?null:`${logicalDocumentKey(project.value)}:${sceneEditing.value?'attachment':'slot'}:${id}`;
   });
   const weightSelection=computed(()=>validWeightSelection(weightSelectionKey.value===null?undefined:weightSelections.value.get(weightSelectionKey.value),selectedBinding.value?.vertices.length??0,selectedBinding.value?.weighted?selectedBinding.value.bones:[]));
   const weightVertices=computed(()=>weightSelection.value.vertices);
@@ -174,7 +177,7 @@ export const useWorkspace = defineStore('workspace', () => {
   function clearWeightBones(){storeWeightSelection({...weightSelection.value,bones:[],anchor:null});}
   function toggleWeightLock(id:number){if(!sceneEditing.value||!selectedBinding.value?.weighted||!selectedBinding.value.bones.includes(id)||busy.value)return;const locks=new Set(weightLocks.value);if(locks.has(id))locks.delete(id);else locks.add(id);storeWeightSelection({...weightSelection.value,locks:selectedBinding.value.bones.filter(bone=>locks.has(bone))});}
   function invalidateWeightVertices(key=weightSelectionKey.value){if(key===null)return;const value=weightSelections.value.get(key);if(!value)return;const next=new Map(weightSelections.value);next.set(key,{...value,vertices:[],active:null});weightSelections.value=next;}
-  watch(()=>project.value?.documentId,(id,previous)=>{if(id!==previous)weightSelections.value=new Map();},{flush:'sync'});
+  watch(()=>logicalDocumentKey(project.value),(id,previous)=>{if(id!==previous)weightSelections.value=new Map();},{flush:'sync'});
   watch(()=>[weightSelectionKey.value,selectedBinding.value?.vertices.length] as const,(current,previous)=>{if(previous&&current[0]!==null&&current[0]===previous[0]&&current[1]!==previous[1])invalidateWeightVertices(current[0]);},{flush:'sync'});
   // Bind changes membership explicitly; lock protection is for ordinary weight
   // edits. Reset locks on membership changes (FBones session policy).
@@ -285,7 +288,7 @@ export const useWorkspace = defineStore('workspace', () => {
     }
   }
   async function setEditorMode(mode:'setup'|'animate'){
-    if(mode===editorMode.value||busy.value||traceOpen.value||clippingDraft.value||inspectorError.value||animationKeyError.value||eventKeyError.value)return;
+    if(mode===editorMode.value||busy.value||traceOpen.value||clippingDraft.value||inspectorError.value||animationKeyError.value||eventKeyError.value||sequenceFieldError.value||attachmentColorError.value)return;
     if(editFlight&&!(await editFlight))return;
     animation.pauseAnimation();releasePose();cancelParentPick();
     editorMode.value=mode;
@@ -419,8 +422,12 @@ export const useWorkspace = defineStore('workspace', () => {
     if (intent === 'new') { discardOnCreate = discardChanges; newDialog.value = true; return; }
     await run(async () => {
       if (intent === 'open') {
-        const opened = await api.openProject(discardChanges);
-        if (opened) { editorMode.value='setup';animation.pauseAnimation();simulationIntent.value=true;project.value = opened;animation.resetAnimationState(); selectBone(opened.bones[0]?.id ?? null); editMode.value = opened.slots?.length ? 'images' : 'bones'; if (opened.slots?.length) selectSlot(opened.slots.at(-1)!.id); resetCount.value++; }
+        openingProject.value=true;
+        try {
+          await nextTick();
+          const opened = await api.openProject(discardChanges);
+          if (opened) { editorMode.value='setup';animation.pauseAnimation();simulationIntent.value=true;project.value = opened;animation.resetAnimationState(); selectBone(opened.bones[0]?.id ?? null); editMode.value = opened.slots?.length ? 'images' : 'bones'; if (opened.slots?.length) selectSlot(opened.slots.at(-1)!.id); resetCount.value++; notice.value='';noticeError.value=false; }
+        } finally { openingProject.value=false; }
       } else if (intent === 'close') {
         await api.closeProject(discardChanges); animation.pauseAnimation();editorMode.value='setup';project.value = null;
       } else if (api.desktop) {
@@ -455,17 +462,32 @@ export const useWorkspace = defineStore('workspace', () => {
   async function copy() {
     return save(true);
   }
+  async function exportRuntime():Promise<boolean>{
+    if(editFlight&&!(await editFlight))return false;
+    if(busy.value||!canEdit.value||!sceneEditing.value||!project.value||newDialog.value||discardDialog.value)return false;
+    if(clippingDraft.value||traceOpen.value){showNotice('Finish or cancel the current geometry operation before exporting.',true);return false;}
+    const invalid=inspectorError.value||animationKeyError.value||eventKeyError.value||sequenceFieldError.value||attachmentColorError.value;
+    if(invalid){showNotice(invalid,true);return false;}
+    animation.pauseAnimation();
+    let exported=false;
+    await run(async()=>{
+      const result=await api.exportRuntime(project.value!.revision);
+      if(result){exported=true;showNotice(`Runtime bundle exported to ${result.path}. Only Setup and saved keys are exported.`);}
+    });
+    return exported;
+  }
   async function save(as = false): Promise<boolean> {
     if(clippingDraft.value){showNotice('Finish or cancel the clipping polygon before saving.',true);return false;}
     if(traceOpen.value){showNotice('Apply or cancel Trace before saving.',true);return false;}
     if (editFlight && !(await editFlight)) return false;
-    if (inspectorError.value||animationKeyError.value||eventKeyError.value) { showNotice(inspectorError.value||animationKeyError.value||eventKeyError.value, true); return false; }
+    if (inspectorError.value||animationKeyError.value||eventKeyError.value||sequenceFieldError.value||attachmentColorError.value) { showNotice(inspectorError.value||animationKeyError.value||eventKeyError.value||sequenceFieldError.value||attachmentColorError.value, true); return false; }
     if (busy.value || !(as ? project.value?.canCopy : project.value?.canSave)) return false;
+    const publishAnimationSave=animation.prepareAnimationSave();
     let saved = false;
     await run(async () => {
       const result = await api.saveProject(as);
-      if (result) {
-        project.value = result; saved = true;
+      if (result&&publishAnimationSave(()=>{project.value=result;})) {
+        saved = true;
         showNotice(result.inspectionOnly ? 'Project copy saved.' : 'Project saved.');
       }
     });
@@ -482,6 +504,8 @@ export const useWorkspace = defineStore('workspace', () => {
     if (editFlight) await editFlight;
     if(project.value?.documentId!==expectedDocument)return false;
     if (busy.value || !canEdit.value || !project.value) return false;
+    if(attachmentColorError.value&&edit.type==='setAttachmentColor'){showNotice(attachmentColorError.value,true);return false;}
+    if(sequenceFieldError.value&&(edit.type==='setAnimationSequenceKeys'||edit.type==='setAttachmentSequence')){showNotice(sequenceFieldError.value,true);return false;}
     if (newDialog.value || discardDialog.value) return false;
     if(editorMode.value==='animate'&&poseEpoch!==undefined&&!validAnimationLease(poseEpoch)){showNotice('The animation pose changed. Start the gesture again.',true);return false;}
     if(clippingDraft.value&&edit.type!=='createClipping'){showNotice('Finish or cancel the clipping polygon first.',true);return false;}
@@ -490,15 +514,21 @@ export const useWorkspace = defineStore('workspace', () => {
     if(editorMode.value==='animate'){
       animation.pauseAnimation();
       if(['move','transformBones','update'].includes(edit.type)){
-        try{const keyed=animation.boneAnimationEdit(edit,renderedBones.value);if(!keyed)return true;edit=keyed;}
+        // A viewport gesture publishes its transient preview into renderedBones.
+        // Its edit still describes a delta from the frozen pointerdown sample;
+        // applying it to that preview would move/rotate/scale the bones twice.
+        const baseline=poseEpoch!==undefined&&frozenPose.value?.localBones
+          ?withEvaluatedPose(frozenPose.value.localBones,frozenPose.value.bones)
+          :renderedBones.value;
+        try{const keyed=animation.boneAnimationEdit(edit,baseline);if(!keyed)return true;edit=keyed;}
         catch(error){showNotice(errorMessage(error),true);return false;}
-      }else if(edit.type==='setActiveAttachment'||edit.type==='setSlotColor'){
+      }else if(edit.type==='setActiveAttachment'||edit.type==='setSlotColor'||edit.type==='setSlotDarkColor'){
         try{const keyed=animation.slotAnimationEdit(edit);if(!keyed)return true;edit=keyed;}
         catch(error){showNotice(errorMessage(error),true);return false;}
       }else if(edit.type==='moveVertex'||edit.type==='moveVertices'||edit.type==='moveMesh'||edit.type==='moveClippingVertices'||edit.type==='transformAttachments'||edit.type==='attachmentEdit'){
         try{const keyed=animation.deformAnimationEdit(edit,renderedBones.value);if(!keyed)return true;edit=keyed;}
         catch(error){showNotice(errorMessage(error),true);return false;}
-      }else if(!['createAnimation','renameAnimation','deleteAnimation','duplicateAnimation','setAnimationFps','setAnimationKey','setAnimationKeys','setAnimationSlotKeys','setAnimationKeyBatch','setAnimationDrawOrderKeys','setAnimationDeformKeys','setAnimationDeformVertices','setAnimationConstraintKeys','setAnimationEventKeys','createEvent','renameEvent','updateEvent','deleteEvent','moveAnimationKeys','deleteAnimationKeys','undo','redo'].includes(edit.type)){
+      }else if(!['createAnimation','renameAnimation','deleteAnimation','duplicateAnimation','setAnimationFps','setAnimationKey','setAnimationKeys','setAnimationSlotKeys','setAnimationKeyBatch','setAnimationDrawOrderKeys','setAnimationDeformKeys','setAnimationDeformVertices','setAnimationConstraintKeys','setAnimationEventKeys','setAnimationSequenceKeys','createEvent','renameEvent','updateEvent','deleteEvent','moveAnimationKeys','deleteAnimationKeys','undo','redo'].includes(edit.type)){
         showNotice('Switch to Setup to change the skeleton structure.',true);return false;
       }
     }
@@ -506,6 +536,7 @@ export const useWorkspace = defineStore('workspace', () => {
     const selectionAtStart=selectionEpoch,originalType=edit.type,weightKeyAtStart=weightSelectionKey.value;
     const scopedMeshEdits=new Set(['convertMesh','triangulateMesh','resetMesh','autoWeights','normalizeWeights','moveMesh','moveVertex','moveVertices','paintWeights','addVertex','deleteVertex','meshEdge','bindMesh','setWeight','meshStroke']);
     if(sceneEditing.value&&selectedAttachmentId.value!==null&&scopedMeshEdits.has(edit.type))edit={type:'attachmentEdit',id:selectedAttachmentId.value,edit};
+    const publishAnimationEdit=animation.prepareAnimationDraftCommit(edit);
     editing.value = true;
     const operation = run(async () => {
       if(edit.type==='create'&&autoColor.value){const parent=edit.parent;edit={...edit,color:childColor(project.value!.bones.find(b=>b.id===parent))};}
@@ -515,7 +546,7 @@ export const useWorkspace = defineStore('workspace', () => {
       const editEpoch=needsEvaluatedPose?poseEpoch??snapshot?.poseEpoch:undefined;
       if(editorMode.value==='animate'&&editEpoch!==undefined&&!validAnimationLease(editEpoch))throw new Error('The animation pose changed. Start the gesture again.');
       const result = await api.editRig(edit, expectedRevision ?? project.value!.revision,editEpoch);
-      project.value = result;
+      if(!publishAnimationEdit(()=>{project.value=result;}))return;
       if(['convertMesh','resetMesh','addVertex','deleteVertex','meshStroke','insertClippingVertex','deleteClippingVertex'].includes(originalType))invalidateWeightVertices(weightKeyAtStart);
       if(selectionAtStart===selectionEpoch){
         const preserveAnimationSelection=editorMode.value==='animate'&&['undo','redo'].includes(originalType);
@@ -675,10 +706,12 @@ export const useWorkspace = defineStore('workspace', () => {
   }
   function beginClippingEdit(id:number){const a=sceneAttachments.value.find(a=>a.id===id);if(!a?.clipping||clippingDraft.value)return false;selectAttachment(id);editMode.value='clipping';meshTool.value='move';return true;}
   async function chooseImagesFolder(){
-    if(editFlight)await editFlight;
-    if(!canEdit.value||busy.value||!project.value||inspectorError.value)return;
+    const document=project.value?.documentId;
+    if(editFlight&&!(await editFlight))return;
+    if(project.value?.documentId!==document||!canUpdateImageResources())return;
+    animation.pauseAnimation();const model=project.value!,publish=animation.prepareAnimationResourceUpdate();
     editing.value=true;let success=false;
-    const operation=run(async()=>{const result=await api.chooseImagesFolder(project.value!.revision);if(result){project.value=result;librarySelection.value=null;success=true;}}).then(()=>success);
+    const operation=run(async()=>{const result=await api.chooseImagesFolder(model.revision);if(result&&publish(result,()=>{project.value=result;})){librarySelection.value=null;success=true;}}).then(()=>success);
     editFlight=operation;try{await operation;}finally{if(editFlight===operation){editFlight=null;editing.value=false;}}
   }
   async function chooseAudioFolder(){
@@ -708,9 +741,18 @@ export const useWorkspace = defineStore('workspace', () => {
   watch(traceOptions,()=>{tracePreview.value=null;traceGeneration++;},{deep:true,flush:'sync'});
   watch(()=>[project.value?.revision,project.value?.documentId,selectedSlotId.value,selectedAttachmentId.value],(current,previous)=>{if(traceOpen.value&&previous&&current.some((value,i)=>value!==previous[i]))cancelTrace();},{flush:'sync'});
 
+  function canUpdateImageResources(){
+    const error=inspectorError.value||animationKeyError.value||eventKeyError.value||sequenceFieldError.value||attachmentColorError.value;
+    if(error){showNotice(error,true);return false;}
+    return canEdit.value&&!busy.value&&!!project.value&&!newDialog.value&&!discardDialog.value&&!traceOpen.value&&!clippingDraft.value&&!parentPicking.value;
+  }
   async function refreshImagesFolder(){
-    if(editFlight)await editFlight;if(!canEdit.value||busy.value||!project.value)return;
-    await run(async()=>{project.value=await api.refreshImagesFolder(project.value!.revision);});
+    const document=project.value?.documentId;
+    if(editFlight&&!(await editFlight))return;if(project.value?.documentId!==document||!canUpdateImageResources())return;
+    animation.pauseAnimation();const model=project.value!,publish=animation.prepareAnimationResourceUpdate();
+    editing.value=true;let success=false;
+    const operation=run(async()=>{const result=await api.refreshImagesFolder(model.revision);success=publish(result,()=>{project.value=result;});}).then(()=>success);
+    editFlight=operation;try{await operation;}finally{if(editFlight===operation){editFlight=null;editing.value=false;}}
   }
   async function placeImages(keys:string[],x:number,y:number,bone?:number,centerOnBone=false):Promise<boolean>{
     if(editorMode.value==='animate'){showNotice('Switch to Setup to add image attachments.',true);return false;}
@@ -782,10 +824,10 @@ export const useWorkspace = defineStore('workspace', () => {
       catch (error) { showNotice(errorMessage(error), true); }
     }
   });
-  watch(()=>[project.value?.documentId,project.value?.revision],(current,previous)=>{
+  watch(()=>[project.value?.documentId,project.value?.revision,logicalDocumentKey(project.value)],(current,previous)=>{
     const compatible=!!previous&&current[0]===previous[0]&&previewRuntime.adopt({bones:project.value?.bones??[],constraints:constraints.value});
     if(compatible){frozenPose.value=null;resumeSimulation('geometry');publishPreview();}else resetSimulation();
-    if(!previous||current[0]!==previous[0]){clearObjectSelection();clippingDraft.value=null;}
+    if(!previous||current[2]!==previous[2]){clearObjectSelection();clippingDraft.value=null;}
     else{
       const valid=new Set(sceneAttachments.value.map(a=>a.id));
       selectedAttachmentIds.value=selectedAttachmentIds.value.filter(id=>valid.has(id));
@@ -798,7 +840,7 @@ export const useWorkspace = defineStore('workspace', () => {
     }
   },{flush:'sync'});
 
-  return { ...animation,editorMode,setEditorMode,animationLocalBones,project, busy, editing, ready, newDialog, discardDialog, notice, noticeError, inspectorError,animationKeyError,eventKeyError,
+  return { ...animation,editorMode,setEditorMode,animationLocalBones,project, busy, openingProject, editing, ready, newDialog, discardDialog, notice, noticeError, inspectorError,animationKeyError,eventKeyError,sequenceFieldError,attachmentColorError,
     animationPhysicsTime,animationPhysicsError,animationPhysicsSupported,animationPhysicsGeneration,resetAnimationPhysicsPreview,
     renderedBones,frozenPose,freezePose,releasePose,previewBonePose,endBonePreview,simulationIntent,simulationRunning,simulationTime,simulationError,simulationReset,simulationStep,runSimulation,pauseSimulation,stepSimulation,resetSimulation,advanceSimulation,suspendSimulation,resumeSimulation,setPreviewVisible,
     sceneEditing,sceneSlots,sceneAttachments,selectedSlotRaw,selectedSlotIds,selectedAttachmentId,selectedAttachmentIds,selectedAttachment,selectedBinding,selectAttachment,selectSceneAttachments,
@@ -810,7 +852,7 @@ export const useWorkspace = defineStore('workspace', () => {
     hoveredBoneId,hoverBone,clearBoneHover,chooseInfluence,
     weightVertices,weightBones,weightLocks,toggleWeightLock,weightActiveVertex,selectWeightVertices,clearWeightVertices,clearWeightBones,weightAutoEdit,
     grid, zoom, resetCount, tool, transformPivot, initialize, request, create, copy, showNotice,
-    save, saveAndContinue, discardAndContinue, cancelDiscard,
+    save, exportRuntime, saveAndContinue, discardAndContinue, cancelDiscard,
     traceOpen,traceBusy,traceOptions,tracePreview,viewSlots,openTrace,previewTrace,applyTrace,cancelTrace,
     selectedIds,selectBones,escapeSelection,autoColor,applyAutoColors,meshEditUvs,library,librarySelection,librarySelectedKeys,selectLibraryImage,chooseImagesFolder,refreshImagesFolder,placeImage,placeImages,
     selectedId, selectedBone, canEdit, editRig, addBone, removeBone,

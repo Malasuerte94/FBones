@@ -24,6 +24,14 @@ pub(super) fn project_record(p: &SceneProject) -> Record {
     };
     set(s, 34, text(&p.audio_root));
     set(s, 53, Bool(p.editor_flag_53));
+    if let Some(wire) = &p.wire {
+        set(s, 46, Float(wire.editor_scalar_46.get()));
+        set(
+            s,
+            24,
+            FloatArray(wire.skeleton_bounds_24.map(FiniteF32::get).to_vec()),
+        );
+    }
     set(s, 10, object(Object::Array(event_records(p))));
     if !p.events.is_empty() {
         set(s, 40, object(Object::Link(108, "event-group".into())));
@@ -57,16 +65,24 @@ pub(super) fn project_record(p: &SceneProject) -> Record {
                 .collect(),
         )),
     );
-    for (tag, class) in [(16, 56), (22, 65), (41, 121)] {
+    let canonical = canonical_constraint_declarations(p);
+    let declarations = p
+        .wire
+        .as_ref()
+        .and_then(|w| w.constraint_declarations.as_ref())
+        .unwrap_or(&canonical);
+    for (tag, indices) in [
+        (16, &declarations.ik),
+        (22, &declarations.transform),
+        (41, &declarations.physics),
+    ] {
         set(
             s,
             tag,
             object(Object::Array(
-                p.constraints
+                indices
                     .iter()
-                    .enumerate()
-                    .filter(|(_, c)| c.class() == class)
-                    .map(|(i, c)| constraint(c, i))
+                    .map(|i| constraint(&p.constraints[*i], *i))
                     .collect(),
             )),
         );
@@ -88,6 +104,13 @@ pub(super) fn project_record(p: &SceneProject) -> Record {
             )
         }),
     );
+    if let Some(metadata) = p.wire.as_ref().and_then(|w| w.editor_metadata.as_ref()) {
+        metadata.apply(&mut root);
+    }
+    if let Some(state) = p.wire.as_ref().and_then(|w| w.source_state.as_ref()) {
+        state.apply(&mut root);
+    }
+    super::wire::apply_strings(p, &mut root);
     root
 }
 fn slot_records(p: &SceneProject) -> Vec<Object> {
@@ -122,36 +145,77 @@ fn slot_records(p: &SceneProject) -> Vec<Object> {
                     (5, object(Object::Color(s.color))),
                     (2, DomainLink(12, format!("bone-{}", s.bone))),
                     (16, object(slot_group)),
-                    (12, Bool(false)),
+                    (12, Bool(p.slot_dark_color(i).enabled)),
                     (14, Enum(3, "slot-mode-14")),
                     (9, object(active)),
                     (15, Float(1.0 / 12.0)),
                     (13, Bool(true)),
                     (3, UInt(1)),
-                    (8, Bool(false)),
+                    (
+                        8,
+                        object(
+                            p.wire
+                                .as_ref()
+                                .and_then(|w| w.slot_references_8.iter().find(|a| a.slot == i))
+                                .map_or(Object::Null, |address| {
+                                    Object::Link(
+                                        s.attachments[address.attachment].class(),
+                                        attachment_label(*address),
+                                    )
+                                }),
+                        ),
+                    ),
                     (7, Enum(s.blend.wire(), s.blend.reference_label())),
                     (0, DomainLink(11, "skeleton".into())),
-                    (11, object(Object::Color([0, 0, 0, 255]))),
+                    (11, object(Object::Color(p.slot_dark_color(i).color))),
                     (126, UInt(0)),
                 ],
             })
         })
         .collect()
 }
+fn sequence_field(p: &SceneProject, address: AttachmentAddress) -> Field {
+    object(match p.sequence(address) {
+        None => Object::Null,
+        Some(s) => Object::Record(Record {
+            class: 123,
+            label: None,
+            fields: vec![
+                (4, UInt(s.setup_index << 1)),
+                (2, UInt(s.count << 1)),
+                (3, UInt(s.digits << 1)),
+                (1, UInt(s.start << 1)),
+            ],
+        }),
+    })
+}
 fn attachment(p: &SceneProject, address: AttachmentAddress) -> Object {
     let label = attachment_label(address);
     match &p.slots[address.slot].attachments[address.attachment] {
-        SceneAttachment::Mesh(m) => super::super::meshes::record_named(m, address.slot, label),
+        SceneAttachment::Mesh(m) => {
+            let Object::Record(mut record) =
+                super::super::meshes::record_named(m, address.slot, label)
+            else {
+                unreachable!()
+            };
+            set(&mut record, 36, sequence_field(p, address));
+            set(
+                &mut record,
+                31,
+                object(Object::Color(p.attachment_color(address))),
+            );
+            Object::Record(record)
+        }
         SceneAttachment::Region(r) => Object::Record(Record {
             class: 43,
             label: Some(label),
             fields: vec![
                 (10, Float(r.rotation)),
-                (15, object(Object::Null)),
+                (15, sequence_field(p, address)),
                 (11, Float(r.width)),
                 (8, Float(r.scale_x)),
                 (9, Float(r.scale_y)),
-                (14, object(Object::Color([255; 4]))),
+                (14, object(Object::Color(p.attachment_color(address)))),
                 (6, Float(r.x)),
                 (13, text(&r.path)),
                 (12, Float(r.height)),
@@ -393,6 +457,21 @@ pub(super) fn schema_record() -> Record {
         edges: vec![0, 1, 1, 2, 0, 2],
     };
     let p = SceneProject {
+        wire: None,
+        attachment_colors: vec![],
+        slot_dark_colors: vec![],
+        attachment_sequences: vec![AttachmentSequence {
+            attachment: AttachmentAddress {
+                slot: 0,
+                attachment: 0,
+            },
+            settings: SequenceSettings {
+                start: 0,
+                count: 3,
+                digits: 2,
+                setup_index: 1,
+            },
+        }],
         rig,
         images_root: "./images/".into(),
         audio_root: "./audio".into(),
@@ -426,7 +505,9 @@ pub(super) fn schema_record() -> Record {
             .collect(),
         fps: 30.0,
         animations: vec![Animation {
+            split_modes: Vec::new(),
             slot_tracks: vec![],
+            sequence_tracks: vec![],
             draw_order: vec![DrawOrderKey {
                 frame: 0.,
                 offsets: vec![SlotOffset { slot: 0, offset: 0 }],

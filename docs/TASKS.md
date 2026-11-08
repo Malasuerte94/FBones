@@ -1,20 +1,12 @@
 # FBones tasks
 
-Latest user goal: publish the open-source beta, observe successful GitHub builds
-on all three platforms, and verify README presentation. F000-public remains
-ACTIVE with public Malasuerte94/FBones. All3native builds pass on5086547;
-two paired-audited UI test corrections are preparing beta.2 final gates.
-Live README desktop/mobile passes; final gated source release remains pending.
-The product priority remains **F105 Animate/timeline/keyframes ACTIVE**. The user
-confirmed Physics and meshes work and explicitly deferred remaining F307/F308
-fidelity work as PENDING. Do not block animation on those old probes. Published
-0.9.4/429e4c4f retains bone/slot/draw/deform/constraint/Event tracks, portable WAV
-and the shared Setup/Animate transform HUD, and adds bounded Animate Physics
-preview. Full animation
-scope includes multiple animations, key authoring/editing, interpolation/curves,
-Dopesheet/Graph, playback, looping, slots/deform/constraint tracks and native
-compatible persistence; see docs/tasks/F105-animation.md for staged coverage.
-UI must closely follow `animare/` references, changing the color theme.
+Latest user request authorizes pushing current work and updating the automatic
+build/release flow. F000-public is active for beta3 source+runtime publication;
+prior beta2 evidence is retained below. Local clean-source installation,416JS,
+16runtime and shippedPixiGPU checks pass. Main/tag/release results must be observed
+before claiming publication. Previous Animate114UI/currentWindows80c71cc0delivery
+remains verified. Full compatibility and F307/F308 deferred scope are unchanged.
+Current publication state/cleanup live in STATE and analysis/public-beta3-check.json.
 
 Statuses: TODO, ACTIVE, WAITING, DONE. External checks remain WAITING until
 observed. Spine reference: **4.3.26 only**. Historical acceptance counts below
@@ -22,7 +14,7 @@ belong to their named delivery, not to a new combined test run.
 
 | ID | Status | Dependencies | Acceptance |
 | --- | --- | --- | --- |
-| F000-public | ACTIVE | Current0.9.4 | PUBLIC FBones/MIT/contributor kit/live desktop+mobile README pass. All3native package/report jobs green on main5086547/run41205464845 and beta.1/run41205464589; eachUI94pass/1invalid-test-oracle failure. Paired DATA/UI proves Reset cross-epoch baseline and stale moving-pointer coordinates; test-only corrections focused PASS, all numeric/epoch/key/history assertions retained. Retain beta.1; prepare new beta.2, require final3native+95UI then verify public5assets/archive/checksums. Source-only; no installer/nativeGUI/notarization claim. See STATE. |
+| F000-public | ACTIVE | Current0.9.4 | Beta3 source+runtime publication authorized; generic tag gates/runtime source inclusion/clean CI prerequisites prepared, clean416JS+16runtime+GPU and policy tests pass. Remote result pending. Earlier beta2 evidence: PUBLIC Malasuerte94/FBones/MIT/contributor kit/live desktop+mobile README verified. Source prerelease v0.9.4-beta.2 published atc60d3bb780e1db63c57fd05f0597df68fd546293. Finaltag41207513156/main41207513094 SUCCESS: all3native build/test/package/report jobs and95/95UI each, no skips/retries/fails. Public472blob/sourcehash audit and5downloaded asset digests/checksums/archive equality pass; all3reports exactcommit/architectures/packages. Source-only; no installer/nativeGUI/notarization claim. Earlier beta.1 retained, no gate bypass. See STATE. |
 | F001 | DONE | — | Instructions, continuation notes, ignored research data; remove exactly the three obsolete editor packages and update inventory. |
 | F002 | WAITING | F001 | Shell/viewport implemented; Windows user-confirmed and current Linux debug GTK/X11/WebGL startup observed. macOS launch remains unverified. |
 | F003a | DONE | F001 | Reproducible 4.3.26 corpus inspection; distinguish proven format facts from unknowns. |
@@ -33,6 +25,7 @@ belong to their named delivery, not to a new combined test run.
 | F003c | DONE | F003b | User confirmed generated .spine copy opens correctly in original Windows Spine 4.3.26. Minimal-profile compatibility only. |
 | F004a | DONE | F002 | Windows native new/save/open dialogs and lifecycle confirmed by user. Linux/macOS verification stays tracked separately under F005. |
 | F004b | DONE | F003b, F004a | User confirmed Windows 0.2.0 New → Save .fbones → Close → Open. Safe writes, revision guards and filesystem roundtrip tests pass. |
+| F004-import | WAITING | F004b | Actual mascot now typed/editable:125bones/24slots/22PNGs/2clips/79constraints; all223769payload bytes independently regenerated. Source metadata/Slot8/known source-state retained with native stable-ID remap, no guard bypass. Real workspace Setup/key/history/Refresh/portableSaveCloseOpen pass; independent43075f32/195string/ref/22PNG preservation.324native/103Scene/16default/95legacy/406JS;111UI discovered0run(serverEPERM). User now reports working import; latest114UI and Windows80c71cc0normalstartup are tracked under F105-reliability. Fresh original4.3.26 acceptance remains pending. Earlier source-proof/cleanup limits retain their named checkpoint; current results live in STATE. |
 | F005a | WAITING | F002 | Checks, historical Linux executable/.deb and CI matrix exist. Current debug Linux GTK/X11/WebGL startup now passes F005-linux-smoke; current packaged-release and native-dialog lifecycle checks remain. Earlier GTK startup failure is historical. |
 | F005b | WAITING | F004b, F005a | Native Windows/macOS launch and lifecycle checks; Spine roundtrip verified. |
 | F005-win | DONE | F001 | Actual Windows x64 release executable built using LLD, cached SDK and a strict resource writer. Portable WINDOWS_TEST folder assembled; PE/resources/imports checked. Native Windows launch with an active FBones window is now observed through W:. |
@@ -83,7 +76,9 @@ belong to their named delivery, not to a new combined test run.
 | F308 | WAITING | F220 |0eedc946 makes both Match actions sample before their own effect. One NEW original Offset action verifies6bits exactly; previous48Properties scalars retained.65/65LinuxUI,200native/93legacy and2Windows groups/native SaveCloseOpen pass. New UI/Windows binaries match full typed original graph; extra UI-source CLI export now passes once after resume (79 represented decimal scalars; sparse unmapped omissions remain explicit). Suffix/World/additive/Physics sampling remain unmeasured; own suffix source81292, full graph/native prediction proof, paired adaptercb8c69 and Windows compile-only checks are ready. New canonical Save/source2d785 passes full graph; terminal code unknown due monitor helper casefold defect. Minimal v2 correction passes actual own cmd-exit7 retained-handle test. One Offset fork precreate-stopped on NEW personal67284; clarification pending, no Match/input/product edit. See docs/tasks/F308-transform-constraint.md and analysis/active-offset-delivery-check.json. |
 | F309 | DONE | F222 inventory | P group picking via Tree/viewport, usable New, parent-tip guides, no Project metadata, tapered bone icon/projected hierarchy, explicit constraint Views and movable/two-axis-resizable docks. Linux35/35, native145/93, one original P-source comparison and five Windowsbe1bc groups; actual normal user82772 opened. Authored-space/slot-isolation/dock policies explicit; docs/tasks/F309-parenting-tree-docking.md. |
 | F310 | DONE | F220, F309 | Product delivered2688a874: selected B/C/D create3 independent Physics in one history action without Target modal; generated names follow bone rename/custom names persist. Active preset, colored sliders+precise fields, live Setup A-drag reaction/settling before Save/Reset and explicit Off/non-baking persistence pass63/63 LinuxUI,200native/93legacy/28Scene,225JS+1knownskip and5actualWindows groups/native OS SaveCloseOpen. ONE new sourceab9e now passes exact original4.3.26 export and independent105Physics/32bone/24child-bit comparison; original gestures/phase remain outside this bounded authoring scope. See docs/tasks/F310-physics-authoring.md and analysis/physics-batch-delivery-check.json. |
-| F105 | ACTIVE | F222 |0.9.4/429e4c4f publishes animatedPhysics Main/Preview/Replayfreeze, timelineclock/Reset/Simulate/Rebuild and bounded120s errors, retaining sharedSetup/AnimateHUD and priorbone/slot/draw/deform/constraint/Event/audio.95/95LinuxUI,263JS+knownskip,254native/93legacy/strict3 and3actualWindows groups/OSSaveCloseOpen pass. ONEnew9eff original81984export independently verifies13keys/72numbers max1.91e-6;112ownTS/Rust comparisons pass. Normal113788 visiblyopened/frontendready/protected;37priorimages/442helpers preserved. Fullanimation ACTIVE for globalPhysics/resetall, RGB/alpha/TintBlack, advancedtiming/mixing/onion; F307/F308 fidelity user-deferred. SeeSTATE/F105. |
+| F105 | WAITING | F222 | Full Animate/timeline scope stays open. Supported release-drag/playback/numeric corrections pass F105-reliability; runtime preview tracked F109-runtime. Current114UI/416JS/326native/95legacy/16default/103Scene checks pass with existing skips distinct. Mascot/source-profile evidence retained; remaining curves/inheritance/budgets/Path/original/macOS/mixing/onion-skin fidelity remain. See STATE and F105. |
+| F105-reliability | DONE | F105 supported slices | Frozen gesture baseline fixes double-applied release delta; stable exact numeric input+compact overlay fixes selection loss. Constraint subtree CPU4×, timeline custom CPU13.55×, viewport2→1draws; no whole-appFPS claim.114/114finalUI,416JS/knownskip,326native, runtime16+24samples and five ownWindowsQA groups pass; final80c71cc0normalstartup observed and left to user. Source/profile/original limits remain; see analysis/animation-reliability-check.json and linked integration. |
+| F109-runtime | WAITING | F105 supported data/solver slices | Independent MIT0.1.0-beta.1 headlessNode/browser+optionalPixi8 preview and native authored JSON/referencedPNG/WAV export delivered.40,353-byte archive under WINDOWS_TEST/RUNTIME; offlineNode/strictTS/noPixi consumer,16package/24native samples and realWebGL pixel tests pass. Full runtime/mixing/directbinaryloader/fidelity/publicGitHub/npm remain open; scope unreserved, no publication claim. See docs/tasks/F109-runtime.md. |
 | F106 | TODO | F105 | IK/transform/path constraints, then gravity/inertia/damping; numerical comparison. |
 | F107 | TODO | F106 | Full 4.3.26 compatibility matrix with explicit passing coverage. |
 | F108 | TODO | F107 | Additional tool modules using shared project/viewport. |

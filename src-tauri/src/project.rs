@@ -1,7 +1,9 @@
 use crate::images::{valid_image_stem, ImageAsset, ImageBundle, ImageCache};
 #[cfg(not(feature = "scene-editing"))]
+use crate::rig::image_stem;
+#[cfg(not(feature = "scene-editing"))]
 use crate::rig::RigHistory;
-use crate::rig::{image_stem, BoneView, ImagePlacement, RigEdit, SlotView};
+use crate::rig::{BoneView, ImagePlacement, RigEdit, SlotView};
 #[cfg(feature = "scene-editing")]
 use crate::scene_edit::SceneRigHistory as RigHistory;
 #[cfg(not(feature = "scene-editing"))]
@@ -71,6 +73,8 @@ pub struct ProjectSummary {
     pub edited_bone: Option<u64>,
     pub revision: u64,
     pub document_id: u64,
+    /// Logical opened-document identity, independent of resource generations.
+    pub logical_document_id: u64,
     pub slots: Vec<SlotView>,
     pub edited_slot: Option<u64>,
     pub edited_vertex: Option<usize>,
@@ -168,6 +172,7 @@ impl Document {
                 edited_bone: Some(rig.focus()),
                 revision: 0,
                 document_id: 0,
+                logical_document_id: 0,
                 slots: rig.slot_views(project, images),
                 edited_slot: rig.slot_focus(),
                 edited_vertex: rig.vertex_focus(),
@@ -188,7 +193,16 @@ impl Document {
                 #[cfg(feature = "scene-editing")]
                 audio_library: crate::audio::view(&project.audio_root, audio, audio_warnings),
                 #[cfg(feature = "scene-editing")]
-                animation_channels: vec!["rotate", "translate", "scale", "shear"],
+                animation_channels: vec![
+                    "rotate",
+                    "translate",
+                    "scale",
+                    "shear",
+                    "translateX",
+                    "translateY",
+                    "scaleX",
+                    "scaleY",
+                ],
                 #[cfg(feature = "scene-editing")]
                 animation_fps: f64::from(project.fps),
                 library: crate::library::view(&project.images_root, images, library_warnings),
@@ -215,6 +229,7 @@ impl Document {
                 edited_bone: None,
                 revision: 0,
                 document_id: 0,
+                logical_document_id: 0,
                 slots: vec![],
                 edited_slot: None,
                 edited_vertex: None,
@@ -249,10 +264,24 @@ pub struct SessionState {
     document: Option<Document>,
     revision: u64,
     document_id: u64,
+    logical_document_id: u64,
     #[cfg(feature = "scene-editing")]
     evaluation: Option<crate::evaluation::CachedEvaluation>,
     #[cfg(feature = "scene-editing")]
     next_pose_epoch: u64,
+}
+impl SessionState {
+    /// Stamp every Session publication from the same authoritative counters.
+    /// Document::summary alone intentionally carries zero sentinel identities.
+    fn summary(&self) -> Option<ProjectSummary> {
+        self.document.as_ref().map(|document| {
+            let mut summary = document.summary();
+            summary.revision = self.revision;
+            summary.document_id = self.document_id;
+            summary.logical_document_id = self.logical_document_id;
+            summary
+        })
+    }
 }
 #[derive(Default)]
 pub struct Session(Mutex<SessionState>);
@@ -275,6 +304,52 @@ pub struct SaveSnapshot {
     write_audio: bool,
 }
 impl Session {
+    #[cfg(feature = "scene-editing")]
+    pub fn prepare_runtime_export(
+        &self,
+        expected_revision: u64,
+    ) -> Result<crate::runtime_export::RuntimeExportSnapshot, AppError> {
+        let state = self.lock()?;
+        if state.revision != expected_revision {
+            return Err(AppError::new(
+                "ProjectChanged",
+                "The project changed before runtime export.",
+            ));
+        }
+        let Some(Document::Editable {
+            project,
+            images,
+            audio,
+            ..
+        }) = state.document.as_ref()
+        else {
+            return Err(AppError::new(
+                "InspectionOnly",
+                "Runtime export requires an editable project.",
+            ));
+        };
+        // Keep the complete independent authoring codec guard in this route too.
+        encode_regions(project)?;
+        crate::runtime_export::snapshot(state.summary().unwrap(), images.clone(), audio.clone())
+    }
+
+    #[cfg(feature = "scene-editing")]
+    pub fn write_runtime_export(
+        &self,
+        snapshot: crate::runtime_export::RuntimeExportSnapshot,
+        parent: &Path,
+    ) -> Result<crate::runtime_export::RuntimeExportResult, AppError> {
+        let state = self.lock()?;
+        if state.revision != snapshot.revision || state.document_id != snapshot.document_id {
+            return Err(AppError::new(
+                "ProjectChanged",
+                "The project changed while choosing the runtime export destination.",
+            ));
+        }
+        // Hold the revision lock through bounded writes. Export never marks saved.
+        snapshot.write(parent)
+    }
+
     pub fn import_image(
         &self,
         expected_revision: u64,
@@ -324,10 +399,7 @@ impl Session {
             }
         }
         state.revision += 1;
-        let mut summary = state.document.as_ref().unwrap().summary();
-        summary.revision = state.revision;
-        summary.document_id = state.document_id;
-        Ok(summary)
+        Ok(state.summary().unwrap())
     }
     pub fn select_images_folder(
         &self,
@@ -411,10 +483,7 @@ impl Session {
         *dirty = rig.dirty(project);
         state.revision += 1;
         state.document_id += 1;
-        let mut result = state.document.as_ref().unwrap().summary();
-        result.revision = state.revision;
-        result.document_id = state.document_id;
-        Ok(result)
+        Ok(state.summary().unwrap())
     }
     pub fn place_image(
         &self,
@@ -481,10 +550,14 @@ impl Session {
                 "Open an editable project first.",
             ));
         };
-        if keys.is_empty() || keys.len() > 128 || project.slots.len() + keys.len() > 128 {
+        #[cfg(feature = "scene-editing")]
+        let slot_limit = fbones_format::minimal::scene::MAX_SCENE_SLOTS;
+        #[cfg(not(feature = "scene-editing"))]
+        let slot_limit = 128;
+        if keys.is_empty() || keys.len() > 128 || project.slots.len() + keys.len() > slot_limit {
             return Err(AppError::new(
                 "InvalidEdit",
-                "Choose images within the 128-slot limit.",
+                format!("Choose 1–128 images within the {slot_limit}-slot limit."),
             ));
         }
         let mut seen = std::collections::HashSet::new();
@@ -542,10 +615,7 @@ impl Session {
         )?;
         *dirty = rig.dirty(project);
         state.revision += 1;
-        let mut result = state.document.as_ref().unwrap().summary();
-        result.revision = state.revision;
-        result.document_id = state.document_id;
-        Ok(result)
+        Ok(state.summary().unwrap())
     }
     #[cfg(not(feature = "scene-editing"))]
     fn traced_mesh(
@@ -694,12 +764,7 @@ impl Session {
     }
     pub fn summary(&self) -> Result<Option<ProjectSummary>, AppError> {
         let state = self.lock()?;
-        Ok(state.document.as_ref().map(|document| {
-            let mut summary = document.summary();
-            summary.revision = state.revision;
-            summary.document_id = state.document_id;
-            summary
-        }))
+        Ok(state.summary())
     }
     pub fn replace(&self, document: Document, discard: bool) -> Result<ProjectSummary, AppError> {
         let mut state = self.lock()?;
@@ -709,13 +774,14 @@ impl Session {
                 "The current project has unsaved changes.",
             ));
         }
-        let mut summary = document.summary();
+        let logical_document_id = state.logical_document_id.checked_add(1).ok_or_else(|| {
+            AppError::new("Internal", "Logical document identity space exhausted.")
+        })?;
         state.document = Some(document);
+        state.logical_document_id = logical_document_id;
         state.document_id += 1;
         state.revision += 1;
-        summary.revision = state.revision;
-        summary.document_id = state.document_id;
-        Ok(summary)
+        Ok(state.summary().unwrap())
     }
     pub fn close(&self, discard: bool) -> Result<(), AppError> {
         let mut state = self.lock()?;
@@ -752,9 +818,12 @@ impl Session {
                 audio,
                 ..
             } => {
-                let names: Vec<_> = project_images(project)
+                #[cfg(feature = "scene-editing")]
+                let names = crate::animation_sequence::all_image_keys(project)?;
+                #[cfg(not(feature = "scene-editing"))]
+                let names: Vec<String> = project_images(project)
                     .into_iter()
-                    .map(image_stem)
+                    .map(|image| image_stem(image).to_owned())
                     .collect();
                 let missing = names
                     .iter()
@@ -794,6 +863,8 @@ impl Session {
                         "./audio" | "./audio/" | "audio" | "audio/"
                     );
                 }
+                #[cfg(feature = "scene-editing")]
+                fbones_format::minimal::scene::normalize_wire_strings(&mut saved)?;
                 let bytes = encode_regions(&saved)?;
                 saved_project = Some(saved);
                 (bytes, path.clone(), bundle, missing)
@@ -886,6 +957,7 @@ impl Session {
                     | RigEdit::SetAnimationDeformKeys { .. }
                     | RigEdit::SetAnimationConstraintKeys { .. }
                     | RigEdit::SetAnimationEventKeys { .. }
+                    | RigEdit::SetAnimationSequenceKeys { .. }
             ) {
                 Self::animation_key_context(&state, epoch, &edit)?;
                 true
@@ -956,10 +1028,22 @@ impl Session {
                             "Choose a portable PNG key from Images.",
                         ));
                     }
-                    if images.get(key).is_none() {
+                    let address = rig.history.frame().attachment_address(*id)?;
+                    let keys = if let Some(settings) =
+                        crate::animation_sequence::settings(project, address)
+                    {
+                        (0..settings.count)
+                            .map(|index| {
+                                crate::animation_sequence::frame_path(key, settings, index)
+                            })
+                            .collect::<Result<Vec<_>, _>>()?
+                    } else {
+                        vec![key.to_owned()]
+                    };
+                    if keys.iter().any(|key| images.get(key).is_none()) {
                         return Err(AppError::new(
                             "MissingImage",
-                            "Choose an existing PNG from the loaded Images folder.",
+                            "Every referenced PNG must exist in the loaded Images folder.",
                         ));
                     }
                 }
@@ -1078,10 +1162,7 @@ impl Session {
         if assets_changed {
             state.document_id += 1;
         }
-        let mut summary = state.document.as_ref().unwrap().summary();
-        summary.revision = state.revision;
-        summary.document_id = state.document_id;
-        Ok(summary)
+        Ok(state.summary().unwrap())
     }
     pub fn save_snapshot(
         &self,
@@ -1117,6 +1198,18 @@ impl Session {
                 "Restore every referenced supported WAV before saving this editable project.",
             ));
         }
+        #[cfg(feature = "scene-editing")]
+        let resource_rebase = match (state.document.as_ref(), snapshot.saved_project.as_ref()) {
+            (Some(Document::Editable { project, rig, .. }), Some(saved)) => {
+                Some(rig.prepare_resource_rebase(
+                    &project.images_root,
+                    &saved.images_root,
+                    &project.audio_root,
+                    &saved.audio_root,
+                )?)
+            }
+            _ => None,
+        };
         if snapshot.write_images {
             snapshot.images.write_to(&path)?;
         }
@@ -1142,10 +1235,13 @@ impl Session {
         }) = state.document.as_mut()
         {
             if let Some(saved) = snapshot.saved_project {
+                #[cfg(not(feature = "scene-editing"))]
                 rig.rebase_images_root(&project.images_root, &saved.images_root);
                 #[cfg(feature = "scene-editing")]
                 {
-                    rig.rebase_audio_root(&project.audio_root, &saved.audio_root);
+                    if let Some(plan) = resource_rebase {
+                        rig.apply_resource_rebase(plan);
+                    }
                     audio_roots.insert(saved.audio_root.clone(), audio.clone());
                 }
                 **project = saved;
@@ -1159,10 +1255,7 @@ impl Session {
             rig.mark_saved(project);
         }
         state.revision += 1;
-        let mut summary = state.document.as_ref().unwrap().summary();
-        summary.revision = state.revision;
-        summary.document_id = state.document_id;
-        Ok(summary)
+        Ok(state.summary().unwrap())
     }
 }
 
@@ -1203,6 +1296,8 @@ pub fn new_document(name: String) -> Result<Document, AppError> {
         .to_be_bytes();
     let project = RegionProject {
         #[cfg(feature = "scene-editing")]
+        wire: None,
+        #[cfg(feature = "scene-editing")]
         fps: 30.,
         #[cfg(feature = "scene-editing")]
         audio_root: "./audio".into(),
@@ -1221,6 +1316,12 @@ pub fn new_document(name: String) -> Result<Document, AppError> {
         region_order: vec![],
         #[cfg(feature = "scene-editing")]
         attachment_order: vec![],
+        #[cfg(feature = "scene-editing")]
+        attachment_sequences: vec![],
+        #[cfg(feature = "scene-editing")]
+        attachment_colors: vec![],
+        #[cfg(feature = "scene-editing")]
+        slot_dark_colors: vec![],
         #[cfg(feature = "scene-editing")]
         constraints: vec![],
     };
@@ -1281,8 +1382,17 @@ fn open_document_profile(path: PathBuf, allow_regions: bool) -> Result<Document,
                 Err(error) => (ImageCache::default(), vec![error.message]),
             };
             let mut names = std::collections::HashMap::new();
-            for region in project_images(&project) {
-                let name = image_stem(region);
+            #[cfg(feature = "scene-editing")]
+            let image_names = match crate::animation_sequence::all_image_keys(&project) {
+                Ok(names) => names,
+                Err(_) => return Ok(Document::Inspected { path, envelope }),
+            };
+            #[cfg(not(feature = "scene-editing"))]
+            let image_names = project_images(&project)
+                .into_iter()
+                .map(|image| image_stem(image).to_owned())
+                .collect::<Vec<_>>();
+            for name in &image_names {
                 if !valid_image_stem(name)
                     || names
                         .get(&name.to_lowercase())
@@ -2172,15 +2282,6 @@ fn project_images(project: &RegionProject) -> Vec<&fbones_format::minimal::regio
         .collect()
 }
 #[cfg(feature = "scene-editing")]
-fn project_images(project: &RegionProject) -> Vec<&fbones_format::minimal::regions::Region> {
-    project
-        .slots
-        .iter()
-        .flat_map(|s| s.attachments.iter())
-        .filter_map(|a| a.image())
-        .collect()
-}
-#[cfg(feature = "scene-editing")]
 impl Session {
     pub fn place_attachments(
         &self,
@@ -2246,10 +2347,7 @@ impl Session {
         )?;
         *dirty = rig.dirty(project);
         state.revision += 1;
-        let mut out = state.document.as_ref().unwrap().summary();
-        out.revision = state.revision;
-        out.document_id = state.document_id;
-        Ok(out)
+        Ok(state.summary().unwrap())
     }
     fn traced_attachment(
         &self,
@@ -2277,11 +2375,9 @@ impl Session {
             };
             let frozen_poses = Self::geometry_poses(&state, pose_epoch)?;
             let a = rig.attachment_address(id)?;
-            let image = project.slots[a.slot].attachments[a.attachment]
-                .image()
-                .ok_or_else(|| AppError::new("InvalidTrace", "Clipping is not an image."))?;
+            let image_key = crate::animation_sequence::setup_image_key(project, a)?;
             let asset = images
-                .get(image_stem(image))
+                .get(&image_key)
                 .cloned()
                 .ok_or_else(|| AppError::new("MissingImage", "The source PNG is unavailable."))?;
             (
@@ -2437,11 +2533,32 @@ impl Session {
     }
 }
 #[cfg(all(test, feature = "scene-editing"))]
+#[path = "scene_animation_capacity_tests.rs"]
+mod animation_capacity_tests;
+#[cfg(all(test, feature = "scene-editing"))]
+#[path = "scene_bone_capacity_tests.rs"]
+mod bone_capacity_tests;
+#[cfg(all(test, feature = "scene-editing"))]
+#[path = "scene_constraint_declarations_tests.rs"]
+mod constraint_declarations_tests;
+#[cfg(all(test, feature = "scene-editing"))]
+#[path = "scene_large_mesh_tests.rs"]
+mod large_mesh_tests;
+#[cfg(all(test, feature = "scene-editing"))]
 #[path = "placement_tests.rs"]
 mod placement_tests;
 #[cfg(all(test, feature = "scene-editing"))]
 #[path = "scene_native_tests.rs"]
 mod scene_tests;
+#[cfg(all(test, feature = "scene-editing"))]
+#[path = "scene_slot_capacity_tests.rs"]
+mod slot_capacity_tests;
+#[cfg(all(test, feature = "scene-editing"))]
+#[path = "scene_string_form_tests.rs"]
+mod string_form_tests;
+#[cfg(all(test, feature = "scene-editing"))]
+#[path = "scene_transform_setup_mix_tests.rs"]
+mod transform_setup_mix_tests;
 
 #[cfg(feature = "scene-editing")]
 impl Session {
@@ -2459,6 +2576,7 @@ impl Session {
         let mut orders = vec![];
         let mut constraints = vec![];
         let mut events = vec![];
+        let mut sequences = vec![];
         let animation = match edit {
             RigEdit::SetAnimationKey { animation, key } => {
                 bones.push((key.bone, key.frame));
@@ -2493,6 +2611,10 @@ impl Session {
                 constraints.extend(keys.iter().map(|k| k.context()));
                 *animation
             }
+            RigEdit::SetAnimationSequenceKeys { animation, keys } => {
+                sequences.extend(keys.iter().map(|key| (key.attachment, key.frame)));
+                *animation
+            }
             RigEdit::SetAnimationEventKeys { animation, keys } => {
                 events.extend(keys.iter().map(|k| (k.event, k.frame)));
                 *animation
@@ -2505,6 +2627,7 @@ impl Session {
                 deform_keys,
                 constraint_keys,
                 event_keys,
+                sequence_keys,
             } => {
                 bones.extend(bone_keys.iter().map(|key| (key.bone, key.frame)));
                 slots.extend(slot_keys.iter().map(|key| key.context()));
@@ -2512,6 +2635,7 @@ impl Session {
                 deforms.extend(deform_keys.iter().map(|key| (key.attachment, key.frame)));
                 constraints.extend(constraint_keys.iter().map(|k| k.context()));
                 events.extend(event_keys.iter().map(|k| (k.event, k.frame)));
+                sequences.extend(sequence_keys.iter().map(|key| (key.attachment, key.frame)));
                 *animation
             }
             _ => {
@@ -2545,7 +2669,8 @@ impl Session {
             && deforms.is_empty()
             && orders.is_empty()
             && constraints.is_empty()
-            && events.is_empty())
+            && events.is_empty()
+            && sequences.is_empty())
             || bones.iter().any(|(id, f)| {
                 f.to_bits() != position.to_bits()
                     || !cache.snapshot.bones.iter().any(|bone| bone.id == *id)
@@ -2566,6 +2691,14 @@ impl Session {
             || constraints.iter().any(|(id, f)| {
                 f.to_bits() != position.to_bits()
                     || !rig.history.frame().constraint_ids.contains(id)
+            })
+            || sequences.iter().any(|(id, f)| {
+                f.to_bits() != position.to_bits()
+                    || !cache
+                        .snapshot
+                        .sequence_pose
+                        .iter()
+                        .any(|pose| pose.attachment == *id)
             })
             || events.iter().any(|(id, f)| {
                 f.to_bits() != position.to_bits() || !rig.history.frame().event_ids.contains(id)
@@ -2843,6 +2976,8 @@ impl Session {
             animation,
             &geometry_targets,
         )?;
+        cache.snapshot.sequence_pose =
+            crate::animation_sequence::sample(rig.history.frame(), animation, position)?;
         cache.snapshot.slot_pose = slot_pose;
         cache.snapshot.draw_order = order
             .iter()
@@ -2919,5 +3054,229 @@ impl Session {
             "UnsupportedProfile",
             "Audio requires the Scene editor.",
         ))
+    }
+}
+
+#[cfg(test)]
+mod logical_document_tests {
+    use super::*;
+
+    fn stamped(session: &Session, summary: &ProjectSummary, logical: u64) {
+        assert_eq!(summary.logical_document_id, logical);
+        let current = session.summary().unwrap().unwrap();
+        assert_eq!(current.logical_document_id, logical);
+        assert_eq!(current.document_id, summary.document_id);
+        assert_eq!(current.revision, summary.revision);
+        assert_eq!(
+            serde_json::to_value(summary).unwrap()["logicalDocumentId"],
+            logical
+        );
+    }
+
+    #[test]
+    fn logical_document_identity_survives_resources_edits_history_and_save() {
+        let source = tempfile::tempdir().unwrap();
+        let alternate = tempfile::tempdir().unwrap();
+        let output = tempfile::tempdir().unwrap();
+        let second_output = tempfile::tempdir().unwrap();
+        let red = crate::images::tests::png([200, 0, 0, 255]);
+        let blue = crate::images::tests::png([0, 0, 200, 255]);
+        let png_path = source.path().join("arm.png");
+        std::fs::write(&png_path, &red).unwrap();
+        std::fs::write(alternate.path().join("arm.png"), blue).unwrap();
+        let session = Session::default();
+        let document = new_document("identity".into()).unwrap();
+        assert_eq!(document.summary().logical_document_id, 0);
+        let initial = session.replace(document, false).unwrap();
+        let logical = initial.logical_document_id;
+        assert!(logical > 0);
+        stamped(&session, &initial, logical);
+        let folder = session
+            .select_images_folder(initial.revision, source.path())
+            .unwrap();
+        stamped(&session, &folder, logical);
+        assert_ne!(folder.document_id, initial.document_id);
+        let imported = session
+            .import_image(folder.revision, folder.bones[0].id, &png_path)
+            .unwrap();
+        stamped(&session, &imported, logical);
+        // Folder switching must retain every referenced imported PNG before Save As.
+        for image in &imported.library.images {
+            if image.key != "arm" {
+                std::fs::write(alternate.path().join(format!("{}.png", image.key)), &red).unwrap();
+            }
+        }
+        let placed = session
+            .place_image(imported.revision, "arm", imported.bones[0].id, 1., 2.)
+            .unwrap();
+        stamped(&session, &placed, logical);
+        let source_path = output.path().join("source.fbones");
+        let saved = session
+            .save_snapshot(session.prepare_save(false).unwrap(), source_path.clone())
+            .unwrap();
+        stamped(&session, &saved, logical);
+        let source_bytes = std::fs::read(&source_path).unwrap();
+        let refreshed = session.refresh_images_folder(saved.revision).unwrap();
+        stamped(&session, &refreshed, logical);
+        assert_ne!(refreshed.document_id, saved.document_id);
+        assert_eq!(refreshed.dirty, saved.dirty);
+        assert_eq!(refreshed.can_undo, saved.can_undo);
+        assert_eq!(
+            serde_json::to_value(&refreshed.bones).unwrap(),
+            serde_json::to_value(&saved.bones).unwrap()
+        );
+        let red_data = session.image_data(refreshed.document_id, "arm").unwrap();
+        assert_eq!(
+            session
+                .image_data(saved.document_id, "arm")
+                .unwrap_err()
+                .code,
+            "ProjectChanged"
+        );
+        let selected = session
+            .select_images_folder(refreshed.revision, alternate.path())
+            .unwrap();
+        stamped(&session, &selected, logical);
+        assert!(selected.dirty);
+        assert_ne!(selected.document_id, refreshed.document_id);
+        assert_ne!(
+            session.image_data(selected.document_id, "arm").unwrap(),
+            red_data
+        );
+        let undo = session.edit(selected.revision, RigEdit::Undo).unwrap();
+        stamped(&session, &undo, logical);
+        assert_ne!(undo.document_id, selected.document_id);
+        assert_eq!(
+            session.image_data(undo.document_id, "arm").unwrap(),
+            red_data
+        );
+        let redo = session.edit(undo.revision, RigEdit::Redo).unwrap();
+        stamped(&session, &redo, logical);
+        let edited = session
+            .edit(
+                redo.revision,
+                RigEdit::Create {
+                    color: None,
+                    parent: redo.bones[0].id,
+                    x: 3.,
+                    y: 4.,
+                    rotation: 0.,
+                    length: 10.,
+                },
+            )
+            .unwrap();
+        stamped(&session, &edited, logical);
+        assert_eq!(
+            session
+                .refresh_images_folder(refreshed.revision)
+                .unwrap_err()
+                .code,
+            "ProjectChanged"
+        );
+        stamped(&session, &session.summary().unwrap().unwrap(), logical);
+        let saved_as = session
+            .save_snapshot(
+                session.prepare_save(false).unwrap(),
+                second_output.path().join("copy.fbones"),
+            )
+            .unwrap();
+        stamped(&session, &saved_as, logical);
+        assert_eq!(std::fs::read(&source_path).unwrap(), source_bytes);
+        assert_eq!(std::fs::read(&png_path).unwrap(), red);
+        session.close(false).unwrap();
+        assert!(session.summary().unwrap().is_none());
+        let reopened = session
+            .replace(open_document(source_path).unwrap(), false)
+            .unwrap();
+        assert!(reopened.logical_document_id > logical);
+        stamped(&session, &reopened, reopened.logical_document_id);
+        let next = session
+            .replace(new_document("another".into()).unwrap(), true)
+            .unwrap();
+        assert!(next.logical_document_id > reopened.logical_document_id);
+        assert_eq!(
+            session
+                .replace(new_document("blocked".into()).unwrap(), false)
+                .unwrap_err()
+                .code,
+            "UnsavedChanges"
+        );
+        stamped(&session, &next, next.logical_document_id);
+    }
+
+    #[test]
+    fn logical_document_identity_exhaustion_rejects_replacement_atomically() {
+        let session = Session::default();
+        session
+            .replace(new_document("original".into()).unwrap(), false)
+            .unwrap();
+        session.lock().unwrap().logical_document_id = u64::MAX;
+        let before = serde_json::to_value(session.summary().unwrap()).unwrap();
+        assert_eq!(
+            session
+                .replace(new_document("replacement".into()).unwrap(), true)
+                .unwrap_err()
+                .code,
+            "Internal"
+        );
+        assert_eq!(
+            serde_json::to_value(session.summary().unwrap()).unwrap(),
+            before
+        );
+    }
+
+    #[cfg(feature = "scene-editing")]
+    #[test]
+    fn logical_document_identity_does_not_authorize_old_animation_pose_leases() {
+        let directory = tempfile::tempdir().unwrap();
+        let source = directory.path().join("source.fbones");
+        let bytes =
+            fbones_format::minimal::scene::encode_scene(&crate::scene_sequence_fixture::project())
+                .unwrap();
+        std::fs::write(&source, &bytes).unwrap();
+        let session = Session::default();
+        let opened = session
+            .replace(open_document(source.clone()).unwrap(), false)
+            .unwrap();
+        let lease = session
+            .evaluate(
+                opened.revision,
+                serde_json::from_value(serde_json::json!({
+                    "mode":"none","time":0.,"animationId":opened.animations[0].id
+                }))
+                .unwrap(),
+            )
+            .unwrap();
+        std::fs::write(
+            directory.path().join("arm.png"),
+            crate::images::tests::png([20, 30, 40, 255]),
+        )
+        .unwrap();
+        let selected = session
+            .select_images_folder(opened.revision, directory.path())
+            .unwrap();
+        stamped(&session, &selected, opened.logical_document_id);
+        let edit: RigEdit = serde_json::from_value(serde_json::json!({
+            "type":"setAnimationKeys","animation":selected.animations[0].id,
+            "keys":[{"bone":selected.bones[0].id,"channel":"translate","frame":0.,"values":[1.,2.],"curve":"linear"}]
+        })).unwrap();
+        assert_eq!(
+            session
+                .edit_in_pose(selected.revision, lease.pose_epoch, edit)
+                .unwrap_err()
+                .code,
+            "StalePose"
+        );
+        stamped(&session, &selected, opened.logical_document_id);
+        let attached = session
+            .place_attachments(selected.revision, &["arm".into()], selected.slots[0].id)
+            .unwrap();
+        stamped(&session, &attached, opened.logical_document_id);
+        assert_eq!(std::fs::read(source).unwrap(), bytes);
+        let replaced = session
+            .replace(new_document("replacement".into()).unwrap(), true)
+            .unwrap();
+        assert_ne!(replaced.logical_document_id, opened.logical_document_id);
+        stamped(&session, &replaced, replaced.logical_document_id);
     }
 }
