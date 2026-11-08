@@ -46,11 +46,27 @@ Close/Open exact authored records. Clean normal close confirmed; user/original
 windows untouched. This proves the named own image, not installed-app upgrading.
 [Current checkpoint](../analysis/constraint-updater-check.json) owns raw receipts.
 
-Next: publish signedv0.9.5-beta.1 through all hosted gates, independently verify
-remoteCI/assets/manifest and leave currentnormalapp available. Nativeinstalled
-update acceptance on eachOS remains unobserved. Publicbeta6 evidence below remains
-historical until newer publication is verified. Endcleanup/free-space measurement
-remains due; keep signingidentity and citedevidence.
+Normalcurrent94293013Windows0.9.5 launch passed frontend/WebGL/visible/version/
+no-debugger checks; new53988window ownership transferred to user and protected.
+Sharedbootstrap unchanged; rootmanifest/pointer select the tested immutable image.
+OwnQA normallyclosed, profile removed. Cleanup recovered205,806,219bytes from
+ownobsolete firstcandidate, obsoleteTauri2.11.5 compiler artifacts, duplicateQAimage
+and profile. Currentprofiles/dependencies/citedevidence and signingidentity retained.
+
+Initialtagdc15a34/v0.9.5-beta.1 publication was withheld: macOS signedassembly
+negatives exposed a CLIentrypath alias gap (/var versus canonicalmodulepath).
+OwnLinuxsymlink reproduction exited0without verifying. PairedDATA/package gates
+preceded correction: realpathbothentrypaths and requireexactsuccessreceipt, with
+actualCLIalias/junction badargs/valid/tamper/version tests in normal/preserved-main
+modes. Correctedcrypto/CLI/signedassembly/policy tests pass. This packaging-only
+change leaves the tested editor image unchanged. Bothfirsttag/mainCIruns canceled;
+no releasepublished and beta1tagremains immutable. Candidate isv0.9.5-beta.2,
+app0.9.5 unchanged because no0.9.5 updater package was published.
+
+Next: publish correctedbeta2 through all hosted gates, independently verify
+remoteCI/assets/manifest. Nativeinstalled update acceptance on eachOS remains
+unobserved; no proof of an actual installed-app upgrade is claimed. Publicbeta6
+below remains historical; keep current signingidentity and protectedwindows.
 
 The latest user clarified the exact target: the repository RIGHT sidebar
 Releases card, rather than README/release-body Download tables. This is fixed

@@ -1,5 +1,5 @@
 {
-  "release": "v0.9.5-beta.1",
+  "release": "v0.9.5-beta.2",
   "kind": "source-only",
   "files": [
     {
@@ -15,7 +15,7 @@
     {
       "path": "README.md",
       "bytes": 12279,
-      "sha256": "f0474e2bc02086d0a98decbb194cfb9d7719082e91dfbf591ac6d0e1d19fb158"
+      "sha256": "f20dfac5ed49892c85862258bc9bc634fba512e64d2ef75afdfc3203068a4ad3"
     },
     {
       "path": "CONTRIBUTING.md",
@@ -2054,13 +2054,13 @@
     },
     {
       "path": "scripts/prepare-installer-release.py",
-      "bytes": 13753,
-      "sha256": "c1f0a2c615b60a9f21f62b91a28ec4e801a26a8133af4d27f132ea09484ce1dc"
+      "bytes": 13878,
+      "sha256": "f60c96a09e52eb0503f3dde86633727e90379f77a34d3d5372b2e4eaebf9b83b"
     },
     {
       "path": "scripts/prepare-public-release.py",
       "bytes": 7730,
-      "sha256": "7b20c981c8d655a8efbdfd1f5578ce62efe20f1260f6c9dc341ceb358fdd9464"
+      "sha256": "965fa3705320b4519d038f2fc04523da424674ec5e614e0fc21050e8844c819b"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -2075,7 +2075,7 @@
     {
       "path": "scripts/publish-public-beta.sh",
       "bytes": 3562,
-      "sha256": "8bfe00ab3cb9f0953ed462bea619e06b4a039dda0cb1d5c28ec44f4a805d20dc"
+      "sha256": "035c50f21293fc1589ebcfe395ff4189c02932e598568c70a7c8ada0295792e0"
     },
     {
       "path": "scripts/run-ui-tests.mjs",
@@ -2104,8 +2104,8 @@
     },
     {
       "path": "scripts/test-updater-signature.mjs",
-      "bytes": 3222,
-      "sha256": "00339565f7c731a1ef4c3225d10df5354cd5e6191012171d51e547cc8a8b2eca"
+      "bytes": 5296,
+      "sha256": "44980a7904a00c14f9cbaf8ab30da3269aa4f911af4359617e4c974a5a1f84bc"
     },
     {
       "path": "scripts/test-windows-delivery.py",
@@ -2119,8 +2119,8 @@
     },
     {
       "path": "scripts/verify-updater-signature.mjs",
-      "bytes": 3659,
-      "sha256": "1184b535af4138de1ae68e26df0fb7259bbe8430566f405d28292a6ab24771f0"
+      "bytes": 3873,
+      "sha256": "68b93e10bb24ef57ddeba0443ddf43b2e7f0d683a486b0c60683bc5a4b5d989e"
     },
     {
       "path": "scripts/windows-bootstrap.rs",
@@ -2214,13 +2214,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 16661,
-      "sha256": "24882d76bd06973385d7b08f63ba5b6c762f50eb80b875709c0c6fc0f59cbbd2"
+      "bytes": 17798,
+      "sha256": "e50265e95c1b3af293c749202960a77eed4f6bf5d8b6dc39e0e17ee33924c253"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 20069,
-      "sha256": "4a64f31eb878f82954f29461740eb8bac4c4a83abb3d203d1cf8d8209af9465d"
+      "bytes": 20147,
+      "sha256": "a5f0aafbd33beaab5561d06616f899ba678d0ef76dbc8df56200f20aaab2319b"
     },
     {
       "path": "docs/TESTING.md",
@@ -2279,8 +2279,13 @@
     },
     {
       "path": "docs/releases/v0.9.5-beta.1.md",
-      "bytes": 5466,
-      "sha256": "c5b9ed140e523748a9935b188e68d38ccad5f613db80f9acf37a57b6c32eff71"
+      "bytes": 5766,
+      "sha256": "5ddb43ea0f24ddfe54408f9b1c9894101bfbf78daddbbc613793e774644fb6b7"
+    },
+    {
+      "path": "docs/releases/v0.9.5-beta.2.md",
+      "bytes": 5841,
+      "sha256": "12378eeaf3a1f0c634649ca20f377bde44e427255830006eb8bba1819745cd71"
     },
     {
       "path": "docs/research/ANIMATION-BONE-BEZIER-UI-2026-11-06.md",
@@ -2784,8 +2789,8 @@
     },
     {
       "path": "docs/research/AUTO-UPDATE-PACKAGE-REFERENCE-2026-11-08.md",
-      "bytes": 7125,
-      "sha256": "5d0d43d98166c5ed5774bd3b1b0f8ea09837c404cc72f8178808791f6a790f5a"
+      "bytes": 8345,
+      "sha256": "96b51f391baf3ae93d0ba38e6c36717b66cbd9f349accc6df0790b5169cd221f"
     },
     {
       "path": "docs/research/BROWSER-ROUTE-TRANSPORT-UI-GATE-2026-11-07.md",
@@ -2794,8 +2799,8 @@
     },
     {
       "path": "docs/research/CONSTRAINT-MULTIEDIT-UPDATER-DATA-GATE-2026-11-08.md",
-      "bytes": 16127,
-      "sha256": "72e0dd4af31fe3fe4a65170e19785ddb6275061a81e3a73ab63efe1fe170db25"
+      "bytes": 17741,
+      "sha256": "ce6cd13613e1ce7e8bde52b0bbf54ca8e415e049a0c3304f78f47c91c8c81d05"
     },
     {
       "path": "docs/research/CONSTRAINT-MULTISELECT-UPDATER-UI-GATE-2026-11-08.md",

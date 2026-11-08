@@ -109,3 +109,22 @@ fixture keys exist only in memory; temporary files were removed automatically.
 DATA's independent source review concurred and its bootstrap-baseline finding
 was fixed. Current tag CI, published payload verification and actual installed
 updates remain coordinator-owned and unobserved by this packaging result.
+
+## Beta1 hosted alias failure and beta2 correction
+
+The beta1 macOS signed-assembly run exposed an entrypoint bug: Node canonicalizes
+an ESM module's filename while `process.argv[1]` can retain a directory alias.
+Comparing its unresolved URL skipped the verifier CLI and returned an empty
+successful process. An own Linux symlink invocation independently reproduced
+exit zero with no output even when all required arguments were absent. Resolving
+only the temporary fixture root would have concealed the actual validator bug.
+Paired DATA/UI findings preceded this correction.
+
+The entry check now canonicalizes both paths, including preserved-main symlink
+mode. Python additionally requires the exact successful filename/version receipt.
+The coordinator's unrestricted checks pass genuine verification plus missing
+arguments, wrong version and changed payload through directory aliases, in both
+Node entry modes; signed-assembly tests pass. The child's initial subprocess test
+was blocked by sandbox EPERM and was not counted as a pass. No native/frontend
+code changed. Beta1 remains immutable and unpublished; beta2 retains app0.9.5 as
+the first distributed updater-enabled version. Hosted beta2 gates remain pending.

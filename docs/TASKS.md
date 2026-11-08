@@ -2,7 +2,7 @@
 
 Active user task: app0.9.5 updater and constraint multi-edit are implemented;
 local120UI/442JS/native/runtime/signature checks pass. OwnWindows94293013fourgroups pass; signed
-publication/remote verification and normalcurrentlaunch remain. STATE owns current results and boundaries.
+publication/remote verification remain;normalcurrent0.9.5launchpassed. STATE owns current results and boundaries.
 Earlier English289wordannouncement remains completed.
 
 Statuses: TODO, ACTIVE, WAITING, DONE. External checks remain WAITING until
@@ -11,8 +11,8 @@ belong to their named delivery, not to a new combined test run.
 
 | ID | Status | Dependencies | Acceptance |
 | --- | --- | --- | --- |
-| F005-updater | ACTIVE | Publishedinstallerpipeline | Strictsignedversion/HTTPS/nativeownedTauriupdates;quietstartup/backgrounddownload/progress/manualcheck/disable;Save/Discard/Cancel+cleanrevisionmutex. Native6+guard,13controller/6Pinia/3UI,realCLI/Node/Rustsignature andclosed16assetpipelinechecks pass. Signedrelease/nativeinstalled-upgradeacceptancepending;0.9.4requiresoneinitialinstaller. |
-| F311-constraint-multiedit | ACTIVE | F309,F310,F105 | DistinctIK/Transform/Physicsglyphs;Ctrl/Cmd/Shiftcohorts;Mixed/rawf32/nullpreservation;typedatomic42fieldhomogeneousSetup+supportedAnimatekeys/drafts,oneUndo. Native7/JS5/UI3passwithfull120UIregressions. OwnWindows94293013native4groupspass;normaldeliverypending;originalgestureparityunknown. |
+| F005-updater | ACTIVE | Publishedinstallerpipeline | Strictsignedversion/HTTPS/nativeownedTauriupdates;quietstartup/backgrounddownload/progress/manualcheck/disable;Save/Discard/Cancel+cleanrevisionmutex. Native6+guard,13controller/6Pinia/3UI,realCLI/Node/Rustsignature andclosed16assetpipelinechecks pass. Failedbeta1withheld;CLIaliasbugfixed/realregressionspass;beta2signedrelease/nativeinstalled-upgradeacceptancepending;0.9.4requiresoneinitialinstaller. |
+| F311-constraint-multiedit | DONE | F309,F310,F105 | DistinctIK/Transform/Physicsglyphs;Ctrl/Cmd/Shiftcohorts;Mixed/rawf32/nullpreservation;typedatomic42fieldhomogeneousSetup+supportedAnimatekeys/drafts,oneUndo. Native7/JS5/UI3passwithfull120UIregressions. OwnWindows94293013native4groupspass;normalcurrent0.9.5launchverified;originalgestureparityunknown. |
 | F000-announcement | DONE | Publishedbeta6 | English ready-to-post message in docs/FBONES-ANNOUNCEMENT.md: MIT/community, implementedfeatures,platform/runtime support and bounded Spine4.3.26 compatibility. Shortened peruser from629to289words; checked projectdocs/license/liveLatest; Markdown2links pass. Superseded ownROdraft removed; no external publication/app changes. |
 | F000-public | DONE | Current0.9.4 | Beta6 at57ee1f26 published10assets:4desktop kits+runtime/source/3reports/SHA. Tag42513851453 all5jobsSUCCESS;7policytests,3platform builds and114/114hostedUI/runtime checks pass. All10downloadedGitHubdigests,9checksums,4installer/reportSHA/sourcecommit matches, source686blob equality/runtime31files pass. AnonymousChrome desktop1440/narrow390 Downloadtables/5links/Assets12(10custom+2source) visible,nooverflow. GitHubLatestsidebarcard+APIverified; Earlybeta labels remain; Windowsunsigned/macad-hoc notnotarized/nativeinstall unverified; no updater/npm/fullparity claim. Prior immutable releases retained. |
 | F001 | DONE | — | Instructions, continuation notes, ignored research data; remove exactly the three obsolete editor packages and update inventory. |

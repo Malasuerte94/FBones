@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Verify Tauri's Minisign envelope using Node's native cryptographic primitives.
 import { createHash, createPublicKey, verify } from 'node:crypto';
-import { createReadStream } from 'node:fs';
+import { createReadStream, realpathSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { basename, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { basename } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 function base64(text) {
   if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(text)) {
@@ -54,7 +54,17 @@ export async function verifyArtifact(artifact, signaturePath, publicKey, version
   verifyDigest(hash.digest(), signature, publicKey, version, basename(artifact));
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+function isEntryPoint() {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
+  } catch {
+    // Imported from an eval/host context whose argv is not an existing file.
+    return false;
+  }
+}
+
+if (isEntryPoint()) {
   const [artifact, signaturePath, publicKey, version] = process.argv.slice(2);
   try {
     if (!artifact || !signaturePath || !publicKey || !version || process.argv.length !== 6) {

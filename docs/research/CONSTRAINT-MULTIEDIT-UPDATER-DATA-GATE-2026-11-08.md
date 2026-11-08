@@ -243,3 +243,27 @@ at/below its0.9.4baseline; normal0.9.5 is already greater. Packaging owner owns
 that source correction/regression. Current signing/native install acceptance
 remains bounded by the coordinator's actual checks; no success is inferred from
 these reviewed source paths alone.
+
+## Signed verifier entrypoint DATA gate — before correction
+
+Hosted macOS signed-assembly regressions did not reject changed payload,
+signature or version. Root and the independent packaging reviewer reproduce a
+direct verifier invocation through a Linux symlink returning0 with no output,
+even with missing arguments (`.local/updater-entry-repro`). The current main
+guard compares `import.meta.url` with a file URL built from merely resolved
+`process.argv[1]`; unequal paths silently skip all validation and report success.
+The installed Node24.15 ESM resolver's `finalizeResolution` directly confirms
+that normal module resolution uses filesystem realpath when symlink preservation
+is off. This explains macOS `/var` versus `/private/var` aliases without requiring
+a cryptographic failure. This auditor's own subprocess probe hit sandbox EPERM;
+the observed executable reproduction belongs to root/packaging, not this audit.
+
+DATA concurs before dependent edits: canonicalize **both** the module file URL
+and argv entry with filesystem realpath before comparison, preserving imported
+library behavior and Node's preserve-symlinks-main mode. Direct invocation must
+execute verification/argument validation and fail for missing arguments,
+tampered data/signature or wrong version. Add actual symlink subprocess checks,
+including the preserve flag; changing only Python fixture path resolution would
+hide the real verifier defect. Packaging owner implements; coordinator owns
+checks and a fresh immutable release candidate. No signature/profile guard is
+relaxed and no remote action occurred in this DATA audit.

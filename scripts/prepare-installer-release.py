@@ -81,7 +81,8 @@ def verify_signature(artifact, signature, version):
     result = subprocess.run(['node', str(ROOT / 'scripts/verify-updater-signature.mjs'),
                              str(artifact), str(signature), public_key(), version],
                             capture_output=True, text=True)
-    if result.returncode:
+    expected_receipt = f'Verified signed updater: {artifact.name} ({version}).'
+    if result.returncode or result.stdout.strip() != expected_receipt:
         raise ValueError('Updater artifact signature or signed version failed verification.')
 
 
