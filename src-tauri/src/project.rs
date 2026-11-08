@@ -766,6 +766,36 @@ impl Session {
         let state = self.lock()?;
         Ok(state.summary())
     }
+    /// Keep authoring serialized with the final synchronous updater install.
+    /// Frontend drafts are flushed before this call; native revision/dirty state
+    /// is checked again while holding the same mutex used by all Session edits.
+    pub(crate) fn with_update_guard<T>(
+        &self,
+        expected_revision: Option<u64>,
+        install: impl FnOnce() -> Result<T, AppError>,
+    ) -> Result<T, AppError> {
+        let state = self.lock()?;
+        match (expected_revision, state.summary()) {
+            (None, None) => {}
+            (Some(expected), Some(summary)) if expected == summary.revision => {
+                if summary.dirty {
+                    return Err(AppError::new(
+                        "UnsavedChanges",
+                        "Save or discard the current project before installing an update.",
+                    ));
+                }
+            }
+            _ => {
+                return Err(AppError::new(
+                    "ProjectChanged",
+                    "The project changed. Confirm the application update again.",
+                ));
+            }
+        }
+        let result = install();
+        drop(state);
+        result
+    }
     pub fn replace(&self, document: Document, discard: bool) -> Result<ProjectSummary, AppError> {
         let mut state = self.lock()?;
         if !discard && state.document.as_ref().is_some_and(|d| d.summary().dirty) {
@@ -1451,6 +1481,65 @@ pub fn write_copy(path: &Path, bytes: &[u8]) -> Result<(), AppError> {
         .persist(path)
         .map_err(|e| AppError::from(e.error))?;
     Ok(())
+}
+
+#[cfg(test)]
+mod updater_guard_tests {
+    use super::*;
+    #[test]
+    fn update_install_guard_rechecks_dirty_revision_and_holds_authoring_mutex() {
+        let session = Session::default();
+        let called = std::cell::Cell::new(0);
+        session
+            .with_update_guard(None, || {
+                assert!(matches!(
+                    session.0.try_lock(),
+                    Err(std::sync::TryLockError::WouldBlock)
+                ));
+                called.set(called.get() + 1);
+                Ok(())
+            })
+            .unwrap();
+        let dirty = session
+            .replace(new_document("owned updater guard".into()).unwrap(), false)
+            .unwrap();
+        assert!(dirty.dirty);
+        for expected in [None, Some(dirty.revision - 1), Some(dirty.revision)] {
+            assert!(session
+                .with_update_guard(expected, || {
+                    called.set(called.get() + 1);
+                    Ok(())
+                })
+                .is_err());
+        }
+        assert_eq!(called.get(), 1);
+        let folder = tempfile::tempdir().unwrap();
+        let saved = session
+            .save_snapshot(
+                session.prepare_save(false).unwrap(),
+                folder.path().join("guard.fbones"),
+            )
+            .unwrap();
+        assert!(!saved.dirty);
+        assert!(session
+            .with_update_guard(Some(dirty.revision), || Ok(()))
+            .is_err());
+        session
+            .with_update_guard(Some(saved.revision), || {
+                assert!(session.0.try_lock().is_err());
+                called.set(called.get() + 1);
+                Ok(())
+            })
+            .unwrap();
+        assert_eq!(called.get(), 2);
+        assert_eq!(session.summary().unwrap().unwrap().revision, saved.revision);
+        assert!(session
+            .with_update_guard(Some(saved.revision), || {
+                Err::<(), _>(AppError::new("OwnTest", "Owned install failure"))
+            })
+            .is_err());
+        assert_eq!(session.summary().unwrap().unwrap().revision, saved.revision);
+    }
 }
 
 #[cfg(all(test, not(feature = "scene-editing")))]

@@ -166,6 +166,10 @@ pub struct SceneHistory {
     undo: Vec<SceneFrame>,
     redo: Vec<SceneFrame>,
     saved: Option<SceneProject>,
+    // Typed float equality treats -0 as +0. Retain canonical bytes so exact
+    // authored bits participate without encoding on every summary/dirty read.
+    encoded: Vec<u8>,
+    saved_encoded: Option<Vec<u8>>,
     ids: Ids,
 }
 impl SceneFrame {
@@ -341,7 +345,7 @@ fn generated_physics_name(bone: &str, name: &str) -> bool {
 impl SceneHistory {
     pub fn new(project: SceneProject, saved: bool) -> Result<Self, AppError> {
         check_active_clipping(&project)?;
-        encode_scene_payload(&project)?;
+        let encoded = encode_scene_payload(&project)?;
         let mut ids = Ids::default();
         let mut bone_ids = vec![];
         let mut slot_ids = vec![];
@@ -450,6 +454,8 @@ impl SceneHistory {
             undo: vec![],
             redo: vec![],
             saved: checkpoint,
+            saved_encoded: saved.then(|| encoded.clone()),
+            encoded,
             ids,
         };
         crate::animation_slots::validate(&history.frame)?;
@@ -461,6 +467,7 @@ impl SceneHistory {
     }
     pub fn dirty(&self) -> bool {
         self.saved.as_ref() != Some(&self.frame.project)
+            || self.saved_encoded.as_ref() != Some(&self.encoded)
     }
     pub fn can_undo(&self) -> bool {
         !self.undo.is_empty()
@@ -470,19 +477,31 @@ impl SceneHistory {
     }
     pub fn mark_saved(&mut self) {
         self.saved = Some(self.frame.project.clone());
+        // Saves have already validated this snapshot. An unexpected failure
+        // keeps the checkpoint dirty rather than hiding it or panicking.
+        self.saved_encoded = encode_scene_payload(&self.frame.project).ok();
+        if let Some(encoded) = &self.saved_encoded {
+            self.encoded.clone_from(encoded);
+        }
     }
     pub fn apply(&mut self, edit: SceneEdit) -> Result<bool, AppError> {
         match edit {
             SceneEdit::Undo => {
-                if let Some(previous) = self.undo.pop() {
+                if let Some(previous) = self.undo.last() {
+                    let encoded = encode_scene_payload(&previous.project)?;
+                    let previous = self.undo.pop().unwrap();
                     self.redo.push(std::mem::replace(&mut self.frame, previous));
+                    self.encoded = encoded;
                     return Ok(true);
                 }
                 return Ok(false);
             }
             SceneEdit::Redo => {
-                if let Some(next) = self.redo.pop() {
+                if let Some(next) = self.redo.last() {
+                    let encoded = encode_scene_payload(&next.project)?;
+                    let next = self.redo.pop().unwrap();
                     self.undo.push(std::mem::replace(&mut self.frame, next));
+                    self.encoded = encoded;
                     return Ok(true);
                 }
                 return Ok(false);
@@ -884,11 +903,12 @@ impl SceneHistory {
         next.follow_physics_bone_names(&before);
         crate::scene_wire::reconcile(&before, &mut next)?;
         check_active_clipping(&next.project)?;
-        encode_scene_payload(&next.project)?;
-        if next.project == self.frame.project {
+        let encoded = encode_scene_payload(&next.project)?;
+        if next.project == self.frame.project && encoded == self.encoded {
             return Ok(false);
         }
         self.frame = next;
+        self.encoded = encoded;
         self.undo.push(before);
         if self.undo.len() > 100 {
             self.undo.remove(0);

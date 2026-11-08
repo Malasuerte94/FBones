@@ -1,6 +1,9 @@
 <script setup lang="ts">
-defineProps<{ name: 'key' | 'plus' | 'folder' | 'save' | 'close' | 'grid' | 'reset' | 'hand' | 'arrow' | 'chevron' | 'file' | 'logo' | 'bone' | 'undo' | 'redo' | 'trash' | 'mesh' | 'image' | 'weights' | 'tree' | 'eye' }>();
+defineProps<{ name: 'key' | 'plus' | 'folder' | 'save' | 'close' | 'grid' | 'reset' | 'hand' | 'arrow' | 'chevron' | 'file' | 'logo' | 'bone' | 'undo' | 'redo' | 'trash' | 'mesh' | 'image' | 'weights' | 'tree' | 'eye' | 'ik' | 'transform' | 'physics' }>();
 const paths: Record<string, string> = {
+  ik:'M3 18h5l5-10h6M8 18l5-3M13 8l-4 2M17 4h4v8h-4zM3 15v6',
+  transform:'M4 7h15m-4-4 4 4-4 4M20 17H5m4-4-4 4 4 4M4 4v6m16 4v6',
+  physics:'M6 3v12m-3-3 3 3 3-3M17 3v15m-4-4 4 4 4-4M3 22h18',
   key:'M14 10a5 5 0 1 0-4 4l3 3h3v3h4v-4l-6-6Z M6.5 6.5h.01',
   mesh:'M4 4h16v16H4zM4 4l16 16M20 4 4 20M4 12h16M12 4v16',
   image:'M3 4h18v16H3zM3 17l6-7 5 5 3-3 4 5M15 8h.01',

@@ -29,6 +29,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       MACOSX_DEPLOYMENT_TARGET: '13.0'
+      FBONES_SIGNED_UPDATES: ${{ github.ref_type == 'tag' && '1' || '0' }}
       # Explicit ad-hoc signing; this is not Developer ID signing or notarization.
       APPLE_SIGNING_IDENTITY: '-'
     steps:
@@ -55,6 +56,9 @@ jobs:
         run: python scripts/ci-build.py configure
       - run: pnpm install --frozen-lockfile
       - run: python scripts/test-public-release.py
+      - run: node scripts/test-updater-signature.mjs
+      - run: python scripts/test-signed-release.py
+      - run: python scripts/test-update-version.py
       - run: pnpm build:runtime
       - name: Verify independent runtime package
         run: node packages/runtime/tests/runtime.test.mjs
@@ -63,7 +67,15 @@ jobs:
       - run: cargo test --workspace --locked
       - run: cargo test -p fbones-desktop --no-default-features --locked
       - name: Build platform installers
+        if: github.ref_type != 'tag'
         run: pnpm tauri build --ci --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} -- --locked
+      - name: Build signed platform installers and updater packages
+        if: github.ref_type == 'tag'
+        env:
+          FBONES_RELEASE_UPDATER: '1'
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
+        run: pnpm tauri build --ci --config src-tauri/tauri.updater.conf.json --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} -- --locked
       - name: Verify executable and package structures
         run: python scripts/ci-build.py verify --target ${{ matrix.target }}
       # Stage only report-listed packages; never upload the native build tree.
@@ -139,6 +151,9 @@ jobs:
       RELEASE_TAG: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -156,6 +171,10 @@ jobs:
         run: |
           python scripts/prepare-runtime-release.py .local/runtime-release
           python scripts/prepare-installer-release.py assemble --installers .local/platform-installers --source .local/ci-source-release --runtime .local/runtime-release --output .local/verified-release --tag "$RELEASE_TAG"
+      - name: Require a newer installed application version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/check-update-version.py
       - name: Publish Latest beta app, runtime, checksums, and build reports
         env:
           GH_TOKEN: ${{ github.token }}

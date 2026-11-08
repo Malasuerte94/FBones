@@ -3,9 +3,9 @@ import {computed,ref,watch} from 'vue';
 import {useI18n} from 'vue-i18n';
 const props=withDefaults(defineProps<{
  modelValue:string;label:string;testId:string;contextKey:string;min:number;max:number;step?:number;
- tone?:'accent'|'motion'|'bone'|'warning'|'danger'|'muted'|'inertia';icon?:string;disabled?:boolean;locked?:boolean;
+ tone?:'accent'|'motion'|'bone'|'warning'|'danger'|'muted'|'inertia';icon?:string;disabled?:boolean;locked?:boolean;mixed?:boolean;
 }>(),{step:0.1,tone:'accent',icon:'mix',disabled:false,locked:false});
-const emit=defineEmits<{'update:modelValue':[value:string];commit:[];cancel:[]}>();
+const emit=defineEmits<{'update:modelValue':[value:string];begin:[];commit:[];cancel:[]}>();
 const {t}=useI18n();
 const active=ref(false),dirty=ref(false),keyboardActive=ref(false);let startContext='',pointer:number|null=null;
 const numeric=computed(()=>props.modelValue.trim()?Number(props.modelValue):NaN);
@@ -22,7 +22,7 @@ const symbols:Record<string,string>={
  mass:'M7 7h10l4 13H3L7 7Zm2 0V5a3 3 0 0 1 6 0v2',wind:'M3 8h13a3 3 0 1 0-3-3M3 12h17M3 16h10a3 3 0 1 1-3 3',
  gravity:'M12 3v15m-5-5 5 5 5-5M5 22h14',mix:'M4 7h16M4 17h16M8 4v6m8 4v6',
 };
-function begin(){if(props.disabled||props.locked||active.value)return;active.value=true;dirty.value=false;startContext=props.contextKey;}
+function begin(){if(props.disabled||props.locked||active.value)return;active.value=true;dirty.value=false;startContext=props.contextKey;emit('begin');}
 function stage(event:Event){if(props.locked){const input=event.target as HTMLInputElement;input.value=input.type==='range'?String(sliderValue.value):props.modelValue;return;}begin();if(!active.value)return;dirty.value=true;emit('update:modelValue',(event.target as HTMLInputElement).value);}
 function finish(){if(!active.value)return;const valid=startContext===props.contextKey,changed=dirty.value;active.value=false;dirty.value=false;keyboardActive.value=false;pointer=null;if(!valid){emit('cancel');return;}if(changed)emit('commit');}
 function cancel(){active.value=false;dirty.value=false;keyboardActive.value=false;pointer=null;emit('cancel');}
@@ -41,8 +41,8 @@ watch(()=>props.disabled||props.locked,unavailable=>{if(unavailable&&active.valu
 <template>
  <div class="numeric-slider-row" :class="`numeric-slider-row--${tone}`" :data-testid="`${testId}-row`" :data-outside-range="outside||undefined" :aria-busy="locked||undefined" :style="{'--numeric-fill':percent}">
   <span class="numeric-slider-label" :title="label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path :d="symbols[icon]??symbols.mix"/></svg><span>{{label}}</span></span>
-  <input :value="modelValue" type="text" inputmode="decimal" class="editor-input numeric-slider-number" :aria-label="t('numericValue',{name:label})" :data-testid="testId" :disabled="disabled" :readonly="locked" :title="outside?t('outsideSliderRange'):undefined" @focus="begin" @input="stage" @change="finish" @blur="finish" @keydown="keydown"/>
-  <input :value="sliderValue" type="range" :min="min" :max="max" :step="step" class="numeric-slider-track" :aria-label="t('numericSlider',{name:label})" :aria-valuetext="modelValue" :data-testid="`${testId}-slider`" :disabled="disabled||!finite" :aria-disabled="disabled||locked||!finite" @pointerdown="pointerDown" @pointerup="pointerUp" @pointercancel="cancel" @lostpointercapture="active&&pointer!==null&&cancel()" @input="stage" @change="!keyboardActive&&pointer===null&&finish()" @blur="finish" @keydown="keydown" @keyup="keyup"/>
+  <input :value="modelValue" type="text" inputmode="decimal" class="editor-input numeric-slider-number" :aria-label="t('numericValue',{name:label})" :data-testid="testId" :disabled="disabled" :readonly="locked" :placeholder="mixed?t('mixedValue'):undefined" :title="outside?t('outsideSliderRange'):undefined" @focus="begin" @input="stage" @change="finish" @blur="finish" @keydown="keydown"/>
+  <input :value="sliderValue" type="range" :min="min" :max="max" :step="step" class="numeric-slider-track" :aria-label="t('numericSlider',{name:label})" :aria-valuetext="mixed&&!finite?t('mixedValue'):modelValue" :data-testid="`${testId}-slider`" :disabled="disabled||!finite" :aria-disabled="disabled||locked||!finite" @pointerdown="pointerDown" @pointerup="pointerUp" @pointercancel="cancel" @lostpointercapture="active&&pointer!==null&&cancel()" @input="stage" @change="!keyboardActive&&pointer===null&&finish()" @blur="finish" @keydown="keydown" @keyup="keyup"/>
   <span v-if="$slots.trailing" class="numeric-slider-trailing"><slot name="trailing"/></span>
  </div>
 </template>

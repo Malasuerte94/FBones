@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGETS = {
@@ -19,6 +20,7 @@ TARGETS = {
         'bundle/dmg/FBones_{version}_universal.dmg',)),
 }
 CHECKS = ['architecture', 'executable-private-path-scan', 'package-structure']
+UPDATE_CHECK = 'updater-signatures-and-versions'
 DISTRIBUTION = 'experimental prerelease installer; native installation not validated'
 SENSITIVE = re.compile(
     rb'(?:-----BEGIN (?:OPENSSH |RSA |EC )?PRIVATE KEY-----|'
@@ -56,6 +58,33 @@ def metadata(commit):
     return json.loads((ROOT / 'package.json').read_text())['version']
 
 
+def update_templates(target, version):
+    if target == 'x86_64-unknown-linux-gnu':
+        return [(f'bundle/deb/FBones_{version}_amd64.deb', ['linux-x86_64-deb']),
+                (f'bundle/appimage/FBones_{version}_amd64.AppImage', ['linux-x86_64-appimage'])]
+    if target == 'x86_64-pc-windows-msvc':
+        return [(f'bundle/nsis/FBones_{version}_x64-setup.exe', ['windows-x86_64-nsis'])]
+    return [('bundle/macos/FBones.app.tar.gz', ['darwin-x86_64-app', 'darwin-aarch64-app'])]
+
+
+def public_key():
+    config = json.loads((ROOT / 'src-tauri/tauri.conf.json').read_text())['plugins']['updater']
+    if (config.get('requireSignedVersion') is not True or config.get('allowDowngrades', False)
+            or config.get('endpoints') != ['https://github.com/Malasuerte94/FBones/releases/latest/download/latest.json']
+            or any(config.get(name, False) for name in ('dangerousInsecureTransportProtocol',
+                       'dangerousAcceptInvalidCerts', 'dangerousAcceptInvalidHostnames'))):
+        raise ValueError('Updater configuration must preserve the strict public release policy.')
+    return config['pubkey']
+
+
+def verify_signature(artifact, signature, version):
+    result = subprocess.run(['node', str(ROOT / 'scripts/verify-updater-signature.mjs'),
+                             str(artifact), str(signature), public_key(), version],
+                            capture_output=True, text=True)
+    if result.returncode:
+        raise ValueError('Updater artifact signature or signed version failed verification.')
+
+
 def report_packages(report_path, target, commit, version):
     raw = report_path.read_bytes()
     if SENSITIVE.search(raw):
@@ -69,7 +98,7 @@ def report_packages(report_path, target, commit, version):
     if (report.get('source_commit') != commit or report.get('target') != target
             or report.get('version') != version
             or sorted(report.get('architectures', [])) != sorted(architectures)
-            or report.get('checks') != CHECKS
+            or report.get('checks') != CHECKS + ([UPDATE_CHECK] if report.get('updates') else [])
             or report.get('native_gui_validation') is not False
             or report.get('signing') != signing or report.get('distribution') != DISTRIBUTION
             or not re.fullmatch(r'[0-9a-f]{64}', report.get('executable_sha256', ''))):
@@ -84,6 +113,49 @@ def report_packages(report_path, target, commit, version):
                 or not re.fullmatch(r'[0-9a-f]{64}', row.get('sha256', ''))):
             raise ValueError('Build report contains an invalid package size or digest.')
     return packages
+
+
+def report_updates(report_path, target, version, required=False):
+    report = json.loads(report_path.read_text())
+    rows = report.get('updates', [])
+    if not rows and not required:
+        return []
+    expected = dict(update_templates(target, version))
+    if (not isinstance(rows, list) or len(rows) != len(expected)
+            or any(not isinstance(row, dict) for row in rows)
+            or {row.get('path') for row in rows} != set(expected)
+            or report.get('updater_public_key_sha256') != hashlib.sha256(public_key().encode()).hexdigest()):
+        raise ValueError('Updater report inventory or signing identity does not match the release.')
+    for row in rows:
+        if (row.get('platforms') != expected[row['path']]
+                or row.get('signature_path') != row['path'] + '.sig'
+                or type(row.get('bytes')) is not int or row['bytes'] <= 0
+                or type(row.get('signature_bytes')) is not int or not 0 < row['signature_bytes'] <= 4096
+                or not re.fullmatch(r'[0-9a-f]{64}', row.get('sha256', ''))
+                or not re.fullmatch(r'[0-9a-f]{64}', row.get('signature_sha256', ''))):
+            raise ValueError('Unexpected updater artifact/signature metadata.')
+    return rows
+
+
+def update_files(rows, directory, root, version, flat):
+    files = []
+    for row in rows:
+        artifact = directory / (Path(row['path']).name if flat else row['path'])
+        signature = directory / (Path(row['signature_path']).name if flat else row['signature_path'])
+        verify_package(artifact, row, root)
+        verify_package(signature, {'bytes': row['signature_bytes'], 'sha256': row['signature_sha256']}, root)
+        verify_signature(artifact, signature, version)
+        files.extend((artifact, signature))
+    return files
+
+
+def unique_files(files):
+    result = {}
+    for path in files:
+        if path.name in result and path != result[path.name]:
+            raise ValueError('Release input asset names collide.')
+        result[path.name] = path
+    return list(result.values())
 
 
 def verify_package(path, row, root):
@@ -105,13 +177,15 @@ def stage(target, commit, output):
     version = metadata(commit)
     report = regular_file(ROOT / 'ci-reports' / f'{target}.json', ROOT)
     rows = report_packages(report, target, commit, version)
+    updates = report_updates(report, target, version)
     release = ROOT / 'target' / target / 'release'
     files = []
     for row in rows:
         path = release / row['path']
         verify_package(path, row, ROOT)
         files.append(path)
-    copy_new([*files, report], output)
+    files.extend(update_files(updates, release, ROOT, version, flat=False))
+    copy_new(unique_files([*files, report]), output)
     print(f'Staged {len(files)} verified installer packages and report for {target}.')
 
 
@@ -131,16 +205,29 @@ def assemble(installers, source, runtime, output, tag, commit):
     if installers.is_symlink() or not installers.is_dir() or {p.name for p in installers.iterdir()} != expected_dirs:
         raise ValueError('Expected exactly the three native installer artifacts.')
     files = []
+    platforms = {}
+    needs_updates = tuple(int(part) for part in version.split('.')) >= (0, 9, 5)
     for target in TARGETS:
         directory = installers / f'installers-{target}'
         report = regular_file(directory / f'{target}.json', installers)
         rows = report_packages(report, target, commit, version)
-        inventory(directory, [report.name, *(Path(row['path']).name for row in rows)])
+        updates = report_updates(report, target, version, required=needs_updates)
+        inventory(directory, {report.name, *(Path(row['path']).name for row in rows),
+                              *(Path(row[key]).name for row in updates for key in ('path', 'signature_path'))})
         for row in rows:
             path = directory / Path(row['path']).name
             verify_package(path, row, installers)
             files.append(path)
         files.append(report)
+        files.extend(update_files(updates, directory, installers, version, flat=True))
+        for row in updates:
+            for platform in row['platforms']:
+                if platform in platforms:
+                    raise ValueError('Duplicate updater platform entry.')
+                platforms[platform] = {
+                    'url': f'https://github.com/Malasuerte94/FBones/releases/download/{tag}/{Path(row["path"]).name}',
+                    'signature': (directory / Path(row['signature_path']).name).read_text().strip(),
+                }
     source_name = f'fbones-{tag}-source.tar.gz'
     runtime_version = json.loads((ROOT / 'packages/runtime/package.json').read_text())['version']
     runtime_name = f'fbones-runtime-{runtime_version}.tgz'
@@ -152,10 +239,16 @@ def assemble(installers, source, runtime, output, tag, commit):
     inventory(runtime, [runtime_name, 'RUNTIME_SHA256SUMS'])
     files.extend((checked_archive(source, source_name, 'SHA256SUMS'),
                   checked_archive(runtime, runtime_name, 'RUNTIME_SHA256SUMS')))
+    files = unique_files(files)
     copy_new(files, output)
+    if needs_updates:
+        manifest = {'version': version, 'source_commit': commit,
+                    'notes': f'FBones {version} — early beta. See the release page for changes and limitations.',
+                    'platforms': platforms}
+        (output / 'latest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8', newline='\n')
     checksum_lines = [f'{digest(path)}  {path.name}\n' for path in sorted(output.iterdir())]
     (output / 'SHA256SUMS').write_text(''.join(checksum_lines), encoding='utf-8', newline='\n')
-    print(f'Assembled {len(files)} payloads/reports and aggregate SHA256SUMS for {commit}.')
+    print(f'Assembled {len(checksum_lines)} payloads/reports and aggregate SHA256SUMS for {commit}.')
 
 
 def main():

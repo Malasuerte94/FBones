@@ -4,6 +4,7 @@ import {applyConstraintPoses,constraintPose,physicsProperties,sampleConstraintPo
 import type {EventKeyInput,EventPatch} from '../domain/animationEvents.ts';
 import type {ConstraintView,ProjectSummary,RigEdit,TransformChannels} from '../domain/project.ts';
 import type {TimelineConstraintKeyChange,TimelineConstraintTrack} from '../domain/animationTimeline.ts';
+import {batchField,batchFieldValue,sameBatchValue} from '../domain/constraintBatch.ts';
 
 interface Options {
  project:ShallowRef<ProjectSummary|null>;active:Readonly<Ref<AnimationView|null>>;frame:Ref<number>;mode:Ref<'setup'|'animate'>;
@@ -67,12 +68,50 @@ export function useConstraintAnimationWorkspace(o:Options){
   const keys=next.type==='physics'?Object.keys(patch).flatMap(property=>inputsForPose(next,property as PhysicsProperty)):inputsForPose(next);
   return keys.length?o.edit({type:'setAnimationConstraintKeys',animation:clip.id,keys},expectedRevision):false;
  });}
+ async function setConstraintAnimationFieldBatch(ids:readonly number[],field:string,value:number|boolean,expectedRevision?:number):Promise<boolean>{return perform(async()=>{
+  o.pause();const clip=current(),project=o.project.value;
+  if(!project||!ids.length||new Set(ids).size!==ids.length)throw new Error('Select existing constraints of one type.');
+  if(expectedRevision!==undefined&&project.revision!==expectedRevision)throw new Error('The project changed. Start the constraint edit again.');
+  const views=ids.map(id=>animationConstraint(id));
+  if(views.some(view=>!view)||!views[0]||views.some(view=>view!.type!==views[0]!.type))throw new Error('Select constraints of one type to edit shared values.');
+  const kind=views[0].type;
+  if(!batchField(kind,field,value))throw new Error('Unsupported constraint field.');
+  if(typeof value==='number'&&(!Number.isFinite(value)||Math.abs(value)>1_000_000))throw new Error('Use finite supported constraint timeline values.');
+  if(kind==='physics'&&(!(physicsProperties as readonly string[]).includes(field)||field==='mass'&&Number(value)<=0||field==='strength'&&Number(value)<0))throw new Error('Use a supported Physics animation property and value.');
+  if(kind==='transform'&&!/^mix:[0-5]$/.test(field))throw new Error('Only Transform mixes can animate.');
+  if(kind==='ik'&&(!['mix','softness','stretch','compress','bendPositive'].includes(field)||field==='mix'&&(Number(value)<0||Number(value)>1)||field==='softness'&&Number(value)<0))throw new Error('Use supported IK animation properties and values.');
+  if(views.every(view=>sameBatchValue(batchFieldValue(view!,field),value)))return true;
+  const poses=views.map(view=>{
+   const pose=constraintPose(view!);
+   if(pose.type==='transform'){const mixes=[...pose.mixes] as TransformChannels;mixes[Number(field.slice(4))]=Number(value);return{...pose,mixes};}
+   return{...pose,[field]:value} as ConstraintPose;
+  });
+  // Validate the whole cohort before publishing a single transient map or one
+  // native edit. Never key/write Setup while Auto Key is disabled.
+  if(!o.autoKey.value){const next=new Map(constraintDraft.value);for(const pose of poses)next.set(pose.constraint,pose);constraintDraft.value=next;return true;}
+  const keys=poses.flatMap(pose=>inputsForPose(pose,pose.type==='physics'?field as PhysicsProperty:undefined));
+  return o.edit({type:'setAnimationConstraintKeys',animation:clip.id,keys},expectedRevision);
+ });}
  async function insertConstraintAnimationKeys(value:{constraintId:number;kind:ConstraintAnimationTrack['channel'];property?:string}):Promise<boolean>{return perform(async()=>{
   o.pause();const clip=current(),view=animationConstraint(value.constraintId);if(!view)throw new Error('Select a constraint to key.');
   if(value.kind==='physicsReset'){if(view.type!=='physics')throw new Error('Only Physics constraints can reset.');return o.edit({type:'setAnimationConstraintKeys',animation:clip.id,keys:[{channel:'physicsReset',constraint:view.id,frame:o.frame.value}]});}
   const expected=view.type==='transform'?'transformMix':view.type;if(value.kind!==expected)throw new Error('Constraint key type does not match.');
   if(value.property&&!physicsProperties.includes(value.property as PhysicsProperty))throw new Error('Unknown Physics property.');
   return o.edit({type:'setAnimationConstraintKeys',animation:clip.id,keys:inputsForPose(constraintPose(view),value.property as PhysicsProperty|undefined)});
+ });}
+ async function insertConstraintAnimationKeysBatch(value:{constraintIds:readonly number[];kind:ConstraintAnimationTrack['channel'];property?:string}):Promise<boolean>{return perform(async()=>{
+  o.pause();const clip=current(),ids=[...value.constraintIds];
+  if(!ids.length||new Set(ids).size!==ids.length)throw new Error('Select existing constraints of one type.');
+  const views=ids.map(id=>animationConstraint(id));
+  if(views.some(view=>!view)||!views[0]||views.some(view=>view!.type!==views[0]!.type))throw new Error('Select constraints of one type to key together.');
+  if(value.kind==='physicsReset'){
+   if(views[0].type!=='physics')throw new Error('Only Physics constraints can reset.');
+   return o.edit({type:'setAnimationConstraintKeys',animation:clip.id,keys:ids.map(constraint=>({channel:'physicsReset',constraint,frame:o.frame.value}))});
+  }
+  if(value.kind!==(views[0].type==='transform'?'transformMix':views[0].type))throw new Error('Constraint key type does not match.');
+  if(value.property&&!(physicsProperties as readonly string[]).includes(value.property))throw new Error('Unknown Physics property.');
+  const keys=views.flatMap(view=>inputsForPose(constraintPose(view!),value.property as PhysicsProperty|undefined));
+  return o.edit({type:'setAnimationConstraintKeys',animation:clip.id,keys});
  });}
  function constraintKeysForIds(ids:readonly number[]):ConstraintKeyInput[]{
   const selected=new Set(ids),keys:ConstraintKeyInput[]=[];
@@ -127,5 +166,5 @@ export function useConstraintAnimationWorkspace(o:Options){
   const key=eventKeysForIds([change.id])[0];if(!key)return false;const{id:_,...patch}=change;return o.edit({type:'setAnimationEventKeys',animation:current().id,keys:[{...key,...patch}]});
  });}
  watch(()=>[o.project.value?.documentId,o.active.value?.id,o.frame.value,o.mode.value],clearConstraintAnimationDraft,{flush:'sync'});
- return{constraintDraft,eventDraft,eventDefinitions,animationConstraintPoses,animationConstraints,animationConstraintTracks,animationTimelineConstraints,animationEventTracks,animationConstraint,clearConstraintAnimationDraft,setConstraintAnimationFields,insertConstraintAnimationKeys,constraintKeysForIds,updateConstraintAnimationKey,constraintInterpolationKeys,constraintBezierKey,insertEventAnimationKey,setEventAnimationFields,eventInput,eventKeysForIds,updateEventAnimationKey};
+ return{constraintDraft,eventDraft,eventDefinitions,animationConstraintPoses,animationConstraints,animationConstraintTracks,animationTimelineConstraints,animationEventTracks,animationConstraint,clearConstraintAnimationDraft,setConstraintAnimationFields,setConstraintAnimationFieldBatch,insertConstraintAnimationKeys,insertConstraintAnimationKeysBatch,constraintKeysForIds,updateConstraintAnimationKey,constraintInterpolationKeys,constraintBezierKey,insertEventAnimationKey,setEventAnimationFields,eventInput,eventKeysForIds,updateEventAnimationKey};
 }

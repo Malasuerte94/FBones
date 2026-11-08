@@ -7,6 +7,7 @@ upstream package licenses.
 | Component | Upstream | License expression in installed package metadata |
 | --- | --- | --- |
 | Tauri and Tauri build tooling | https://github.com/tauri-apps/tauri | MIT OR Apache-2.0 |
+| Tauri updater plugin | https://github.com/tauri-apps/plugins-workspace | MIT OR Apache-2.0 |
 | Vue | https://github.com/vuejs/core | MIT |
 | Pinia | https://github.com/vuejs/pinia | MIT |
 | Vue I18n | https://github.com/intlify/vue-i18n | MIT |

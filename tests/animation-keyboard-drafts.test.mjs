@@ -12,7 +12,7 @@ const appScript=readFileSync(new URL('../src/App.vue',import.meta.url),'utf8').m
 const ast=ts.createSourceFile('App.ts',appScript,ts.ScriptTarget.Latest,true),declaration=ast.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text==='keyboard');
 assert.ok(declaration,'the application keyboard entry point must be tested');
 const handlerJs=ts.transpileModule(declaration.getText(ast),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
-const keyboardFor=w=>new Function('w','constraintCreator','clippingCreator','eventCreator','desktop',handlerJs+';return keyboard;')(w,{value:null},{value:false},{value:false},true);
+const keyboardFor=(w,updater={installing:{value:false}})=>new Function('w','constraintCreator','clippingCreator','eventCreator','desktop','updater',handlerJs+';return keyboard;')(w,{value:null},{value:false},{value:false},true,updater);
 const copy=value=>JSON.parse(JSON.stringify(value));
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 function typedReply(source,command){

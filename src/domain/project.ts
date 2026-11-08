@@ -4,6 +4,7 @@ import type {DeformKeyInput,DeformPose,DrawOrderKeyInput} from './animationGeome
 import type {ConstraintKeyInput,ConstraintPose} from './animationConstraints.ts';
 import type {EventDefinition,EventKeyInput,EventPatch} from './animationEvents.ts';
 import type {SequenceSettings,SequenceKeyInput} from './animationSequence.ts';
+import type {ConstraintBatchField} from './constraintBatch.ts';
 export interface BoneView {
   id: number; parent: number | null; name: string;
   x: number; y: number; rotation: number; length: number;
@@ -164,6 +165,7 @@ export type RigEdit =
   | {type:'addConstraint';constraint:ConstraintInput}
   | {type:'addPhysicsToBones';bones:number[]}
   | {type:'updateConstraint';id:number;constraint:ConstraintInput}
+  | {type:'patchConstraints';ids:number[];field:ConstraintBatchField;value:number|boolean|{bits:number}}
   | {type:'matchTransform';id:number;section:'offsets'|'properties'}
   | {type:'setTransformRange';id:number;index:number;bits:number|null}
   | {type:'deleteConstraint';id:number}

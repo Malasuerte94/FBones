@@ -3,7 +3,7 @@
   "private": true,
   "description": "Free, open-source offline 2D skeletal animation editor",
   "license": "MIT",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "type": "module",
   "packageManager": "pnpm@11.1.0",
   "engines": {
@@ -32,7 +32,7 @@
   "devDependencies": {
     "@playwright/test": "1.64.1",
     "@tailwindcss/vite": "4.3.3",
-    "@tauri-apps/cli": "2.10.1",
+    "@tauri-apps/cli": "2.12.4",
     "@types/node": "24.10.0",
     "@vitejs/plugin-vue": "6.0.8",
     "esbuild": "0.28.2",

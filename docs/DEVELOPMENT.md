@@ -210,11 +210,32 @@ Run `bash scripts/build-windows-test.sh` when a cached Microsoft SDK/CRT is
 available. Set `FBONES_WINDOWS_SDK` to its root, otherwise the script reads the
 existing cargo-xwin cache. Everything generated is workspace-local.
 
+Native C dependencies, including the updater's TLS implementation, also require
+an MSVC-targeting Clang compiler and `llvm-lib`. Supply executable tool paths:
+
+```sh
+FBONES_WINDOWS_CC=/path/to/sdk-aware-clang-wrapper \
+FBONES_WINDOWS_AR=/path/to/llvm-lib \
+FBONES_WINDOWS_SDK=/path/to/windows-sdk \
+bash scripts/build-windows-test.sh
+```
+
+The compiler wrapper must run Clang in MSVC driver mode for
+`x86_64-pc-windows-msvc` and provide the SDK/CRT include directories. Use a wrapper
+file rather than putting flags inside the tool-path variable. The SDK needs its
+`crt/include` and `sdk/include/{ucrt,shared,um}` headers as well as the library
+directories checked by the script. `FBONES_WINDOWS_CC`/`FBONES_WINDOWS_AR` take
+priority, followed by existing hyphenated target variables, underscored target
+variables, then `clang-cl`/`llvm-lib` on PATH. Both target-variable forms receive
+the selected paths for Cargo. Missing/nonexecutable tools fail before the build;
+the script does not install a toolchain or change global configuration.
+
 The script uses Rust's bundled LLD and statically links the CRT. The restricted
 `windows-resource.py` converter handles only the VERSIONINFO, ICON and manifest
 resources emitted by this project. Its output is a genuine Win32 .res stream;
-unknown syntax fails rather than dropping resources. GNU cpp preprocesses this
-header-free resource definition only; it does not compile executable code.
+unknown syntax fails rather than dropping resources. The selected MSVC-targeting
+Clang also preprocesses the header-free resource definition; native dependencies
+use that compiler for actual Windows C/assembly code.
 Native Windows builds continue using the standard SDK resource compiler.
 
 `scripts/prepare-windows-test.py` checks PE32+/x64/GUI headers, atomically replaces the

@@ -877,6 +877,9 @@ pub(super) fn apply(
                 constraint.build_update(next, &next.project.constraints[i])?;
             next.focus.constraint = Some(id);
         }
+        RigEdit::PatchConstraints { ids, field, value } => {
+            crate::scene_constraint_batch::apply(next, &ids, field, value)?;
+        }
         RigEdit::SetTransformRange { id, index, bits } => {
             let i = next.constraint_index(id)?;
             let Constraint::Transform(constraint) = &next.project.constraints[i] else {

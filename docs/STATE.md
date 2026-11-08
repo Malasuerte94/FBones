@@ -2,6 +2,56 @@
 
 ## Active goal and priorities
 
+Implemented for app0.9.5: signed release updates, distinctIK/Transform/Physics
+icons, Ctrl/Cmd/Shift constraint cohorts and atomic shared-field edits. Paired
+[DATA](research/CONSTRAINT-MULTIEDIT-UPDATER-DATA-GATE-2026-11-08.md)/
+[UI](research/CONSTRAINT-MULTISELECT-UPDATER-UI-GATE-2026-11-08.md) gates reuse
+accepted4.3.26 evidence; original multi-edit gesture parity remains unknown.
+F307/F308 deferred fidelity research stays pending.
+
+Shared Setup fields cover homogeneous Physics/IK/Transform groups; mixed types,
+identity/references/order/Match/delete are guarded. Supported Animate fields use
+working drafts or one combined key action. FrozenIDs/revision, rawf32/signedzero/
+nullable rotation, unrelated fields and singleUndo/Redo/persistence are covered.
+Native7batch tests,5composable tests and3realSession browser cases pass. Canonical
+payload caching preserves bit-sensitive no-op/dirty equality without per-frame
+encoding. One strictmap-only signed-bits decoder fixes Serde's sequence acceptance.
+
+Updater uses pinnedTauri2.12.5/build2.7.4/CLI2.12.4/plugin2.14.1, strictHTTPS,
+authenticated package+version signatures and separate installer routes. Startup
+checks/background downloads are optional; restart is explicit and guarded by
+Save/Discard/Cancel plus native clean-revision mutex. Local immutable/workspace
+builds cannot replace themselves. Earlier0.9.4 needs the first updater-enabled
+installer once. [Policy](UPDATES.md) explains publication and version increments.
+Private durable signing identity is provisioned owner-only and Actions secret set;
+never print/publish/delete the private identity. Only its public key enters source.
+GenuineCLI signatures pass independentNode and pinnedRustminisign verification;
+wrong announcedversion and8tamper/key/framing cases reject. Native6updater boundary
+cases plus the Session guard pass. Frontend13controller/6actualPinia lifecycle and
+3browser updater cases pass; no OS installed-app upgrade claim follows from these.
+
+Current local integration passes:120/120production-CSP UI in177.55seconds with no
+skip/failure/retry;442JavaScript pass/one existingPhysics skip;340desktopnative/
+2existingignored,102legacy/1existingignored,16defaultformat/103Sceneformat,
+7researchtests; runtime16package/24nativeexport samples. TypeScript/UItypes,
+web/runtimebuilds, nativecheck, strictClippy andrustfmt pass. Releasepolicy7,
+signedassembly2/versiongate4 andrealcrypto checks pass. NewTLS dependency requires
+MSVCClang/llvm-lib for crossbuild; builder supports explicit validatedtoolpaths
+and correctly documents sharedClang resource preprocessing. Own cached tools work.
+
+FinalWindows0.9.5 image94293013 passes4owned native groups: actualHelp menu/custom
+commands report local-copy unsupported, nativeOSOpen ofown5Physicsfixture,
+Ctrl/Shift selection+gravity-only one-revision edit/Undo/Redo, nativeSaveAs and
+Close/Open exact authored records. Clean normal close confirmed; user/original
+windows untouched. This proves the named own image, not installed-app upgrading.
+[Current checkpoint](../analysis/constraint-updater-check.json) owns raw receipts.
+
+Next: publish signedv0.9.5-beta.1 through all hosted gates, independently verify
+remoteCI/assets/manifest and leave currentnormalapp available. Nativeinstalled
+update acceptance on eachOS remains unobserved. Publicbeta6 evidence below remains
+historical until newer publication is verified. Endcleanup/free-space measurement
+remains due; keep signingidentity and citedevidence.
+
 The latest user clarified the exact target: the repository RIGHT sidebar
 Releases card, rather than README/release-body Download tables. This is fixed
 and directly verified on the live repository. Existing beta6 release438467646
@@ -19,7 +69,7 @@ instruction overriding the prior retain-prerelease policy before mutation.
 
 Future workflow publication now uses --prerelease=false --latest under the same
 platform/UI/runtime/archive gates. No new tag, asset rebuild/reupload or installer
-execution is needed. Main-only metadata-policy followup is being committed;
+execution is needed. Main-only metadata-policy followup42b8eb2 is pushed;
 the already published beta6 tag and downloadable content stay immutable.
 
 Prior delivery remains verified: tag42513851453/main42513850954 passed, publishing
@@ -201,3 +251,7 @@ open; full F105 and deferred F307/F308 are unchanged. Main pushes check/build;
 validated beta tags publish all4desktop packages and runtime/source as GitHub
 Latest after all existing gates pass. Keep immutable tags and scoped release validators. This
 post-publication checkpoint records outcomes observed after the source tag.
+
+Sidebar followup cleanup: removed the unpublished main-snapshot archive/checksum
+(2.20MiBallocated); retained source/Git and actual sidebar evidence. Existing
+published tag/archive/assets and user windows are untouched.

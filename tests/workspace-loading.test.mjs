@@ -29,7 +29,7 @@ await build({entryPoints:['src/components/molecules/ProjectInspectionNotice.vue'
 const InspectionNotice=(await import(new URL('../'+noticeOutput,import.meta.url))).default;unlinkSync(noticeOutput);
 const ast=ts.createSourceFile('App.ts',descriptor.scriptSetup.content,ts.ScriptTarget.Latest,true),command=ast.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='command');
 const commandJs=ts.transpileModule(command.getText(ast),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
-const appCommand=w=>new Function('w','constraintCreator','clippingCreator','eventCreator','document',commandJs+';return command;')(w,{value:null},{value:false},{value:false},document);
+const appCommand=w=>new Function('w','constraintCreator','clippingCreator','eventCreator','document','updater',commandJs+';return command;')(w,{value:null},{value:false},{value:false},document,{installing:{value:false},checkNow:async()=>{}});
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 const model=name=>({...draftSummary(name),dirty:false,sceneEditing:true,documentId:name==='Old'?1:2,logicalDocumentId:name==='Old'?11:12,revision:1,animations:[],constraints:[]});
 function fixture(){const pinia=createPinia(),w=useWorkspace(pinia),calls=[];w.project=model('Old');w.pauseSimulation();let release,reject;const gate=new Promise((resolve,fail)=>{release=resolve;reject=fail;});invoke=async(name,args)=>{calls.push({name,args});if(name==='open_project')return gate;if(name==='close_project')return null;throw Error('Unexpected native call '+name);};return{w,calls,release,reject,close:()=>disposePinia(pinia)};}

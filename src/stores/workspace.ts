@@ -17,8 +17,9 @@ import type {EventDefinition,EventPatch,FiredEvent} from '../domain/animationEve
 import {EventAudioPlayer,type AudioReceipt} from '../domain/eventAudio.ts';
 import {evaluate as evaluateScene,PhysicsState} from '../domain/solve/index.ts';
 import {logicalDocumentKey} from '../domain/resourceContinuity.ts';
+import {batchField,batchFieldValue,sameBatchValue} from '../domain/constraintBatch.ts';
 
-export type Intent = 'new' | 'open' | 'close' | 'quit';
+export type Intent = 'new' | 'open' | 'close' | 'quit' | 'update';
 
 export const useWorkspace = defineStore('workspace', () => {
   const project = shallowRef<ProjectSummary | null>(null);
@@ -60,6 +61,8 @@ export const useWorkspace = defineStore('workspace', () => {
   const selectedSlotIds=ref<number[]>([]);
   const selectedAttachmentId=ref<number|null>(null),selectedAttachmentIds=ref<number[]>([]);
   const selectedConstraintId=ref<number|null>(null);
+  const selectedConstraintIds=ref<number[]>([]),constraintSelectionAnchor=ref<number|null>(null);
+  watch(selectedConstraintId,id=>{if(id===null){selectedConstraintIds.value=[];constraintSelectionAnchor.value=null;}else if(!selectedConstraintIds.value.includes(id))selectedConstraintIds.value=[id];},{flush:'sync'});
   const selectedEventId=ref<number|null>(null);
   const selectedEvent=computed(()=>project.value?.events?.find(event=>event.id===selectedEventId.value)??null);
   const audioLibrary=computed(()=>project.value?.audioLibrary??{root:project.value?.audioRoot??'./audio',sounds:[],warnings:[]});
@@ -148,6 +151,7 @@ export const useWorkspace = defineStore('workspace', () => {
   });
   const selectedSlotRaw=computed(()=>sceneSlots.value.find(s=>s.id===selectedSlotId.value)??null);
   const selectedConstraint=computed(()=>constraints.value.find(c=>c.id===selectedConstraintId.value)??null);
+  const selectedConstraints=computed(()=>selectedConstraintIds.value.flatMap(id=>{const c=constraints.value.find(c=>c.id===id);return c?[c]:[];}));
   const selectedSlot = computed(() => {
     const slot=selectedSlotRaw.value,attachment=selectedAttachment.value;
     return slot&&attachment?.slot===slot.id?{...slot,region:attachment.region,mesh:attachment.mesh,imageAvailable:attachment.imageAvailable}:slot;
@@ -202,7 +206,7 @@ export const useWorkspace = defineStore('workspace', () => {
   const canEdit = computed(() => api.desktop && !!project.value && !project.value.inspectionOnly);
   const parentPick=shallowRef<{documentId:number;revision:number;bones:number[];attachments:number[];active:number|null;selection:string}|null>(null);
   const parentPicking=computed(()=>parentPick.value!==null);
-  const parentSelectionKey=computed(()=>`${selectedSlotId.value}:${selectedAttachmentId.value}:${selectedAttachmentIds.value.join(',')}:${selectedIds.value.join(',')}:${selectedConstraintId.value}:${editMode.value}:${librarySelection.value}`);
+  const parentSelectionKey=computed(()=>`${selectedSlotId.value}:${selectedAttachmentId.value}:${selectedAttachmentIds.value.join(',')}:${selectedIds.value.join(',')}:${selectedConstraintIds.value.join(',')}:${editMode.value}:${librarySelection.value}`);
   function cancelParentPick(){parentPick.value=null;resumeSimulation('parent');clearBoneHover();}
   async function beginParentPick():Promise<boolean>{
     if(editFlight&&!(await editFlight))return false;
@@ -405,6 +409,7 @@ export const useWorkspace = defineStore('workspace', () => {
   let editFlight: Promise<boolean> | null = null;
   let pendingIntent: Intent | null = null;
   let discardOnCreate = false;
+  let resolveUpdatePreparation:((ready:boolean)=>void)|null=null;
 
   function showNotice(message: string, error = false) { notice.value = message; noticeError.value = error; }
   async function run(operation: () => Promise<void>) {
@@ -419,6 +424,14 @@ export const useWorkspace = defineStore('workspace', () => {
     ready.value = true;
   }
   async function perform(intent: Intent, discardChanges: boolean) {
+    if(intent==='update'){
+      let allowed=false;
+      await run(async()=>{
+        if(discardChanges&&project.value){await api.closeProject(true);animation.pauseAnimation();editorMode.value='setup';project.value=null;}
+        allowed=!project.value?.dirty;
+      });
+      const resolve=resolveUpdatePreparation;resolveUpdatePreparation=null;resolve?.(allowed);return;
+    }
     if (intent === 'new') { discardOnCreate = discardChanges; newDialog.value = true; return; }
     await run(async () => {
       if (intent === 'open') {
@@ -448,7 +461,20 @@ export const useWorkspace = defineStore('workspace', () => {
     pendingIntent = null; discardDialog.value = false;
     if (intent) await perform(intent, true);
   }
-  function cancelDiscard() { pendingIntent = null; discardDialog.value = false; }
+  function cancelDiscard() { pendingIntent = null; discardDialog.value = false;const resolve=resolveUpdatePreparation;resolveUpdatePreparation=null;resolve?.(false); }
+  async function prepareForUpdate():Promise<boolean>{
+    const focused=document.activeElement;
+    if(focused instanceof HTMLInputElement||focused instanceof HTMLTextAreaElement||focused instanceof HTMLSelectElement)focused.blur();
+    await nextTick();
+    if(editFlight&&!(await editFlight))return false;
+    if(busy.value||newDialog.value||discardDialog.value||resolveUpdatePreparation)return false;
+    if(clippingDraft.value||traceOpen.value){showNotice('Finish or cancel the current geometry operation before updating.',true);return false;}
+    const invalid=inspectorError.value||animationKeyError.value||eventKeyError.value||sequenceFieldError.value||attachmentColorError.value;
+    if(invalid){showNotice(invalid,true);return false;}
+    animation.pauseAnimation();
+    if(project.value?.dirty)return new Promise(resolve=>{resolveUpdatePreparation=resolve;pendingIntent='update';discardDialog.value=true;});
+    return true;
+  }
   async function create(name: string) {
     await run(async () => {
       librarySelection.value=null;
@@ -552,13 +578,13 @@ export const useWorkspace = defineStore('workspace', () => {
         const preserveAnimationSelection=editorMode.value==='animate'&&['undo','redo'].includes(originalType);
         const focusHistory=!preserveAnimationSelection&&['undo','redo'].includes(originalType),focusCreation=['create','createSlot','createClipping','addConstraint','addPhysicsToBones'].includes(originalType);
         const sameSlot = selectedSlotId.value === result.editedSlot;
-        if(!sceneEditing.value||focusHistory||focusCreation){
+        if(!sceneEditing.value||focusHistory&&selectedConstraintIds.value.length<2||focusCreation){
           selectedSlotId.value=result.editedSlot??null;
           if(sceneEditing.value){
             selectedAttachmentId.value=result.editedAttachment??null;
             selectedAttachmentIds.value=selectedAttachmentId.value===null?[]:[selectedAttachmentId.value];
             selectedSlotIds.value=selectedSlotId.value===null?[]:[selectedSlotId.value];
-            selectedConstraintId.value=null;
+            clearConstraintSelection();
           }
         }
         // Weight edits never change vertex inventory. Keep the current Direct
@@ -600,10 +626,10 @@ export const useWorkspace = defineStore('workspace', () => {
     if (editFlight) await editFlight;
     if (selectedBone.value?.parent !== null && selectedBone.value) await editRig({ type: 'delete', id: selectedBone.value.id });
   }
-  function clearObjectSelection(){selectedAttachmentId.value=null;selectedAttachmentIds.value=[];selectedSlotIds.value=[];selectedConstraintId.value=null;selectedEventId.value=null;}
+  function clearObjectSelection(){selectedAttachmentId.value=null;selectedAttachmentIds.value=[];selectedSlotIds.value=[];clearConstraintSelection();selectedEventId.value=null;}
   function selectBone(id: number | null) { selectionEpoch++;clearObjectSelection(); librarySelection.value=null; selectedIds.value=id===null?[]:[id]; selectedId.value = id; selectedSlotId.value = null; selectedVertex.value = null; inspectorError.value = ''; }
   function selectSlot(id: number | null,modifiers:{toggle?:boolean;shift?:boolean;ordered?:number[]}={}) {
-    selectionEpoch++;librarySelection.value=null;selectedAttachmentId.value=null;selectedAttachmentIds.value=[];selectedConstraintId.value=null;selectedEventId.value=null;
+    selectionEpoch++;librarySelection.value=null;selectedAttachmentId.value=null;selectedAttachmentIds.value=[];clearConstraintSelection();selectedEventId.value=null;
     if(id !== selectedSlotId.value)selectedVertex.value=null;
     let ids=id===null?[]:[id];
     if(id!==null&&modifiers.shift&&modifiers.ordered&&selectedSlotId.value!==null){const a=modifiers.ordered.indexOf(selectedSlotId.value),b=modifiers.ordered.indexOf(id);if(a>=0&&b>=0)ids=modifiers.ordered.slice(Math.min(a,b),Math.max(a,b)+1);}
@@ -611,7 +637,7 @@ export const useWorkspace = defineStore('workspace', () => {
     selectedSlotIds.value=ids.filter(id=>slots.value.some(s=>s.id===id));selectedSlotId.value=id!==null&&selectedSlotIds.value.includes(id)?id:selectedSlotIds.value.at(-1)??null;inspectorError.value='';
   }
   function selectSceneAttachments(ids:number[],active:number|null){
-    selectionEpoch++;librarySelection.value=null;selectedConstraintId.value=null;selectedEventId.value=null;
+    selectionEpoch++;librarySelection.value=null;clearConstraintSelection();selectedEventId.value=null;
     const valid=new Set(sceneAttachments.value.map(a=>a.id));selectedAttachmentIds.value=[...new Set(ids)].filter(id=>valid.has(id));
     selectedAttachmentId.value=active!==null&&selectedAttachmentIds.value.includes(active)?active:selectedAttachmentIds.value.at(-1)??null;
     selectedSlotIds.value=[...new Set(sceneAttachments.value.filter(a=>selectedAttachmentIds.value.includes(a.id)).map(a=>a.slot))];
@@ -623,7 +649,19 @@ export const useWorkspace = defineStore('workspace', () => {
     else if(modifiers.toggle)ids=selectedAttachmentIds.value.includes(id)?selectedAttachmentIds.value.filter(v=>v!==id):[...selectedAttachmentIds.value,id];
     selectSceneAttachments(ids,ids.includes(id)?id:ids.at(-1)??null);
   }
-  function selectConstraint(id:number|null){selectionEpoch++;clearObjectSelection();selectedConstraintId.value=constraints.value.some(c=>c.id===id)?id:null;selectedSlotId.value=null;librarySelection.value=null;selectedVertex.value=null;inspectorError.value='';}
+  function clearConstraintSelection(){selectedConstraintId.value=null;selectedConstraintIds.value=[];constraintSelectionAnchor.value=null;}
+  function selectConstraint(id:number|null,modifiers:{toggle?:boolean;shift?:boolean;ordered?:number[]}={}){
+    const valid=new Set(constraints.value.map(c=>c.id)),current=selectedConstraintIds.value.filter(id=>valid.has(id)),active=selectedConstraintId.value,anchor=constraintSelectionAnchor.value;
+    let ids:number[]=[],nextAnchor=anchor;
+    if(id!==null&&valid.has(id)){
+      const ordered=[...new Set(modifiers.ordered??[...valid])].filter(value=>valid.has(value));
+      if(modifiers.shift&&anchor!==null&&ordered.includes(anchor)&&ordered.includes(id)){
+        const a=ordered.indexOf(anchor),b=ordered.indexOf(id),range=ordered.slice(Math.min(a,b),Math.max(a,b)+1);ids=modifiers.toggle?[...new Set([...current,...range])]:range;
+      }else{ids=modifiers.toggle?(current.includes(id)?current.filter(value=>value!==id):[...current,id]):[id];nextAnchor=id;}
+    }
+    selectionEpoch++;clearObjectSelection();selectedConstraintIds.value=ids;selectedConstraintId.value=id!==null&&ids.includes(id)?id:active!==null&&ids.includes(active)?active:ids.at(-1)??null;constraintSelectionAnchor.value=ids.length?nextAnchor:null;
+    selectedSlotId.value=null;librarySelection.value=null;selectedVertex.value=null;inspectorError.value='';
+  }
   function selectBones(ids:number[],active:number|null){
     selectionEpoch++;
     clearObjectSelection();
@@ -663,6 +701,17 @@ export const useWorkspace = defineStore('workspace', () => {
     const{editorRangeBits:_ranges,editorRangeValues:_resolved,...input}=fields as typeof fields & {editorRangeBits?:readonly(number|null)[];editorRangeValues?:readonly number[]|null};
     const constraint=input as ConstraintInput;
     return editRig({type:'updateConstraint',id:c.id,constraint},revision);
+  }
+  async function editSelectedConstraintField(field:string,value:number|boolean,expectedRevision?:number,frozenIds:readonly number[]=[...selectedConstraintIds.value]):Promise<boolean>{
+    const model=project.value,ids=[...frozenIds];
+    if(!model||!sceneEditing.value||!canEdit.value||!ids.length||new Set(ids).size!==ids.length)return false;
+    const selected=ids.map(id=>constraints.value.find(c=>c.id===id));
+    if(selected.some(c=>!c)||!selected[0]||selected.some(c=>c!.type!==selected[0]!.type))return false;
+    const wireField=batchField(selected[0].type,field,value);if(!wireField)return false;
+    if(expectedRevision!==undefined&&expectedRevision!==model.revision){showNotice('The project changed. Start the constraint edit again.',true);return false;}
+    if(editorMode.value==='animate')return animation.setConstraintAnimationFieldBatch(ids,field,value,expectedRevision);
+    if(selected.every(c=>sameBatchValue(batchFieldValue(c!,field),value)))return true;
+    return editRig({type:'patchConstraints',ids,field:wireField,value:typeof value==='number'&&Object.is(value,-0)?{bits:0x80000000}:value},expectedRevision??model.revision);
   }
   async function editConstraint(patch:Partial<ConstraintInput>,revision?:number){return selectedConstraintId.value===null?false:editConstraintById(selectedConstraintId.value,patch,revision);}
   async function editTransformRange(id:number,index:number,bits:number|null,revision?:number):Promise<boolean>{
@@ -761,7 +810,7 @@ export const useWorkspace = defineStore('workspace', () => {
     const activeBone=project.value.bones.find(candidate=>candidate.id===selectedId.value)?.id;
     const parent=bone??activeBone??project.value.bones[0]?.id;if(parent===undefined)return false;
     let success=false;editing.value=true;
-    const operation=run(async()=>{const snapshot=await freezePose();if(centerOnBone){const pose=worldBones(renderedBones.value).find(b=>b.id===parent);if(!pose)throw new Error('The destination bone changed.');x=pose.worldX;y=pose.worldY;}const result=await api.placeImages(keys,parent,x,y,project.value!.revision,snapshot?.poseEpoch);project.value=result;selectedId.value=parent;selectedIds.value=[parent];selectedSlotId.value=result.editedSlot;selectedSlotIds.value=selectedSlotId.value===null?[]:[selectedSlotId.value];selectedAttachmentId.value=result.editedAttachment??null;selectedAttachmentIds.value=selectedAttachmentId.value===null?[]:[selectedAttachmentId.value];selectedConstraintId.value=null;selectedVertex.value=null;editMode.value='images';tool.value='translate';success=true;}).then(()=>success);
+    const operation=run(async()=>{const snapshot=await freezePose();if(centerOnBone){const pose=worldBones(renderedBones.value).find(b=>b.id===parent);if(!pose)throw new Error('The destination bone changed.');x=pose.worldX;y=pose.worldY;}const result=await api.placeImages(keys,parent,x,y,project.value!.revision,snapshot?.poseEpoch);project.value=result;selectedId.value=parent;selectedIds.value=[parent];selectedSlotId.value=result.editedSlot;selectedSlotIds.value=selectedSlotId.value===null?[]:[selectedSlotId.value];selectedAttachmentId.value=result.editedAttachment??null;selectedAttachmentIds.value=selectedAttachmentId.value===null?[]:[selectedAttachmentId.value];clearConstraintSelection();selectedVertex.value=null;editMode.value='images';tool.value='translate';success=true;}).then(()=>success);
     editFlight=operation;try{return await operation;}finally{if(editFlight===operation){editFlight=null;editing.value=false;}}
   }
   async function placeImage(key:string,x:number,y:number,bone?:number):Promise<boolean>{return placeImages([key],x,y,bone);}
@@ -770,7 +819,7 @@ export const useWorkspace = defineStore('workspace', () => {
     if(editFlight)await editFlight;
     if(!sceneEditing.value||!canEdit.value||busy.value||!project.value||traceOpen.value||clippingDraft.value||inspectorError.value||!keys.length)return false;
     let success=false;editing.value=true;
-    const operation=run(async()=>{const result=await api.placeAttachments(keys,slot,project.value!.revision);project.value=result;selectedSlotId.value=slot;selectedSlotIds.value=[slot];selectedAttachmentId.value=result.editedAttachment??null;selectedAttachmentIds.value=selectedAttachmentId.value===null?[]:[selectedAttachmentId.value];selectedConstraintId.value=null;selectedVertex.value=null;editMode.value='images';success=true;}).then(()=>success);
+    const operation=run(async()=>{const result=await api.placeAttachments(keys,slot,project.value!.revision);project.value=result;selectedSlotId.value=slot;selectedSlotIds.value=[slot];selectedAttachmentId.value=result.editedAttachment??null;selectedAttachmentIds.value=selectedAttachmentId.value===null?[]:[selectedAttachmentId.value];clearConstraintSelection();selectedVertex.value=null;editMode.value='images';success=true;}).then(()=>success);
     editFlight=operation;try{return await operation;}finally{if(editFlight===operation){editFlight=null;editing.value=false;}}
   }
   function setMode(mode: EditMode) {
@@ -807,6 +856,8 @@ export const useWorkspace = defineStore('workspace', () => {
     finally { if (editFlight === operation) { editFlight = null; editing.value = false;if(!traceOpen.value&&!clippingDraft.value)releasePose(); } }
   }
   async function removeSelection() {
+    if(selectedConstraintIds.value.length>1){showNotice('Select an individual constraint to delete it.',true);return;}
+
     if (editFlight) await editFlight;
     if(selectedEvent.value){if(await editRig({type:'deleteEvent',id:selectedEvent.value.id}))selectEvent(null);return;}
     if(editMode.value==='clipping'&&selectedAttachment.value?.clipping&&selectedVertex.value!==null)await editRig({type:'deleteClippingVertex',id:selectedAttachment.value.id,vertex:selectedVertex.value});
@@ -835,19 +886,21 @@ export const useWorkspace = defineStore('workspace', () => {
       if(selectedAttachmentId.value!==null){selectedSlotId.value=sceneAttachments.value.find(a=>a.id===selectedAttachmentId.value)?.slot??null;selectedSlotIds.value=[...new Set(sceneAttachments.value.filter(a=>selectedAttachmentIds.value.includes(a.id)).map(a=>a.slot))];}
       selectedSlotIds.value=selectedSlotIds.value.filter(id=>slots.value.some(s=>s.id===id));
       if(selectedSlotId.value!==null&&!slots.value.some(s=>s.id===selectedSlotId.value)){selectedSlotId.value=null;selectedVertex.value=null;}
-      if(!constraints.value.some(c=>c.id===selectedConstraintId.value))selectedConstraintId.value=null;
+      selectedConstraintIds.value=selectedConstraintIds.value.filter(id=>constraints.value.some(c=>c.id===id));
+      if(!selectedConstraintIds.value.includes(selectedConstraintId.value??-1))selectedConstraintId.value=selectedConstraintIds.value.at(-1)??null;
+      if(!selectedConstraintIds.value.length)constraintSelectionAnchor.value=null;
       if(!project.value?.events?.some(event=>event.id===selectedEventId.value))selectedEventId.value=null;
     }
   },{flush:'sync'});
 
-  return { ...animation,editorMode,setEditorMode,animationLocalBones,project, busy, openingProject, editing, ready, newDialog, discardDialog, notice, noticeError, inspectorError,animationKeyError,eventKeyError,sequenceFieldError,attachmentColorError,
+  return { ...animation,editorMode,setEditorMode,animationLocalBones,project, busy, openingProject, editing, ready,prepareForUpdate, newDialog, discardDialog, notice, noticeError, inspectorError,animationKeyError,eventKeyError,sequenceFieldError,attachmentColorError,
     animationPhysicsTime,animationPhysicsError,animationPhysicsSupported,animationPhysicsGeneration,resetAnimationPhysicsPreview,
     renderedBones,frozenPose,freezePose,releasePose,previewBonePose,endBonePreview,simulationIntent,simulationRunning,simulationTime,simulationError,simulationReset,simulationStep,runSimulation,pauseSimulation,stepSimulation,resetSimulation,advanceSimulation,suspendSimulation,resumeSimulation,setPreviewVisible,
     sceneEditing,sceneSlots,sceneAttachments,selectedSlotRaw,selectedSlotIds,selectedAttachmentId,selectedAttachmentIds,selectedAttachment,selectedBinding,selectAttachment,selectSceneAttachments,
-    selectedConstraintId,selectedConstraint,constraints,selectConstraint,treeFilters,selectedEventId,selectedEvent,currentEventKey,selectEvent,createEvent,patchEventDefinition,audioLibrary,chooseAudioFolder,selectedEventAudioPlayable,previewEventAudio,stopAnimationAudio,eventPlaybackText,eventPlaybackCount,audioPlaybackCount,lastAudioPlayback,lastAnimationEvent,
+    selectedConstraintId,selectedConstraintIds,selectedConstraints,selectedConstraint,constraints,selectConstraint,treeFilters,selectedEventId,selectedEvent,currentEventKey,selectEvent,createEvent,patchEventDefinition,audioLibrary,chooseAudioFolder,selectedEventAudioPlayable,previewEventAudio,stopAnimationAudio,eventPlaybackText,eventPlaybackCount,audioPlaybackCount,lastAudioPlayback,lastAnimationEvent,
     parentPicking,beginParentPick,cancelParentPick,canPickParent,chooseParent,
     createSlot,toggleAttachment,renameAttachment,setAttachmentImagePath,removeAttachment,moveAttachment,editAttachmentTransform,placeAttachments,
-    createConstraint,physicsBoneIds,canAddPhysics,addPhysicsToSelectedBones,editConstraint,editConstraintById,editTransformRange,matchTransform,removeConstraint,removeConstraintById,reorderConstraint,createClipping,editClipping,
+    createConstraint,physicsBoneIds,canAddPhysics,addPhysicsToSelectedBones,editConstraint,editConstraintById,editSelectedConstraintField,editTransformRange,matchTransform,removeConstraint,removeConstraintById,reorderConstraint,createClipping,editClipping,
     clippingDraft,beginClipping,appendClippingPoint,finishClipping,cancelClipping,beginClippingEdit,
     hoveredBoneId,hoverBone,clearBoneHover,chooseInfluence,
     weightVertices,weightBones,weightLocks,toggleWeightLock,weightActiveVertex,selectWeightVertices,clearWeightVertices,clearWeightBones,weightAutoEdit,

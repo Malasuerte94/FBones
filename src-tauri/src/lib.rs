@@ -33,6 +33,8 @@ mod project;
 mod rig;
 #[cfg(feature = "scene-editing")]
 mod runtime_export;
+#[cfg(feature = "scene-editing")]
+mod scene_constraint_batch;
 #[cfg(all(feature = "scene-editing", any(test, feature = "e2e-host")))]
 mod scene_constraint_declarations_fixture;
 #[cfg(feature = "scene-editing")]
@@ -67,6 +69,7 @@ mod transform_match;
 #[cfg(feature = "scene-editing")]
 mod transform_ranges;
 mod triangulation;
+mod updater;
 
 use project::{AppError, ProjectSummary, Session};
 use tauri::{Emitter, Manager};
@@ -540,7 +543,13 @@ fn frontend_ready(renderer: String, app: tauri::AppHandle) {
 pub fn run() {
     tauri::Builder::default()
         .manage(Session::default())
+        .plugin(updater::plugin())
+        .manage(updater::UpdateState::default())
         .invoke_handler(tauri::generate_handler![
+            updater::get_app_update_state,
+            updater::check_app_update,
+            updater::download_app_update,
+            updater::install_app_update,
             get_project,
             create_project,
             open_project,
@@ -612,6 +621,9 @@ pub fn run() {
             let edit = SubmenuBuilder::new(app, "Edit")
                 .items(&[&undo, &redo])
                 .build()?;
+            let updates =
+                MenuItemBuilder::with_id("check-updates", "Check for Updates…").build(app)?;
+            let help = SubmenuBuilder::new(app, "Help").item(&updates).build()?;
             #[cfg(target_os = "macos")]
             let menu = menu.item(
                 &SubmenuBuilder::new(app, "FBones")
@@ -620,7 +632,7 @@ pub fn run() {
                     .quit()
                     .build()?,
             );
-            app.set_menu(menu.item(&file).item(&edit).build()?)?;
+            app.set_menu(menu.item(&file).item(&edit).item(&help).build()?)?;
             app.on_menu_event(|app, event| {
                 let _ = app.emit("editor-command", event.id().as_ref());
             });

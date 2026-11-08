@@ -2,6 +2,7 @@
 """Configure path remapping and verify the packages built by native CI runners."""
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -58,7 +59,7 @@ def check_private_paths(data):
 
 
 def verify(target):
-    release = Path('target') / target / 'release'
+    release = Path.cwd() / 'target' / target / 'release'
     bundle = release / 'bundle'
     executable = release / ('fbones.exe' if target.endswith('msvc') else 'fbones')
     app = bundle / 'macos' / 'FBones.app'
@@ -112,6 +113,23 @@ def verify(target):
         'signing': 'ad-hoc; not notarized' if target == 'universal-apple-darwin' else 'not verified',
         'distribution': 'experimental prerelease installer; native installation not validated',
     }
+    if os.environ.get('FBONES_SIGNED_UPDATES') == '1':
+        spec = importlib.util.spec_from_file_location('installer_policy', Path(__file__).with_name('prepare-installer-release.py'))
+        policy = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(policy)
+        version = report['version']
+        updates = []
+        for relative, platforms in policy.update_templates(target, version):
+            artifact = policy.regular_file(release / relative, Path.cwd())
+            signature = policy.regular_file(release / (relative + '.sig'), Path.cwd())
+            policy.verify_signature(artifact, signature, version)
+            updates.append({'path': relative, 'bytes': artifact.stat().st_size,
+                            'sha256': policy.digest(artifact), 'signature_path': relative + '.sig',
+                            'signature_bytes': signature.stat().st_size,
+                            'signature_sha256': policy.digest(signature), 'platforms': platforms})
+        report['updates'] = updates
+        report['updater_public_key_sha256'] = hashlib.sha256(policy.public_key().encode()).hexdigest()
+        report['checks'].append(policy.UPDATE_CHECK)
     output = Path('ci-reports') / f'{target}.json'
     output.parent.mkdir(exist_ok=True)
     output.write_text(json.dumps(report, indent=2) + '\n')

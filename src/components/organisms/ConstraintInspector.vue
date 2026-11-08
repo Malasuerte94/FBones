@@ -11,8 +11,11 @@ import TransformMappingEditor from './TransformMappingEditor.vue';
 import AppButton from '../atoms/AppButton.vue';
 import AppIcon from '../atoms/AppIcon.vue';
 import NumericSliderRow from '../molecules/NumericSliderRow.vue';
+import ConstraintBatchInspector from './ConstraintBatchInspector.vue';
 const props=defineProps<{constraintId?:number}>();
 const w=useWorkspace(),{t,te}=useI18n(),animate=computed(()=>w.editorMode==='animate'),setupConstraint=computed(()=>props.constraintId===undefined?w.selectedConstraint:w.constraints.find(c=>c.id===props.constraintId)??null),constraint=computed<ConstraintView|null>(()=>{const c=setupConstraint.value;return c&&animate.value?w.animationConstraint(c.id):c;});
+const batch=computed(()=>props.constraintId===undefined&&w.selectedConstraintIds.length>1);
+const batchKey=computed(()=>`${w.project?.documentId}:${w.selectedConstraintIds.join(',')}`);
 const matching=ref(false);
 const animationText=(key:string,fallback:string)=>te('animation_'+key)?t('animation_'+key):fallback;
 const animationElapsed=computed(()=>Number.isFinite(w.animationPhysicsTime)?`${Math.max(0,w.animationPhysicsTime).toFixed(3)} s`:'—');
@@ -64,7 +67,7 @@ function patchField(key:string,value:SceneFieldValue):Partial<ConstraintInput>{
  if(key==='fps')return{step:1/n};
  return{[key]:key==='damping'?1-n/100:key==='limit'||['strength','wind','gravity'].includes(key)?n:n/100};
 }
-const editor=useSceneFieldEditor({current:()=>{const c=constraint.value,p=w.project;return c&&p?{id:c.id,documentId:p.documentId,revision:p.revision,editable:w.canEdit,values:fieldValues()}:null;},numeric:key=>key!=='name',invalidMessage:()=>t('invalidTransform'),edit:(key,value,revision)=>{if(key==='fps'&&Number(value)<=0){w.inspectorError=t('invalidPhysicsRate');w.showNotice(w.inspectorError,true);return Promise.resolve(false);}return edit(patchField(key,value),revision);}});
+const editor=useSceneFieldEditor({current:()=>{if(batch.value)return null;const c=constraint.value,p=w.project;return c&&p?{id:c.id,documentId:p.documentId,revision:p.revision,editable:w.canEdit,values:fieldValues()}:null;},numeric:key=>key!=='name',invalidMessage:()=>t('invalidTransform'),edit:(key,value,revision)=>{if(key==='fps'&&Number(value)<=0){w.inspectorError=t('invalidPhysicsRate');w.showNotice(w.inspectorError,true);return Promise.resolve(false);}return edit(patchField(key,value),revision);}});
 watch(()=>[w.editorMode,w.animationId,w.animationFrame],()=>editor.reset());
 function boolean(key:string,event:Event){void edit({[key]:(event.target as HTMLInputElement).checked});}
 async function member(event:Event){const select=event.target as HTMLSelectElement,c=constraint.value,ids=Array.from(select.selectedOptions,option=>Number(option.value)),next=c?.type==='ik'?orderedIkMembers(w.project?.bones??[],ids)??ids:c?.type==='transform'?retainedTransformMembers(c.bones,ids):ids;if(!await edit({bones:next})){const current=constraint.value;if(current?.id===c?.id)for(const option of select.options)option.selected=current?.type!=='physics'&&!!current?.bones.includes(Number(option.value));}}
@@ -72,8 +75,9 @@ function reference(key:'target'|'source'|'bone',event:Event){void edit({[key]:Nu
 function global(field:typeof physicsDynamic[number],event:Event){const c=constraint.value;if(c?.type!=='physics')return;const globals:PhysicsConstraintInput['globals']={...c.globals,[field]:(event.target as HTMLInputElement).checked};void edit({globals});}
 </script>
 <template>
- <section v-if="constraint" class="inspector-form border-b border-line p-2" data-testid="constraint-inspector" :data-constraint-id="constraint.id">
-  <h3 class="mb-3 text-xs font-medium text-accent">{{t('constraint_'+constraint.type)}}</h3>
+ <ConstraintBatchInspector v-if="batch" :key="batchKey"/>
+ <section v-else-if="constraint" class="inspector-form border-b border-line p-2" data-testid="constraint-inspector" :data-constraint-id="constraint.id">
+  <h3 class="mb-3 flex items-center gap-1.5 text-xs font-medium text-accent"><AppIcon :name="constraint.type" class="!size-3.5"/>{{t('constraint_'+constraint.type)}}</h3>
   <fieldset :disabled="!w.canEdit||(w.busy&&!w.editing)||matching" class="space-y-3">
    <label class="block text-xs text-muted">{{t('constraintName')}}<input :disabled="w.busy||animate" v-model="editor.draft.name" class="editor-input mt-1 w-full" maxlength="120" data-testid="constraint-name" @change="editor.commit('name')" @keydown.enter.prevent="editor.enter($event,'name')" @keydown.esc.prevent="editor.escape"/></label>
    <label class="block text-xs text-muted">{{t(constraint.type==='physics'?'physicsBone':constraint.type==='transform'?'constraintSource':'constraintTarget')}}<select :disabled="w.busy||animate" :value="constraint.type==='physics'?constraint.bone:constraint.type==='transform'?constraint.source:constraint.target" class="editor-input mt-1 w-full" data-testid="constraint-reference" @change="reference(constraint.type==='physics'?'bone':constraint.type==='transform'?'source':'target',$event)"><option v-for="bone in w.project?.bones" :key="bone.id" :value="bone.id" :disabled="!targetAllowed(bone.id)">{{bone.name}}</option></select></label>

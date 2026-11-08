@@ -380,6 +380,12 @@ pub enum RigEdit {
         constraint: Box<crate::scene_edit::ConstraintInput>,
     },
     #[cfg(feature = "scene-editing")]
+    PatchConstraints {
+        ids: Vec<u64>,
+        field: crate::scene_constraint_batch::ConstraintBatchField,
+        value: crate::scene_constraint_batch::ConstraintBatchValue,
+    },
+    #[cfg(feature = "scene-editing")]
     MatchTransform {
         id: u64,
         section: crate::transform_match::MatchSection,
@@ -1770,6 +1776,7 @@ impl RigHistory {
             | RigEdit::AddConstraint { .. }
             | RigEdit::AddPhysicsToBones { .. }
             | RigEdit::UpdateConstraint { .. }
+            | RigEdit::PatchConstraints { .. }
             | RigEdit::MatchTransform { .. }
             | RigEdit::SetTransformRange { .. }
             | RigEdit::DeleteConstraint { .. }

@@ -22,6 +22,8 @@ import ConstraintViewPanel from './components/organisms/ConstraintViewPanel.vue'
 import {cloneDockLayout,defaultDockLayout,dockPanel,dockPanels,dockStorageKey,readDockLayout,type DockPanelId} from './domain/dockLayout';
 import BoneInspector from './components/organisms/BoneInspector.vue';
 import {useBoneFieldEditor} from './composables/useBoneFieldEditor';
+import {useAppUpdater} from './composables/useAppUpdater';
+import UpdateNotice from './components/organisms/UpdateNotice.vue';
 
 import SlotInspector from './components/organisms/SlotInspector.vue';
 import AttachmentInspector from './components/organisms/AttachmentInspector.vue';
@@ -36,7 +38,7 @@ import { toolEditMode } from './domain/toolMode';
 const { t } = useI18n();
 const w = useWorkspace();
 const timelineSlots=computed(()=>(w.project?.slots??[]).map(slot=>({id:slot.id,boneId:slot.bone,name:slot.name,tintBlack:slot.tintBlack,attachments:slot.attachments?.map(attachment=>({id:attachment.id,name:attachment.name,sequence:attachment.sequence}))??(slot.region?[{id:slot.id,name:slot.region.name}]:[])})));
-const timelineSelectedConstraints=computed(()=>w.selectedConstraintId===null?[]:[w.selectedConstraintId]);
+const timelineSelectedConstraints=computed(()=>w.selectedConstraintIds);
 const timelineInterpolations:Array<'linear'|'stepped'|'bezier'>=['linear','stepped','bezier'];
 const boneEditor=useBoneFieldEditor(()=>t('invalidTransform'));
 const timeline=ref<InstanceType<typeof AnimationTimeline>>();
@@ -60,6 +62,10 @@ function changeEditorMode(value:'setup'|'animate'){(document.activeElement as HT
 const name = ref('Untitled');
 const submitted = ref(false);
 const constraintCreator=ref<'ik'|'transform'|null>(null),clippingCreator=ref(false);
+const updater=useAppUpdater({beforeInstall:async()=>{
+  if(constraintCreator.value||clippingCreator.value||eventCreator.value){w.showNotice(t('updatePreparing'),true);return false;}
+  return w.prepareForUpdate();
+},expectedRevision:()=>w.project?.revision??null});
 async function createConstraint(type:'ik'|'transform'|'physics'){
   if(type!=='physics'){constraintCreator.value=type;return;}
   const count=w.physicsBoneIds.length;
@@ -99,6 +105,8 @@ let cleanup: Array<() => void> = [];
 let disposed = false;
 
 function command(id: string) {
+  if(updater.installing.value)return;
+  if(id==='check-updates'){void updater.checkNow();return;}
   if(w.parentPicking)w.cancelParentPick();
   if(constraintCreator.value||clippingCreator.value||eventCreator.value){if(['save','copy','export-runtime','undo','redo','import'].includes(id))return;constraintCreator.value=null;clippingCreator.value=false;eventCreator.value=false;}
   if(w.clippingDraft){if(['save','copy','undo','redo','import'].includes(id)){w.showNotice(t('clippingFinishFirst'));return;}if(['new','open','close','quit'].includes(id))w.cancelClipping();}
@@ -116,6 +124,7 @@ function command(id: string) {
   if (id === 'import') void w.chooseImagesFolder();
 }
 function keyboard(event: KeyboardEvent) {
+  if(updater.installing.value){event.preventDefault();return;}
   if(event.defaultPrevented)return;
   if(w.parentPicking){if(event.key==='Escape'){event.preventDefault();event.stopPropagation();w.cancelParentPick();}return;}
   if(constraintCreator.value||clippingCreator.value||eventCreator.value){if(event.key==='Escape'){event.preventDefault();constraintCreator.value=null;clippingCreator.value=false;eventCreator.value=false;}return;}
@@ -130,7 +139,7 @@ function keyboard(event: KeyboardEvent) {
   if(w.editorMode==='animate'&&!event.ctrlKey&&!event.metaKey){
     if(event.key===' '){if(target.closest('button')){event.stopPropagation();return;}event.preventDefault();event.stopPropagation();if(w.animationPlaying)w.pauseAnimation();else w.playAnimation();return;}
     if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();w.seekAnimation(w.animationFrame+(event.key==='ArrowRight'?1:-1));return;}
-    if(event.key.toLowerCase()==='k'){event.preventDefault();if(w.selectedEventId!==null)void w.insertEventAnimationKey(w.selectedEventId);else if(w.selectedConstraint)void w.insertConstraintAnimationKeys({constraintId:w.selectedConstraint.id,kind:w.selectedConstraint.type==='transform'?'transformMix':w.selectedConstraint.type});else if(w.selectedAttachment?.sequence)void w.insertSequenceAnimationKey(w.selectedAttachment.id);else if(w.selectedSlotId!==null)void w.insertSlotAnimationKeys({slotId:w.selectedSlotId,channel:'attachment'});else void w.keyAnimationChanges(w.tool==='pose'||w.tool==='rotate'?'rotate':w.tool==='scale'?'scale':w.tool==='shear'?'shear':'translate');return;}
+    if(event.key.toLowerCase()==='k'){event.preventDefault();if(w.selectedEventId!==null)void w.insertEventAnimationKey(w.selectedEventId);else if(w.selectedConstraint){const kind=w.selectedConstraint.type==='transform'?'transformMix':w.selectedConstraint.type;if(w.selectedConstraints.length>1)void w.insertConstraintAnimationKeysBatch({constraintIds:w.selectedConstraintIds,kind});else void w.insertConstraintAnimationKeys({constraintId:w.selectedConstraint.id,kind});}else if(w.selectedAttachment?.sequence)void w.insertSequenceAnimationKey(w.selectedAttachment.id);else if(w.selectedSlotId!==null)void w.insertSlotAnimationKeys({slotId:w.selectedSlotId,channel:'attachment'});else void w.keyAnimationChanges(w.tool==='pose'||w.tool==='rotate'?'rotate':w.tool==='scale'?'scale':w.tool==='shear'?'shear':'translate');return;}
     if(['p','b','n','l'].includes(event.key.toLowerCase()))return;
     if(event.key==='Delete'||event.key==='Backspace')return;
   }
@@ -172,7 +181,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main class="flex h-full min-h-0 flex-col select-none" :aria-busy="w.busy">
+  <main class="flex h-full min-h-0 flex-col select-none" :inert="updater.installing.value" :aria-busy="w.busy||updater.installing.value">
     <header class="editor-header">
       <div class="mr-2 flex items-center gap-1.5 text-accent"><AppIcon name="logo" class="!size-5"/><span class="font-semibold tracking-wide text-ink">{{ t('appName') }}</span></div>
       <details class="editor-menu"><summary>{{ t('fileMenu') }}</summary><div class="menu-popover">
@@ -186,7 +195,8 @@ onBeforeUnmount(() => {
       <AppButton variant="ghost" :disabled="w.traceOpen||w.busy||!w.project?.canRedo" :aria-label="t('redo')" :title="t('redo')+' (Ctrl+Shift+Z)'" @click="command('redo')"><AppIcon name="redo"/></AppButton>
       <span class="toolbar-separator"/>
       <span class="min-w-0 truncate text-xs text-muted">{{ w.project?.name??t('noProject') }}<span v-if="w.project?.dirty" class="ml-1 text-warning">*</span></span>
-      <details class="editor-menu ml-auto"><summary>{{ t('views') }}</summary><div class="menu-popover right-0">
+      <UpdateNotice class="ml-auto" :updater="updater"/>
+      <details class="editor-menu"><summary>{{ t('views') }}</summary><div class="menu-popover right-0">
         <label v-for="id in dockPanels" :key="id"><input type="checkbox" :checked="dockPanel(dockLayout,id).visible" :data-testid="'view-toggle-'+id" @change="showPanel(id,($event.target as HTMLInputElement).checked)"/>{{dockTitles[id]}}</label><hr/><button data-testid="reset-layout" @click="resetLayout">{{t('resetLayout')}}</button>
       </div></details>
     </header>
