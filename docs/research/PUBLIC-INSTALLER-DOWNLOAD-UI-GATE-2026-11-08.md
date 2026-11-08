@@ -61,3 +61,31 @@ product behavior and requires content/link checks, not another UI build.
 
 No remote mutations, installer execution, shared build/test run or protected
 user/original-window interaction was performed for this gate.
+
+## Latest user steering: repository sidebar release card
+
+The user subsequently clarified that the target is the repository's right-hand
+**Releases** sidebar: a normal latest-release card with the downloadable beta6
+release, rather than only a tags/count link. The earlier direct download tables
+address the README/release body but do not change that GitHub-owned sidebar.
+This newer explicit instruction overrides the earlier recommendation to retain
+`prerelease=true` for this release.
+
+Before the coordinator's metadata mutation, the documented GitHub requirement
+remains decisive: a prerelease cannot be marked latest. The authorized correction
+is to update the existing beta6 release to `prerelease=false` and
+`make_latest=true`, preserving the beta tag/title, Early beta product wording,
+current assets, checksums and all verification/compatibility/signing limits.
+This selects GitHub's latest-release display category; it does not establish
+stable product quality. No new tag, asset, source commit or application build is
+needed for that metadata-only change. Prior release evidence remains unchanged.
+
+Required proof after the mutation: the release API returns beta6 with
+`prerelease=false`, `/releases/latest` resolves that same beta6 release, and an
+actual repository sidebar observation shows a beta6 card and Latest badge.
+Scope the DOM check to the Releases sidebar section so README download links
+cannot produce a false positive: locate the sidebar heading link whose resolved
+href is the repository's `/releases`, take its closest `.BorderGrid-row`, then
+verify a link to `/releases/tag/v0.9.4-beta.6` and visible `Latest` text there.
+Capture the actual sidebar; do not infer its rendering solely from API success.
+The coordinator owns this browser check in a separate isolated output directory.

@@ -104,8 +104,8 @@
     },
     {
       "path": ".github/workflows/desktop.yml",
-      "bytes": 6455,
-      "sha256": "55d12e38df15bbd23059bc9acd26820f7de29874885f964bb77cc81f954f08d5"
+      "bytes": 6456,
+      "sha256": "3673fea014ebf2d146a1ca2c9d87b0da61ddc85b93310400c1906665d9a3918a"
     },
     {
       "path": "src/App.vue",
@@ -2114,13 +2114,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 12891,
-      "sha256": "478cc35c6998128e2834d35292f087b0dcfc092ad6c5390ee0b12f1ce68aa775"
+      "bytes": 12955,
+      "sha256": "844f2db2556d5f042c87330eb359b225cc36a6e18da131b7e98efaff732378bb"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 19098,
-      "sha256": "f7531f1819f70702e92601ee05f99da0d006854c42ebcb1e27610ce39e1a48d6"
+      "bytes": 19002,
+      "sha256": "afe1f3e133bb47b7411f99440bb97a1a25694d5baec2e7b09ec0cda5fd7b3071"
     },
     {
       "path": "docs/TESTING.md",
@@ -2164,13 +2164,13 @@
     },
     {
       "path": "docs/releases/v0.9.4-beta.5.md",
-      "bytes": 8289,
-      "sha256": "2b6dd7ca072f251da9eb0696620d578ca76c10c2a99a2d930e26f02d9e0a54bc"
+      "bytes": 8288,
+      "sha256": "ad5a78ff496b490e2c0567a60b702cb2707f13fde9433ce1e6312cf024a93ddd"
     },
     {
       "path": "docs/releases/v0.9.4-beta.6.md",
-      "bytes": 4236,
-      "sha256": "1ea957d258af815de4913832c5a3d66c08c95ea2d6c158253924b0ad33c715b5"
+      "bytes": 4278,
+      "sha256": "bca9e4554b747aa00adb6e1bf19de4836af4669a9d71da4132e1369ccb127c8e"
     },
     {
       "path": "docs/research/ANIMATION-BONE-BEZIER-UI-2026-11-06.md",
@@ -2939,13 +2939,13 @@
     },
     {
       "path": "docs/research/PUBLIC-INSTALLER-DOWNLOAD-UI-GATE-2026-11-08.md",
-      "bytes": 3841,
-      "sha256": "cd1a1b0e5475a3be5a3690cc62a907be1be50da534d36fafb8b1cf0710c042f6"
+      "bytes": 5654,
+      "sha256": "b0ea4f50eedfd60b2693f1c2cc195937b7dfd2f44c148771b5aaaf850911c75c"
     },
     {
       "path": "docs/research/PUBLIC-INSTALLERS-DATA-GATE-2026-11-08.md",
-      "bytes": 6068,
-      "sha256": "c771ea4e9f292ec650ab79f5748989078b3f6f63155cc9f9f183f5f3dea9d58f"
+      "bytes": 8100,
+      "sha256": "e1e82ef8048c01dadd01cc761f4c50bc5e76ccc26612d7c3f6ee8b655fd10d24"
     },
     {
       "path": "docs/research/PUBLIC-UPDATE-DATA-GATE-2026-11-08.md",

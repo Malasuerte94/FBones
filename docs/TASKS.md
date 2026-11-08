@@ -1,10 +1,10 @@
 # FBones tasks
 
-Latest user steering requests publicly visible APP installers plus Pixi runtime.
-F000-public is ACTIVE for beta6 installer retention/publication and direct Download
-tables. Prior beta5 source/runtime publication and acceptance remain verified;
-product/format code is unchanged. Paired installer DATA/UI gates and STATE own
-current scope. Full compatibility and F307/F308 deferred work remain unchanged.
+Latest user clarification targets the repository RIGHT sidebar Releases card.
+Existingbeta6 is now GitHubLatest (prereleasefalse), retainingBeta/Earlybeta title
+and unchangedtag/assets. LiveAPIlatest andactualChrome sidebarcard/Latestbadge
+pass. Futureworkflow usesnormalLatest metadata underallunchangedgates.
+Previouslyverified10downloads/desktop+mobiletables remain valid. STATE ownsproof.
 
 Statuses: TODO, ACTIVE, WAITING, DONE. External checks remain WAITING until
 observed. Spine reference: **4.3.26 only**. Historical acceptance counts below
@@ -12,7 +12,7 @@ belong to their named delivery, not to a new combined test run.
 
 | ID | Status | Dependencies | Acceptance |
 | --- | --- | --- | --- |
-| F000-public | ACTIVE | Current0.9.4 | Newuserrequest: beta6 must publish4desktop packages+runtime/source/3reports/checksums and show directDownloadtables underunchangedCIgates; currentpublicationpending. Priorbeta5: Public source/runtime prerelease v0.9.4-beta.5 at4033a831; tag42511316324/main42511316267 SUCCESS, all3native build/test/package jobs and114/114hostedUI, no skips/retries/failures. Downloaded6assets: allGitHubdigests/bothchecksums/source682blob equality/runtime31files equality/3exactcommit architecture reports pass. Runtime40,373bytes SHA655df42b…b510a. Source+runtime only; no public installers, app updater, npm or nativeGUI/notarization claim. Beta3failed/beta4withheld tags retained. See STATE/checkpoint. |
+| F000-public | DONE | Current0.9.4 | Beta6 at57ee1f26 published10assets:4desktop kits+runtime/source/3reports/SHA. Tag42513851453 all5jobsSUCCESS;7policytests,3platform builds and114/114hostedUI/runtime checks pass. All10downloadedGitHubdigests,9checksums,4installer/reportSHA/sourcecommit matches, source686blob equality/runtime31files pass. AnonymousChrome desktop1440/narrow390 Downloadtables/5links/Assets12(10custom+2source) visible,nooverflow. GitHubLatestsidebarcard+APIverified; Earlybeta labels remain; Windowsunsigned/macad-hoc notnotarized/nativeinstall unverified; no updater/npm/fullparity claim. Prior immutable releases retained. |
 | F001 | DONE | — | Instructions, continuation notes, ignored research data; remove exactly the three obsolete editor packages and update inventory. |
 | F002 | WAITING | F001 | Shell/viewport implemented; Windows user-confirmed and current Linux debug GTK/X11/WebGL startup observed. macOS launch remains unverified. |
 | F003a | DONE | F001 | Reproducible 4.3.26 corpus inspection; distinguish proven format facts from unknowns. |

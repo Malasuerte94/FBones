@@ -89,3 +89,35 @@ connected GitHub GET `/repos/Malasuerte94/FBones/releases/tags/v0.9.4-beta.5` an
 workflow artifact listing42511316324. Existing provider descriptions reference
 GitHub's official release/artifact APIs; no new external behavioral assumption
 is used to claim native acceptance.
+
+## Repository Releases sidebar / Latest metadata gate — before mutation
+
+The user's latest clarification is the repository's **right-hand Releases
+sidebar**, which shows tags instead of the desired downloadable Latest card.
+This explicitly supersedes the former decision to keep GitHub's prerelease flag.
+README tables alone cannot change GitHub's release classification.
+
+Read-only live beta6 metadata still marks it `prerelease=true`, `draft=false`,
+with all ten existing assets present. The current workflow explicitly creates
+releases with `--prerelease --latest=false`. GitHub's official
+[release API documentation](https://docs.github.com/en/rest/releases/releases#update-a-release)
+states that prereleases cannot be Latest and exposes `prerelease` plus
+`make_latest` for release metadata. This is a direct metadata-policy explanation;
+actual sidebar rendering must be checked after the update.
+
+DATA concurs with the minimal authorized correction: update the **existing**
+beta6 release using `prerelease=false` and `make_latest="true"` (REST PATCH to
+its existing release ID), or the equivalent GitHub CLI
+`release edit v0.9.4-beta.6 --prerelease=false --latest`. Preserve its existing
+tag, commit, assets and hashes. Keep “beta”/early-beta scope and native signing,
+installation and compatibility limits visible: GitHub Latest eligibility does
+not establish stable product quality. No new tag, app build or asset re-upload
+is required for this metadata correction.
+
+For future gated publications, the main-branch workflow should explicitly create
+the release with `--prerelease=false --latest`, keeping all existing build/UI/
+runtime/closed-asset gates. A main-only workflow update does not itself republish
+beta6 or move its immutable tag. Afterward verify the Latest API resolves beta6,
+the repository sidebar shows the download-bearing release, and its ten asset
+identities/digests remain unchanged. Coordinator owns the authorized mutation;
+this gate was recorded before it, with no remote write by this auditor.

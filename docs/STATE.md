@@ -2,27 +2,40 @@
 
 ## Active goal and priorities
 
-The latest user explicitly requests visible downloads for BOTH the FBones
-application and the Pixi runtime. This supersedes the earlier source-only public
-delivery policy. F000-public is active for immutable beta6: publish Windows x64
-NSIS, Linux x64 AppImage/Debian and macOS universal DMG alongside runtime/source,
-three build reports and aggregate checksums. Keep the same three-platform and
-Ubuntu UI/runtime gates. Product code is unchanged from accepted beta5.
+The latest user clarified the exact target: the repository RIGHT sidebar
+Releases card, rather than README/release-body Download tables. This is fixed
+and directly verified on the live repository. Existing beta6 release438467646
+was changed from GitHub prerelease=true to prerelease=false and make_latest=true.
+The Beta/Early beta title, product limits, immutable tag57ee1f26 and all10asset
+IDs/names/digests are unchanged. GitHub's category does not claim stable quality.
 
-Observed beta5 assets contain only source/runtime/checksum/reports, no app
-installers; its CI retained reports rather than packages. GitHub's latest endpoint
-returns404 because every existing release is a prerelease. Keep honest beta
-metadata and use direct release/asset links in Download tables above screenshots
-and at the top of release notes. Paired
-[DATA](research/PUBLIC-INSTALLERS-DATA-GATE-2026-11-08.md)/
-[UI](research/PUBLIC-INSTALLER-DOWNLOAD-UI-GATE-2026-11-08.md) gates own the new
-publication contract. No original-editor observation or product fix is needed.
+GET releases/latest now resolves to beta6. Anonymous Chrome1440×1000 confirms
+the actual right-hand Releases section shows the beta6 card, green Latest badge
+and correct release URL. Private evidence: .local/public-beta/beta6-sidebar/
+after.json and after.png. The before browser capture caught a loading skeleton;
+before absence is supported by the user's report and live latest404, not that
+incomplete capture. Paired installer DATA/UI gate appendices record the latest
+instruction overriding the prior retain-prerelease policy before mutation.
 
-Prior beta5 remains published at4033a831b057d9bbe1a13e8f009eb3d3869b9299,
-main42511316267/tag42511316324 SUCCESS. All3platform build/test/package jobs,
-114/114hostedUI and runtime16/24samples pass. All6downloaded beta5 assets, both
-checksums, source682blob/archive equality and runtime31file equality were verified.
-Its source/runtime-only scope stays historical; beta6 assets remain pending.
+Future workflow publication now uses --prerelease=false --latest under the same
+platform/UI/runtime/archive gates. No new tag, asset rebuild/reupload or installer
+execution is needed. Main-only metadata-policy followup is being committed;
+the already published beta6 tag and downloadable content stay immutable.
+
+Prior delivery remains verified: tag42513851453/main42513850954 passed, publishing
+beta6 on2026-11-08T19:26:25Z. Its10downloaded assets comprise4desktop kits,
+runtime/source/3reports/checksums. Every digest,9checksums,4installer/report
+matches, source686blob/archive and runtime31file equality pass. CI7policytests,
+3platform jobs,114/114UI,16runtime checks and24native samples pass. Live desktop/
+narrow Download tables also passed, separately from the new sidebar proof.
+[Current checkpoint](../analysis/public-beta6-check.json) owns the results.
+
+All255product/runtime/format source files are unchanged from accepted beta5;
+this change affects packaging/retention/publication and download presentation.
+No local app rebuild, new original probe or user-window interaction occurred.
+Native installation of CI packages remains unverified; Windows is unsigned,
+macOS ad-hoc signed without Developer ID/notarization. No installed-app updater,
+npm publication, stable/full-compatibility or new native GUI claim is made.
 
 Beta5 fixes semantic mode/index/authored-f32-delay key no-ops and recursive native
 File/Edit item lookup. Tauri's shallow root lookup missed submenu commands; all
@@ -168,34 +181,23 @@ F307/F308 broader fidelity remains explicitly user-deferred.
 
 ## Cleanup and next reproducible action
 
-This publication/menu session removed246.16MiBallocated Linux artifacts: the consumed
-beta3 clean-install workspace, disposable own fixture-generator executable and
-normally closed own menu-QA launcher copy,72unreferenced current UI session
-directories and disposable Python caches. It removed74.03MiBfile data from that
-QA's Windows profile after verifying no image/profile process remained. Earlier
-session cleanup is retained in its named integration evidence; no Linux removal
-is reported as immediate Windows/VHDX space recovery. pnpm hardlinks/live activity prevent attributing immediate physical recovery.
-Linux free831GiB, Windows Cfree88GiB. Current user windows/profiles and all original/personal files remain.
+Generated policy-test fixtures were automatically removed. Packaging removed its
+14,338-byte helper cache; coordinator removed20,480allocated bytes of own current
+Python caches. No substantial local build or obsolete native variant was created.
+Earlier cleanup is retained in its named checkpoint, not counted as new recovery.
+Linux free831GiB, Windows Cfree87GiB; no physical/VHDX recovery is inferred from
+unlinked caches. Original/personal files and protected user windows stay untouched.
 
-Retained1981referenced/older UI session directories63.82MiB
-(older ownership uncertain), current runtime/dist, selected/QA
-immutable images, fresh114-case report
-and required saved/GPU artifacts, cited raw failures/traces/receipts and source
-archives. Coherent native dependencies5.2GiB and Windows release cache852MiB stay
-for repeatable builds; incremental cache4KiB. Historical images/workspaces remain
-where ownership or future reference relevance is uncertain. No broad cargo clean.
+Retained the current reviewed source snapshot/archive,10downloaded published
+assets95.34MiB for reproducible delivery verification, desktop/narrow real GitHub
+screenshots/report and useful calibration failures. Current Windows selection,
+referenced/uncertain older workspaces and prior delivery evidence remain. New
+large Actions installer artifacts expire after7days; release assets stay public.
 
-Next: export/commit/push immutable beta6; observe its complete platform/UI/runtime
-gates,10published assets and direct desktop/mobile GitHub download links.
-Local7policytests plus workflow/content checks pass; all255product/runtime/format
-source files match accepted beta5. No application rebuild or new original probe
-is needed for this packaging-only change. Use File → Export runtime and follow
-the package guide. The user confirmed mascot export and corrected File
-commands. GitHub main pushes build automatically; new validated beta tags publish
-source/runtime after every gate passes. An already installed/open editor has no
-auto-updater. npm publication requires an owned scope and separate instruction.
-Prior beta5 code is pushed; beta6 packaging/download changes are prepared and
-await their immutable publication checkpoint. Full F105/runtime/Spine fidelity
-remains open; do not restart deferred probes. Reproduce runtime/UI checks using
-`pnpm test:runtime` and `pnpm test:ui --no-build --workers=2 --global-timeout=600000`
-after rebuilding changed sources. Reuse accepted exact-version evidence.
+Next: use the Download table on the repository/release page. Select the desktop
+package for the OS, or install the runtime tgz in a game and File → Export runtime.
+Native installer lifecycle/signing/notarization and broader runtime/fidelity remain
+open; full F105 and deferred F307/F308 are unchanged. Main pushes check/build;
+validated beta tags publish all4desktop packages and runtime/source as GitHub
+Latest after all existing gates pass. Keep immutable tags and scoped release validators. This
+post-publication checkpoint records outcomes observed after the source tag.

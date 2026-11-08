@@ -156,8 +156,8 @@ jobs:
         run: |
           python scripts/prepare-runtime-release.py .local/runtime-release
           python scripts/prepare-installer-release.py assemble --installers .local/platform-installers --source .local/ci-source-release --runtime .local/runtime-release --output .local/verified-release --tag "$RELEASE_TAG"
-      - name: Publish prerelease app, runtime, checksums, and build reports
+      - name: Publish Latest beta app, runtime, checksums, and build reports
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$RELEASE_TAG" .local/verified-release/* --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease --latest=false --title "FBones $RELEASE_TAG — app installers and runtime preview" --notes-file "docs/releases/$RELEASE_TAG.md"
+          gh release create "$RELEASE_TAG" .local/verified-release/* --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease=false --latest --title "FBones $RELEASE_TAG — app installers and runtime preview" --notes-file "docs/releases/$RELEASE_TAG.md"
