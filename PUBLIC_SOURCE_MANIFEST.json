@@ -109,8 +109,8 @@
     },
     {
       "path": ".github/workflows/native-install-upgrade.yml",
-      "bytes": 3033,
-      "sha256": "a67d3e70e0cb76a6f4b66eca8c34c02ac3047d31796ea3d141287148e78cc77e"
+      "bytes": 2304,
+      "sha256": "4525df39b509faede4c6e9832b5c2199906f79d10407beea4e4f518801e5a59a"
     },
     {
       "path": "src/App.vue",
@@ -2084,8 +2084,8 @@
     },
     {
       "path": "scripts/native-acceptance/mac.swift",
-      "bytes": 7328,
-      "sha256": "04954b51115f47e33f1053cbdc3e72ec2d3ab70d0b1112915add183058f1dd25"
+      "bytes": 11104,
+      "sha256": "b6d8e0c29909ec0ce4db9ac6b7f687792297c601f5c04080f0b8e24fbef25d31"
     },
     {
       "path": "scripts/native-acceptance/nul-gui-launch.cs",
@@ -2099,8 +2099,8 @@
     },
     {
       "path": "scripts/native-acceptance/windows.ps1",
-      "bytes": 9460,
-      "sha256": "e80b57097a8214f42fb4f9c21152f2ae99510984eaed6624e5eb394b45adb01a"
+      "bytes": 11695,
+      "sha256": "40aa06f190a9df280e11563f8598c07be01893b8d91e88ef7009a628a5e6232f"
     },
     {
       "path": "scripts/prepare-installer-release.py",
@@ -2986,6 +2986,16 @@
       "path": "docs/research/NATIVE-INSTALLED-UPGRADE-DATA-GATE-2026-11-09.md",
       "bytes": 4408,
       "sha256": "bfea35c12634f320d2be6e4d574c8498cf18b25d775b7fc95552cd218efa26ad"
+    },
+    {
+      "path": "docs/research/NATIVE-NEXT-PICKER-AND-LAUNCH-DATA-GATE-2026-11-09.md",
+      "bytes": 5841,
+      "sha256": "efee44ba4f18c6ec654610afa8b9343e31b46a96302031dfa583177e6728f250"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-MACOS-CAPABILITY-V3-UI-GATE-2026-11-09.md",
+      "bytes": 2198,
+      "sha256": "aecb705bced05c6bd72c49938b13d03687e65e1b28118924d8f7ad2e70906603"
     },
     {
       "path": "docs/research/PHYSICS-BATCH-AUTHORING-POLICY.md",

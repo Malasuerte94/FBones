@@ -1,4 +1,4 @@
-name: Native stock-package capability v2
+name: Native Windows/macOS capability v3
 on:
   push:
     branches: [work/native-install-upgrade-0.9.6]
@@ -19,10 +19,6 @@ jobs:
         include:
           - route: windows-nsis
             os: windows-latest
-          - route: linux-deb
-            os: ubuntu-22.04
-          - route: linux-appimage
-            os: ubuntu-22.04
           - route: mac-dmg
             os: macos-latest
     env:
@@ -45,11 +41,6 @@ jobs:
           root = Path(os.environ['RUNNER_TEMP']) / ('fbones-native-' + os.environ['GITHUB_RUN_ID'] + '-' + os.environ['GITHUB_RUN_ATTEMPT'] + '-' + os.environ['FBONES_ROUTE'])
           with open(os.environ['GITHUB_ENV'], 'a') as output:
               output.write('RUN_ROOT=' + str(root) + '\n')
-      - name: Install ordinary native Linux prerequisites on this ephemeral VM
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-0 libgtk-3-0 webkit2gtk-driver xvfb x11-utils dbus-x11 libfuse2 libgl1-mesa-dri
       - name: Verify and fetch one exact published stock 0.9.5 package
         shell: bash
         env:
@@ -59,10 +50,6 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./scripts/native-acceptance/windows.ps1 -Root $env:RUN_ROOT
-      - name: Real Linux package installation and native GTK control
-        if: runner.os == 'Linux'
-        shell: bash
-        run: xvfb-run --auto-servernum --server-args='-screen 0 1440x900x24' dbus-run-session -- python scripts/native-acceptance/linux.py "$RUN_ROOT" '${{ matrix.route }}'
       - name: Real macOS DMG installation and permitted native Aqua AX control
         if: runner.os == 'macOS'
         shell: bash

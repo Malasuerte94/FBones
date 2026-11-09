@@ -12,7 +12,7 @@ Add-Type -Path (Join-Path $PSScriptRoot 'nul-gui-launch.cs')
 Add-Type @'
 using System;using System.Runtime.InteropServices;public static class OwnNativeWindow{
  [DllImport("user32.dll")]public static extern bool IsWindowVisible(IntPtr h);
- [DllImport("user32.dll")]public static extern uint GetWindowThreadProcessId(IntPtr h,out uint pid);
+ [DllImport("user32.dll",SetLastError=true)]public static extern uint GetWindowThreadProcessId(IntPtr h,out uint pid);
  [DllImport("user32.dll",SetLastError=true)]public static extern bool PostMessage(IntPtr h,uint msg,IntPtr w,IntPtr l);
 }
 '@
@@ -39,10 +39,28 @@ try{
  $native=[NativeOwnGui]::Start($image,$installDir);$app=Get-Process -Id $native.ProcessId
  $created=[long]0;$exited=[long]0;$kernel=[long]0;$user=[long]0
  if(![NativeOwnGui]::GetProcessTimes($native.Process,[ref]$created,[ref]$exited,[ref]$kernel,[ref]$user) -or $created -le 0){throw 'New retained child creation identity unavailable'}
- $deadline=[DateTime]::UtcNow.AddSeconds(30)
- do{$app.Refresh();if($app.HasExited){throw 'Installed native app exited before readiness'};if($app.MainWindowHandle){break};Start-Sleep -Milliseconds 200}while([DateTime]::UtcNow -lt $deadline)
- $window=$app.MainWindowHandle;$windowPid=[uint32]0
- if(!$window -or ![OwnNativeWindow]::IsWindowVisible($window) -or ![OwnNativeWindow]::GetWindowThreadProcessId($window,[ref]$windowPid) -or $windowPid -ne $native.ProcessId -or $app.StartTime.ToUniversalTime().ToFileTimeUtc() -ne $created -or $app.MainModule.FileName -ne $image){throw 'Native visible window identity mismatch'}
+ $deadline=[DateTime]::UtcNow.AddSeconds(30);$ready=$false;$samples=@();$observed=$null
+ do{
+  $observed=[ordered]@{checkedUtc=[DateTime]::UtcNow.ToString('o');processId=$native.ProcessId;expectedCreationFileTime=$created;expectedImage=$image;ready=$false}
+  try{
+   $app.Refresh();$observed.hasExited=$app.HasExited;$observed.retainedWait=[NativeOwnGui]::WaitForSingleObject($native.Process,0)
+   if($app.HasExited){$terminalCode=[uint32]0;$observed.exitCodeAvailable=[NativeOwnGui]::GetExitCodeProcess($native.Process,[ref]$terminalCode);$observed.exitCode=$terminalCode;$proof.windowObservation=$observed;throw 'Installed native app exited before readiness'}
+   $pollCreated=[long]0;$pollExited=[long]0;$pollKernel=[long]0;$pollUser=[long]0
+   $observed.processTimesAvailable=[NativeOwnGui]::GetProcessTimes($native.Process,[ref]$pollCreated,[ref]$pollExited,[ref]$pollKernel,[ref]$pollUser)
+   $observed.processTimesWin32Error=[Runtime.InteropServices.Marshal]::GetLastWin32Error();$observed.observedCreationFileTime=$pollCreated;$observed.createdMatches=($observed.processTimesAvailable -and $pollCreated -eq $created)
+   $observed.dotNetStartFileTime=$app.StartTime.ToUniversalTime().ToFileTimeUtc();$observed.dotNetStartMatches=($observed.dotNetStartFileTime -eq $created)
+   $observed.actualImage=$app.MainModule.FileName;$observed.imagePathMatches=($observed.actualImage -eq $image)
+   $window=$app.MainWindowHandle;$observed.window=$window.ToInt64();$windowPid=[uint32]0
+   $observed.windowVisible=($window -ne [IntPtr]::Zero -and [OwnNativeWindow]::IsWindowVisible($window))
+   $observed.windowThread=if($window -ne [IntPtr]::Zero){[OwnNativeWindow]::GetWindowThreadProcessId($window,[ref]$windowPid)}else{0};$observed.windowOwnerPid=$windowPid;if($observed.windowThread -eq 0 -and $window -ne [IntPtr]::Zero){$observed.windowThreadWin32Error=[Runtime.InteropServices.Marshal]::GetLastWin32Error()};$observed.windowPidMatches=($observed.windowThread -ne 0 -and $windowPid -eq $native.ProcessId)
+   $ready=($observed.retainedWait -eq 258 -and $observed.createdMatches -and $observed.dotNetStartMatches -and $observed.imagePathMatches -and $observed.window -ne 0 -and $observed.windowVisible -and $observed.windowPidMatches)
+   $observed.ready=$ready
+  }catch{$observed.observationError=$_.Exception.Message;$observed.win32Error=[Runtime.InteropServices.Marshal]::GetLastWin32Error()}
+  $samples+=@($observed);if($samples.Count -gt 32){$samples=@($samples[0..15]) + @($samples[($samples.Count-16)..($samples.Count-1)])}
+  $proof.windowObservation=$observed;$proof.windowPollSamples=$samples
+  if($ready){break};if($app.HasExited){break};Start-Sleep -Milliseconds 200
+ }while([DateTime]::UtcNow -lt $deadline)
+ if(!$ready){throw 'Native full window identity/visibility readiness did not pass before deadline; see observed tuple'}
  $proof.native=[ordered]@{processId=$native.ProcessId;creationFileTime=$created;window=$window.ToInt64();visible=$true;sha256=$receipt.executableSha256;stdio='NUL-handle-allowlist'}
  $proof.currentStage='bind-native-cdp-listener'
  $connection=$null;for($i=0;$i -lt 100;$i++){$connection=Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue;if($connection){break};Start-Sleep -Milliseconds 200}
