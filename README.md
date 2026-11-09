@@ -14,7 +14,7 @@ Build rigs, paint weights, and animate offline with an editor built for Windows,
 
 ## Download
 
-**FBones `v0.9.6-beta.1` — release candidate with desktop app and developer runtime.** Candidate download links become available only after the tag workflow passes its build, UI, runtime and signing gates and publishes the release. [Release page](https://github.com/Malasuerte94/FBones/releases/tag/v0.9.6-beta.1) · [All published releases](https://github.com/Malasuerte94/FBones/releases).
+**FBones `v0.9.6-beta.1` — desktop app and developer runtime.** Downloads passed this release's build, UI, runtime and signing gates and are available below. [Release page](https://github.com/Malasuerte94/FBones/releases/tag/v0.9.6-beta.1) · [All published releases](https://github.com/Malasuerte94/FBones/releases).
 
 | Download | Platform / use |
 | --- | --- |
@@ -49,7 +49,7 @@ Animate includes Dopesheet and Graph views, key editing, playback, a live Previe
 
 ## Implementation status
 
-| Area | Implemented profile in the 0.9.6 candidate | Remaining work / limits |
+| Area | Available in 0.9.6 | Remaining work / limits |
 | --- | --- | --- |
 | Projects and history | Native New/Open/Save As, Undo/Redo, resource copying, conservative inspection of unsupported documents | Broad project compatibility remains progressive |
 | Bones and hierarchy | Create, rename, reparent, group selection, affine transforms, viewport gizmos | Further reference-driven interaction polish |
@@ -119,7 +119,9 @@ cargo test --workspace --locked
 
 For the full browser UI suite, install Chromium or set `CHROME_BINARY`, run `cargo fetch --locked` once, build the runtime with `pnpm build:runtime`, then run `pnpm test:ui`. It uses the production CSP and isolated instances of the real Rust Session, including shipped-runtime GPU checks. See [development](docs/DEVELOPMENT.md) and [testing](docs/TESTING.md).
 
-The stabilization checkpoint before the 0.9.6 version bump records **123 passing Ubuntu UI cases**, **443 passing JavaScript tests with one existing skip**, and **343 native / 102 legacy tests** with existing ignored cases kept distinct. Runtime checks add 16 package tests and 24 native-export samples. Six targeted native Windows QA groups passed on the earlier 0.9.5 working build; this does not establish acceptance of the new packaged candidate or an installed-app upgrade. Release CI results belong to the exact source commit reported by its jobs; these engineering results do not claim every platform or Spine feature is verified. The [checkpoint](docs/STATE.md) retains their scope and limitations.
+The stabilization checkpoint before the 0.9.6 version bump records **123 passing Ubuntu UI cases**, **443 passing JavaScript tests with one existing skip**, and **343 native / 102 legacy tests** with existing ignored cases kept distinct. Runtime checks add 16 package tests and 24 native-export samples. Six targeted native Windows QA groups passed on the earlier 0.9.5 working build; this does not establish native installation of the published 0.9.6 packages or an installed-app upgrade. Release CI results belong to the exact source commit reported by its jobs; these engineering results do not claim every platform or Spine feature is verified. The [checkpoint](docs/STATE.md) retains their scope and limitations.
+
+For release commit `cfc60a4`, the [tag CI run](https://github.com/Malasuerte94/FBones/actions/runs/42608780250) passed all three platform jobs and Ubuntu's **123 UI cases** with runtime gates. Independent publication checks verify all **16 uploaded assets**, **15 aggregate checksums**, **four signed updater payloads** and **five updater routes**. See the [release verification](docs/releases/v0.9.6-beta.1.md#verification-and-limits) for scope.
 
 ## License
 

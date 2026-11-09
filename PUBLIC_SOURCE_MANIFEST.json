@@ -14,8 +14,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 12658,
-      "sha256": "87f6cd32ba05d9b1ca28c5fdb3ae0bb77e5ee583d8553dbd74f3252d5d9427bc"
+      "bytes": 13019,
+      "sha256": "71ca329776f49d7d8ea542debd8668291f5f221460c2649d155e044592da75ea"
     },
     {
       "path": "CONTRIBUTING.md",
@@ -2204,8 +2204,8 @@
     },
     {
       "path": "docs/ROADMAP.md",
-      "bytes": 7717,
-      "sha256": "b39fc926eb26565fb4766a630e257852b33572fd465b8382f7a5e047abb55209"
+      "bytes": 7704,
+      "sha256": "9ee35aeec83ef4e0fb690f6619f630c8b659d0673ce85e2a27501d1b85242adc"
     },
     {
       "path": "docs/SLOT-ATTACHMENTS-4.3.26.md",
@@ -2214,13 +2214,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 24130,
-      "sha256": "2d8af096afeb297a70567c86bed7c148d926595889723cff18296f508c260a7b"
+      "bytes": 25133,
+      "sha256": "592e5e4bbba39daeb91e57858321b8a16bf65ddd02dcdc37b9628c0553d08f5d"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 20335,
-      "sha256": "75524432b0b8045dfabfa691fc05c8af2be9cf01eb0fb6e46d472520a21dfb2e"
+      "bytes": 20331,
+      "sha256": "3941315f25a1be14819eeffce6c59e696dd6a6ec8f806ea259cb201c4c5be1d3"
     },
     {
       "path": "docs/TESTING.md",
@@ -2289,8 +2289,8 @@
     },
     {
       "path": "docs/releases/v0.9.6-beta.1.md",
-      "bytes": 6363,
-      "sha256": "cdbc05910fe4065b9126e4b69880bba37118c24f2bcc2d95f0a6b4f3975ad5cb"
+      "bytes": 7146,
+      "sha256": "f50217e7d1b667c83b481877b0e3a896463b362e0136c0031c4dce3935a99efb"
     },
     {
       "path": "docs/research/ANIMATION-BONE-BEZIER-UI-2026-11-06.md",

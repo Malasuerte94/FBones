@@ -15,23 +15,25 @@ for the updater; no new solver, clock or numeric-bound change is introduced.
 
 ## Current release publication
 
-The requested release is v0.9.6-beta.1/application0.9.6, retaining runtime
-0.1.0-beta.1. Published Latest is still v0.9.5-beta.2/application0.9.5 at
-preparation. A higher installed version is required by the signed-updater gate;
-the old54e27667 executable stays0.9.5 and is not relabeled. The new release
-must build installers in CI from its own exact commit, retaining all existing
-platform/UI/runtime/source/signature/version gates and native-install limits.
+Published GitHub Latest is now v0.9.6-beta.1/application0.9.6, runtime remains
+0.1.0-beta.1. The immutable release tag/archive bind commit
+cfc60a45b5d73e25f35125f5353da56ff9027236. Release 439062261 is independently
+verified: tag 42608780250 and main 42608780414 pass their required jobs, including
+three platform builds and 123 hosted Ubuntu UI cases/runtime gates.
+All 16 uploaded asset digests/15 aggregate checksums, four updater payload
+signatures/authenticated versions and five exact bundle routes pass. Source
+archive equality covers 739 reviewed files plus its manifest;
+runtime archive equality covers 32 files. No original/private
+assets are included. The [release notes](releases/v0.9.6-beta.1.md) retain the
+verification scope and limits.
 
-Paired DATA/UI release audits confirm allowlisted source publication only,
-no original/private assets, honest Physics/shear limits and no repeated original
-probe. Workspace .git is an empty placeholder; the fresh public snapshot will
-retain remote main500f710d as its parent instead of initializing this workspace
-or overwriting old checkouts. Source/tag atomic push and the existing gated
-workflow own publication. Tests already pass for release policy7, signed release2,
-version guard4, locked offline Cargo metadata, live0.9.5→0.9.6 version comparison,
-JavaScript suite, frontend typecheck/build and README content/integrity. New
-exact-tag hosted checks/assets are not yet observed. Next: verify the reviewed
-snapshot diff, commit/tag, push, wait for CI and independently verify publication.
+This documentation-only follow-up on main uses [skip ci]; it does not move the
+release tag, rebuild or replace published archives. Prior local Windows QA
+belongs to the retained 0.9.5 image 54e27667, never relabeled as 0.9.6. Native OS
+installation and actual 0.9.5 → 0.9.6 installed upgrades remain unobserved; Physics
+moving-parent phase, World shear precision and full compatibility remain open.
+The next product work remains unanswered F307/F308 fidelity; installed-update
+acceptance stays separately WAITING. Fresh ownership/source guards still apply.
 
 ## New exact4.3.26 observations
 
@@ -277,10 +279,20 @@ Future recovered references should guide one narrow method question, never a
 blanket decompile. Earlier bundled-Linux/JVMTI/VMStruct/class-buffer/CLI-trace
 negatives remain valid; no unchanged failed route or accepted PNG batch reran.
 
+Normal local availability is also observed on the retained0.9.5 image54e27667:
+new85172/start2026-11-09T11:39:53.7157359Z/HWND2951442 is visible with the expected
+version UI and no debugging port. It is handed to the user; protect
+.local/release-0.9.6-user-process.json and its transport companion. No project
+input or existing user window operation occurred. This is not new0.9.6 installer
+QA. The native startup receipt passes, while the capture launch transport remains
+pending on inherited GUI streams; preserve that user window/transport and never
+claim a terminal result or force cleanup. Future normal launchers require native
+NUL handles. The consumed one-shot helper is not retried or overwritten.
+
 ## Previously accepted delivery and profile boundaries
 
-Published0.9.5-beta.2/1913f20e is the existing public release, separate from this
-locally verified working change. All120hosted/localUI,442JS+oneknownskip,340native/twoignored,
+Previous public0.9.5-beta.2/1913f20e retains its earlier acceptance evidence;
+current0.9.6 publication is recorded above. All120hosted/localUI,442JS+oneknownskip,340native/twoignored,
 102legacy/oneignored,16default/103Sceneformat,7research and runtime16+24samples
 belong to that delivery. Full signature/16asset/source/runtime verification,
 release438536371 and CI42524571053/42524571125 are retained in
@@ -310,7 +322,9 @@ remain mandatory; no source gets admitted by deleting unsupported data.
 
 Selected54e27667 and its prior normal-startup/user-ownership receipts remain
 unchanged; protect .local/stabilization-user-process.json and every other user
-ledger. This session is research-only, so no duplicate normal app was launched.
+ledger. The earlier research portion needed no duplicate normal app. The release session
+opened the retained0.9.5 image once and handed it to the user, as recorded above;
+preserve its window and pending launch transport.
 Prior delivery cleanup/failure/source-restoration evidence remains in the linked
 stabilization checkpoint; it is not a new current test or disk measurement.
 
@@ -331,7 +345,7 @@ mounted discard support, but no manual trim, shutdown, compaction or global
 setting change was performed, and no physical host recovery is claimed. Keep
 large builds/captures deferred; the prepared reference output is capped at6MiB.
 
-Final read-only process check11:05:00UTC found a NEW unowned installed Spine
+The previous research read-only process check11:05:00UTC found an unowned Spine
 49192/start2026-11-09T11:03:49.8698784Z/HWND3213622 with an unsaved marker. It
 appeared after our CLI's terminal and was not operated. Preserve its protection
 ledger .local/physics-2026-11-09-second-user-process.json plus all earlier user
@@ -347,11 +361,12 @@ wait for actual absence of the protected49192 and fresh isolation; its old PID
 or any consumed receipt never authorizes process operations. No memory rescan,
 old oracle grid, accepted Match/canonical Save or new encoding export repeats.
 For future F308 work reuse the accepted60741ccb canonical; freeze a distinct
-unanswered action first. Actual G:free2,525,851,648bytes and Linux
-885,719,416,832bytes were measured at session end; no physical reclamation is
+unanswered action first. At the earlier research checkpoint G:free2,525,851,648bytes and Linux
+885,719,416,832bytes were measured; no physical reclamation is
 inferred. The selected54e27667 image remains exact; all255 source pins were exact before
 the current release-only0.9.6 metadata/visible-label changes.
-Research-only session: no duplicate normal FBones launch was required.
+The release-session retained0.9.5 normal launch/protected transport is recorded
+above; current0.9.6 packaged native installation remains unverified.
 
 Full Physics caller reset/update/Pose timing and moving-parent parity remain
 ACTIVE; broader Match World/additive/Physics/rounding/manual branches remain

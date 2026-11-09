@@ -1,6 +1,6 @@
 # Implementation status and roadmap
 
-This is the public overview for the **0.9.6 release candidate**. FBones is an offline desktop
+This is the public overview for the **0.9.6 beta**. FBones is an offline desktop
 2D skeletal animation editor under active development. The implemented workflows
 below cover tested profiles; they do not establish full Spine compatibility.
 
