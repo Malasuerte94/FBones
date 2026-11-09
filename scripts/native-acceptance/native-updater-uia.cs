@@ -33,8 +33,10 @@ public static class OwnUpdaterUia {
  private sealed class Pending {public AutomationElement Element;public int[] Path;}
  private static bool Allowed(int pid,int[] allowed){foreach(int value in allowed)if(value==pid&&pid>0)return true;return false;}
  private static string Bound(string value,OwnUiaRow row,OwnUiaInventory inventory){if(value==null)return "";if(value.Length>inventory.MaxStringChars){row.TextTruncated=true;inventory.StringCapHit=true;inventory.Complete=false;return value.Substring(0,inventory.MaxStringChars);}return value;}
- public static OwnUiaInventory Capture(long hwnd,int expectedPid,int[] allowedPids) {
-  var output=new OwnUiaInventory();output.RootHandle=hwnd;var watch=Stopwatch.StartNew();
+ public static OwnUiaInventory Capture(long hwnd,int expectedPid,int[] allowedPids) {return CaptureBudget(hwnd,expectedPid,allowedPids,15000);}
+ public static OwnUiaInventory CaptureBudget(long hwnd,int expectedPid,int[] allowedPids,int maxMilliseconds) {
+  if(maxMilliseconds<1||maxMilliseconds>15000)throw new ArgumentOutOfRangeException("maxMilliseconds");
+  var output=new OwnUiaInventory();output.MaxMilliseconds=maxMilliseconds;output.RootHandle=hwnd;var watch=Stopwatch.StartNew();
   try {
    output.Root=AutomationElement.FromHandle(new IntPtr(hwnd));var current=output.Root.Current;output.RootPid=current.ProcessId;
    if(current.ProcessId!=expectedPid||current.NativeWindowHandle!=hwnd)throw new Exception("UIA root does not match retained own HWND/PID");

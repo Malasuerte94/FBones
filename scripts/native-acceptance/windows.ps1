@@ -54,7 +54,7 @@ using System;using System.Runtime.InteropServices;public static class OwnNativeW
  [DllImport("user32.dll",SetLastError=true)]public static extern bool PostMessage(IntPtr h,uint msg,IntPtr w,IntPtr l);
 }
 '@
-$proof=[ordered]@{passed=$false;route='windows-nsis';stage='updater-control-capability-v5';updaterControlCapabilityPassed=$false;viewportAccessibilityShapeVerified='unknown';previousCombinedViewportGatePassed=$false;upgradeAttempted=$false;normalClose=$false;currentStage='stock-nsis-install'};$app=$null;$native=$null;$created=[long]0;$closeRequested=$false
+$proof=[ordered]@{passed=$false;route='windows-nsis';stage='updater-control-capability-v6';updaterControlCapabilityPassed=$false;viewportAccessibilityShapeVerified='unknown';previousCombinedViewportGatePassed=$false;upgradeAttempted=$false;normalClose=$false;currentStage='stock-nsis-install'};$app=$null;$native=$null;$created=[long]0;$closeRequested=$false
 try{
  $installer=Join-Path $rootPath $receipt.asset.name
  if((Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant() -ne $receipt.asset.sha256){throw 'Installer hash changed'}
@@ -104,13 +104,33 @@ try{
  do{Assert-OwnNativeIdentity;$nativeText=Read-OwnNativePrefix;$rendererReady=$nativeText.Contains('FBones UI ready; renderer=webgl');if($rendererReady){break};Start-Sleep -Milliseconds 200}while([DateTime]::UtcNow -lt $readyDeadline)
  $proof.rendererReady=[ordered]@{observed=$rendererReady;source='stock native frontend_ready stdout from this created process';pixelParityClaimed=$false}
  if(!$rendererReady){throw 'Actual stock native renderer-ready signal unavailable'}
- $proof.currentStage='owned-uia-inventory';$provider=Get-OwnUiaProviders;Write-OwnUiaJson 'uia-providers.json' $provider
- $before=[OwnUpdaterUia]::Capture($window.ToInt64(),[int]$native.ProcessId,[int[]]$provider.allowedPids);Write-OwnUiaInventory 'uia-before.json' $before
- if(!$before.Complete){throw 'UIA inventory incomplete/foreign/errored; no action'}
- $beforeText=Own-VisibleText $before
- if($beforeText -notmatch '0\.9\.5\b' -or $beforeText.Contains('The viewport could not start.') -or $beforeText.Contains('Opening workspace') -or $beforeText.Contains('Automatic updates are unavailable for this copy.')){throw 'Native version/startup/updater-support evidence unqualified'}
- $selected=[OwnUpdaterUia]::UniqueUpdates($before);$beforePanel=Own-PanelPresent $before
- Assert-OwnNativeIdentity;$currentProvider=Get-OwnUiaProviders;$proof.currentStage='one-native-updates-invoke';$proof.invokeAttempted=$true
+ $proof.currentStage='bounded-owned-uia-initialization';$observation=[Diagnostics.Stopwatch]::StartNew();$attempts=New-Object Collections.ArrayList;$selected=$null;$before=$null;$observationBudget=20000;$maximumSnapshots=10
+ for($attempt=1;$attempt -le $maximumSnapshots;$attempt++){
+  $remaining=$observationBudget-[int]$observation.ElapsedMilliseconds;if($remaining -lt 1){break}
+  Assert-OwnNativeIdentity;$provider=Get-OwnUiaProviders;Write-OwnUiaJson ('uia-providers-'+$attempt.ToString('00')+'.json') $provider
+  $remaining=$observationBudget-[int]$observation.ElapsedMilliseconds;if($remaining -lt 1){break}
+  $before=[OwnUpdaterUia]::CaptureBudget($window.ToInt64(),[int]$native.ProcessId,[int[]]$provider.allowedPids,[int][Math]::Min(15000,$remaining));Write-OwnUiaInventory ('uia-before-'+$attempt.ToString('00')+'.json') $before
+  $beforeText=Own-VisibleText $before;$hasVersion=$beforeText -match '0\.9\.5\b';$startupError=$beforeText.Contains('The viewport could not start.');$loading=$beforeText.Contains('Opening workspace');$unsupported=$beforeText.Contains('Automatic updates are unavailable for this copy.')
+  $updateRows=@($before.Rows|Where-Object{$_.ControlType -eq 'ControlType.Button' -and $null -ne $_.NameVariant -and $_.Enabled -and !$_.Offscreen -and $_.OwnerAllowed -and $_.InvokeAvailable})
+  $emptyDocs=0
+  foreach($doc in @($before.Rows|Where-Object{$_.ControlType -eq 'ControlType.Document' -and $_.AutomationId -eq 'RootWebArea'})){
+   $prefix=($doc.Path -join '.')+'.';$descendants=@($before.Rows|Where-Object{($_.Path -join '.').StartsWith($prefix,[StringComparison]::Ordinal)})
+   if([string]::IsNullOrEmpty($doc.Name) -and [string]::IsNullOrEmpty($doc.Value) -and $descendants.Count -eq 0){$emptyDocs++}
+  }
+  $withinDeadline=$observation.ElapsedMilliseconds -lt $observationBudget
+  $qualified=$withinDeadline -and $before.Complete -and $hasVersion -and !$startupError -and !$loading -and !$unsupported -and $updateRows.Count -eq 1
+  [void]$attempts.Add([ordered]@{attempt=$attempt;elapsedMilliseconds=$observation.ElapsedMilliseconds;captureMilliseconds=$before.ElapsedMilliseconds;captureBudgetMilliseconds=$before.MaxMilliseconds;complete=$before.Complete;rows=$before.OriginalRowCount;versionObserved=$hasVersion;qualifiedUpdatesCount=$updateRows.Count;emptyRootWebAreaDocuments=$emptyDocs;startupError=$startupError;loading=$loading;unsupported=$unsupported;withinDeadline=$withinDeadline;qualified=$qualified})
+  $proof.uiaInitialization=[ordered]@{maximumSnapshots=$maximumSnapshots;budgetMilliseconds=$observationBudget;elapsedMilliseconds=$observation.ElapsedMilliseconds;hardApiCancellation=$false;attempts=$attempts}
+  Write-OwnUiaJson ('uia-attempt-'+$attempt.ToString('00')+'.json') ($attempts[$attempts.Count-1])
+  if(!$before.Complete){throw 'UIA inventory incomplete/foreign/errored; no action'}
+  if($startupError -or $unsupported){throw 'Native startup/updater-support evidence unqualified; no action'}
+  if($qualified){$selected=[OwnUpdaterUia]::UniqueUpdates($before);break}
+  $remaining=$observationBudget-[int]$observation.ElapsedMilliseconds;if($attempt -lt $maximumSnapshots -and $remaining -gt 0){Start-Sleep -Milliseconds ([int][Math]::Min(250,$remaining))}
+ }
+ if($null -ne $before){Write-OwnUiaInventory 'uia-before.json' $before}
+ if($null -eq $selected){throw 'Bounded native UIA initialization did not qualify unchanged version/unique Updates contract; no action'}
+ $beforePanel=Own-PanelPresent $before
+ Assert-OwnNativeIdentity;$currentProvider=Get-OwnUiaProviders;if($observation.ElapsedMilliseconds -ge $observationBudget){throw 'UIA observation deadline expired before action; no Invoke'};$proof.currentStage='one-native-updates-invoke';$proof.invokeAttempted=$true
  try{[OwnUpdaterUia]::InvokeOnce($before,$selected,[int]$native.ProcessId,[int[]]$currentProvider.allowedPids)}finally{$proof.selectedUpdates=[ordered]@{beforeName=$selected.Name;beforeVariant=$selected.NameVariant;actionName=$selected.ActionName;actionVariant=$selected.ActionNameVariant;runtimeId=$selected.RuntimeId}}
  $proof.invokeReturned=$true;$after=$null;$changed=$false;$transitionDeadline=[DateTime]::UtcNow.AddSeconds(15)
  do{

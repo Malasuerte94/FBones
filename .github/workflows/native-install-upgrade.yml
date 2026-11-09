@@ -1,4 +1,4 @@
-name: Native owned updater controls v5
+name: Windows bounded native provider v6
 on:
   push:
     branches: [work/native-install-upgrade-0.9.6]
@@ -19,8 +19,6 @@ jobs:
         include:
           - route: windows-nsis
             os: windows-latest
-          - route: mac-dmg
-            os: macos-latest
     env:
       FBONES_ROUTE: ${{ matrix.route }}
       PYTHONDONTWRITEBYTECODE: '1'
@@ -46,10 +44,6 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\native-acceptance\windows.ps1 -Root "%RUN_ROOT%"
-      - name: Real macOS DMG installation and permitted native Aqua AX control
-        if: runner.os == 'macOS'
-        shell: bash
-        run: bash scripts/native-acceptance/mac.sh "$RUN_ROOT"
       - name: Preserve bounded native capability receipts, including blockers
         if: always()
         uses: actions/upload-artifact@v4

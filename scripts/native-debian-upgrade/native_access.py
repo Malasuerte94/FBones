@@ -140,6 +140,30 @@ def selftest():
   else:raise AssertionError('Unbound click action accepted')
  print('PASS pure selector guards; no GI/desktop/process calls')
 
+PASSIVE_TEXT_ROLES={'static','label','page','footer','status bar','document text','document frame','paragraph','text'}
+PROTECTED_TEXT_ROLES={'password text','password-text','protected text','protected-text'}
+def read_passive_text(node,row,budget):
+ """Read-only standard Text; fake-node tests never load an AT-SPI provider."""
+ result={'textInterfaceQueried':False,'textInterfaceAvailable':None,'textCharacterCount':None,'nativeText':None,'textReadComplete':True,'textReadError':None,'textCapHit':False,'textSkipReason':None}
+ if row['role']in PROTECTED_TEXT_ROLES:result['textSkipReason']='protected-role';return result
+ if row['editable']:result['textSkipReason']='editable-control';return result
+ if not(row['showing']and row['visible']):result['textSkipReason']='not-showing-visible';return result
+ if row['role']not in PASSIVE_TEXT_ROLES:result['textSkipReason']='role-not-qualified';return result
+ result['textInterfaceQueried']=True
+ try:
+  iface=node.get_text_iface();result['textInterfaceAvailable']=iface is not None
+  if iface is None:return result
+  count=iface.get_character_count();result['textCharacterCount']=count
+  require(type(count)is int and count>=0,'Invalid native Text character count')
+  if count>8192 or budget['characters']+count>65536:
+   result['textCapHit']=True;raise ValueError('Native Text per-node/aggregate character cap')
+  value=iface.get_text(0,count)
+  require(isinstance(value,str)and len(value)==count,'Native Text partial/invalid returned range')
+  budget['characters']+=count;result['nativeText']=value
+ except Exception as error:
+  result['textReadComplete']=False;result['textReadError']=(type(error).__name__+': '+str(error))[:512]
+ return result
+
 def _successor_attempt(run,baseline,expected_sha):
  """No accessible action; only main-window subtree and verified exporters."""
  from lifecycle import process,same,tree
@@ -165,28 +189,28 @@ def _successor_attempt(run,baseline,expected_sha):
   if node.get_process_id()==baseline['pid']and node.get_role_name()=='frame'and name.endswith('FBones')and state.contains(a.StateType.SHOWING)and state.contains(a.StateType.VISIBLE):windows.append(node)
  require(len(windows)<=1,'Successor main accessible frame ambiguous')
  if not windows:return{'versionVerified':False,'readiness':'own frame not yet showing','main':baseline,'nodes':[],'exporters':[],'startupErrorVisible':False}
- queue=[(windows[0],[])];rows=[];exporters={};end=time.monotonic()+15
+ queue=[(windows[0],[])];rows=[];exporters={};end=time.monotonic()+15;text_budget={'characters':0}
  while queue:
   require(len(rows)<4096 and time.monotonic()<end,'Successor accessibility inventory cap');node,p=queue.pop(0);pid=node.get_process_id()
   if pid not in allowed:
    born=tree(baseline['pid']);require(pid in born and int(born[pid]['startTicks'])>=int(baseline['startTicks']),'Accessibility exporter outside verified successor tree');allowed[pid]=born[pid]
   live=process(pid);require(live['startTicks']==allowed[pid]['startTicks']and live['executablePath']==allowed[pid]['executablePath'],'Accessibility exporter identity changed');exporters[pid]=live
-  name=node.get_name()or'';require(len(name)<=512,'Native accessible label cap');state=node.get_state_set();rows.append({'path':p,'exporterPid':pid,'role':node.get_role_name(),'name':name,'showing':state.contains(a.StateType.SHOWING),'visible':state.contains(a.StateType.VISIBLE)})
+  role=node.get_role_name();name=''if role in PROTECTED_TEXT_ROLES else(node.get_name()or'');require(len(name)<=512,'Native accessible label cap');state=node.get_state_set();row={'path':p,'exporterPid':pid,'role':role,'name':name,'showing':state.contains(a.StateType.SHOWING),'visible':state.contains(a.StateType.VISIBLE),'editable':state.contains(a.StateType.EDITABLE)};row.update(read_passive_text(node,row,text_budget));rows.append(row)
   count=node.get_child_count();require(0<=count<=512 and len(p)<=32,'Native accessibility child/depth cap');queue.extend((node.get_child_at_index(i),p+[i])for i in range(count))
- text=' '.join(r['name']for r in rows if r['showing']and r['visible']);version=bool(re.search(r'(?:Version\s*|Current version:\s*)0\.9\.6\b',text));error='The viewport could not start.'in text or'Opening workspace…'in text
- proof={'versionVerified':version,'version':'0.9.6'if version else None,'startupErrorVisible':error,'main':baseline,'exporters':list(exporters.values()),'nodes':rows,'readOnly':True,'accessibleActions':0}
+ text_complete=all(r['textReadComplete']for r in rows);text=' '.join(value for r in rows if r['showing']and r['visible']for value in[r['name'],r['nativeText']]if value is not None);matches=[{'path':r['path'],'exporterPid':r['exporterPid'],'source':source,'value':r[source]}for r in rows if r['showing']and r['visible']for source in['name','nativeText']if r[source]is not None and re.search(r'(?:Version\s*|Current version:\s*)0\.9\.6\b',r[source])];version=text_complete and bool(matches);error='The viewport could not start.'in text or'Opening workspace…'in text
+ proof={'versionVerified':version,'version':'0.9.6'if version else None,'versionMatches':matches,'startupErrorVisible':error,'main':baseline,'exporters':list(exporters.values()),'nodes':rows,'readOnly':True,'accessibleActions':0,'nativeTextReadsComplete':text_complete,'nativeTextCharacters':text_budget['characters'],'nativeTextNodeCharacterCap':8192,'nativeTextAggregateCharacterCap':65536,'nativeTextCapHit':any(r['textCapHit']for r in rows),'nativeTextReadErrors':sum(not r['textReadComplete']for r in rows)}
  require(same(process(baseline['pid'],True),baseline),'Successor identity changed after native view');return proof
 
 def readonly_successor_version(run,baseline,expected_sha):
  end=time.monotonic()+20;attempts=0;last=None
  while time.monotonic()<end:
   attempts+=1;last=_successor_attempt(run,baseline,expected_sha);last['readOnlyAttempts']=attempts;data=json.dumps(last,indent=2,ensure_ascii=True).encode();require(len(data)<=2*1024*1024,'Read-only native inventory byte cap');(Path(run)/'reports/automatic-native-accessibility-progress.json').write_bytes(data+b'\n')
-  if last['startupErrorVisible']or last['versionVerified']:break
+  if last['startupErrorVisible']or last['versionVerified']or last.get('nativeTextReadsComplete')is False:break
   time.sleep(.2)
  require(last is not None,'No automatic native view observation')
  with(Path(run)/'reports/automatic-native-accessibility.json').open('xb')as f:f.write(data+b'\n')
  require(last['versionVerified']and not last['startupErrorVisible'],'Automatic successor visible native0.9.6/startup readiness unproved')
- return{'versionVerified':True,'version':'0.9.6','exporterPids':sorted(r['pid']for r in last['exporters']),'nodeCount':len(last['nodes']),'readOnly':True,'readOnlyAttempts':attempts}
+ return{'versionVerified':True,'version':'0.9.6','exporterPids':sorted(r['pid']for r in last['exporters']),'nodeCount':len(last['nodes']),'readOnly':True,'readOnlyAttempts':attempts,'nativeTextReadsComplete':last.get('nativeTextReadsComplete'),'nativeTextCharacters':last.get('nativeTextCharacters'),'versionSources':sorted(set(r['source']for r in last['versionMatches']))}
 if __name__=='__main__':
  import sys
  require(sys.argv[1:]==['--selftest'],'Only pure --selftest CLI; provider called by own runner');selftest()
