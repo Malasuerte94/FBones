@@ -1,4 +1,5 @@
 name: Own macOS nonchild SDK exit-status capability
+run-name: Own macOS nonchild exit 7 at ${{ github.sha }}
 on:
   push:
     branches: [work/native-install-upgrade-0.9.6]

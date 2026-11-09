@@ -129,8 +129,8 @@
     },
     {
       "path": ".github/workflows/native-macos-nonchild.yml",
-      "bytes": 939,
-      "sha256": "89879c314233aeefb1896ebf353b27449ad9dc661cfea2cf012a04c54958b2a8"
+      "bytes": 996,
+      "sha256": "ae3e75283dbea253f23530e145fdb7037d4597dc8eab1a04f88abe3f22a4735d"
     },
     {
       "path": "src/App.vue",
