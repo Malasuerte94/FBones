@@ -1,0 +1,86 @@
+param([Parameter(Mandatory=$true)][string]$Root)
+$ErrorActionPreference='Stop'
+if($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or $env:RUNNER_OS -ne 'Windows'){throw 'Ephemeral hosted Windows job only'}
+$rootPath=[IO.Path]::GetFullPath($Root);$tempPath=[IO.Path]::GetFullPath($env:RUNNER_TEMP).TrimEnd('\')+'\'
+if(!$rootPath.StartsWith($tempPath,[StringComparison]::OrdinalIgnoreCase) -or !(Test-Path -LiteralPath (Join-Path $rootPath 'reports\stock-package.json'))){throw 'Verified private runner root required'}
+$receipt=Get-Content -Raw -LiteralPath (Join-Path $rootPath 'reports\stock-package.json')|ConvertFrom-Json
+if($receipt.route -ne 'windows-nsis' -or $receipt.tag -ne 'v0.9.5-beta.2'){throw 'Wrong initial stock package'}
+if(Get-Process -Name FBones -ErrorAction SilentlyContinue){throw 'Fresh runner unexpectedly has FBones process'}
+$key='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\FBones'
+if(Test-Path -LiteralPath $key){throw 'Fresh runner unexpectedly has existing FBones installation'}
+Add-Type -Path (Join-Path $PSScriptRoot 'nul-gui-launch.cs')
+Add-Type @'
+using System;using System.Runtime.InteropServices;public static class OwnNativeWindow{
+ [DllImport("user32.dll")]public static extern bool IsWindowVisible(IntPtr h);
+ [DllImport("user32.dll")]public static extern uint GetWindowThreadProcessId(IntPtr h,out uint pid);
+ [DllImport("user32.dll",SetLastError=true)]public static extern bool PostMessage(IntPtr h,uint msg,IntPtr w,IntPtr l);
+}
+'@
+$proof=[ordered]@{passed=$false;route='windows-nsis';stage='capability-only';upgradeAttempted=$false;normalClose=$false};$app=$null;$native=$null;$created=[long]0;$closeRequested=$false
+try{
+ $installer=Join-Path $rootPath $receipt.asset.name
+ if((Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant() -ne $receipt.asset.sha256){throw 'Installer hash changed'}
+ $installDir=Join-Path $rootPath 'installed';if(Test-Path -LiteralPath $installDir){throw 'Install path must be new'}
+ $ownedInstaller=[NativeOwnGui]::StartNsis($installer,$env:SystemRoot,$installDir)
+ try{
+  if([NativeOwnGui]::WaitForSingleObject($ownedInstaller.Process,120000) -ne 0){throw 'Installer did not finish normally before deadline; no force'}
+  $exit=[uint32]0;if(![NativeOwnGui]::GetExitCodeProcess($ownedInstaller.Process,[ref]$exit) -or $exit -ne 0){throw 'Stock NSIS installer failed'}
+  $proof.installerExitCode=$exit
+ }finally{[NativeOwnGui]::CloseHandle($ownedInstaller.Process)|Out-Null}
+ $registry=Get-ItemProperty -LiteralPath $key;$image=Join-Path $installDir 'FBones.exe'
+ if($registry.DisplayVersion -ne '0.9.5' -or (Get-FileHash -LiteralPath $image -Algorithm SHA256).Hash.ToLowerInvariant() -ne $receipt.executableSha256){throw 'Installed version/executable identity differs'}
+ $proof.installation=[ordered]@{stockNsisExecuted=$true;registryVersion=$registry.DisplayVersion;executableSha256=$receipt.executableSha256}
+ $port=9331;if(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue){throw 'Dedicated CDP port occupied before launch'}
+ $env:WEBVIEW2_USER_DATA_FOLDER=Join-Path $rootPath 'webview-profile';$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="--remote-debugging-port=$port"
+ $native=[NativeOwnGui]::Start($image,$installDir);$app=Get-Process -Id $native.ProcessId
+ $created=[long]0;$exited=[long]0;$kernel=[long]0;$user=[long]0
+ if(![NativeOwnGui]::GetProcessTimes($native.Process,[ref]$created,[ref]$exited,[ref]$kernel,[ref]$user) -or $created -le 0){throw 'New retained child creation identity unavailable'}
+ $deadline=[DateTime]::UtcNow.AddSeconds(30)
+ do{$app.Refresh();if($app.HasExited){throw 'Installed native app exited before readiness'};if($app.MainWindowHandle){break};Start-Sleep -Milliseconds 200}while([DateTime]::UtcNow -lt $deadline)
+ $window=$app.MainWindowHandle;$windowPid=[uint32]0
+ if(!$window -or ![OwnNativeWindow]::IsWindowVisible($window) -or ![OwnNativeWindow]::GetWindowThreadProcessId($window,[ref]$windowPid) -or $windowPid -ne $native.ProcessId -or $app.StartTime.ToUniversalTime().ToFileTimeUtc() -ne $created -or $app.MainModule.FileName -ne $image){throw 'Native visible window identity mismatch'}
+ $proof.native=[ordered]@{processId=$native.ProcessId;creationFileTime=$created;window=$window.ToInt64();visible=$true;sha256=$receipt.executableSha256;stdio='NUL-handle-allowlist'}
+ $connection=$null;for($i=0;$i -lt 100;$i++){$connection=Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue;if($connection){break};Start-Sleep -Milliseconds 200}
+ if(!$connection -or @($connection).Count -ne 1){throw 'Missing/ambiguous native CDP listener'}
+ $listener=Get-CimInstance Win32_Process -Filter "ProcessId=$($connection.OwningProcess)";$cursor=$listener;$seen=@{}
+ while($cursor -and $cursor.ProcessId -ne $native.ProcessId){if($seen.ContainsKey([string]$cursor.ProcessId)){throw 'CDP ancestry cycle'};$seen[[string]$cursor.ProcessId]=$true;$cursor=Get-CimInstance Win32_Process -Filter "ProcessId=$($cursor.ParentProcessId)"}
+ if(!$listener -or $listener.Name -ne 'msedgewebview2.exe' -or !$cursor){throw 'CDP listener is not a descendant of our created native app'}
+ & node (Join-Path $PSScriptRoot 'windows-cdp.mjs') $rootPath $port
+ if($LASTEXITCODE -ne 0){throw 'Native WebView2 frontend/control probe failed'}
+ $frontend=Get-Content -Raw -LiteralPath (Join-Path $rootPath 'reports\frontend.json')|ConvertFrom-Json
+ if($frontend.passed -ne $true){throw 'Native frontend probe did not pass'}
+ $app.Refresh();$nowCreated=[long]0
+ if($app.HasExited -or ![NativeOwnGui]::GetProcessTimes($native.Process,[ref]$nowCreated,[ref]$exited,[ref]$kernel,[ref]$user) -or $nowCreated -ne $created -or (Get-FileHash -LiteralPath $image -Algorithm SHA256).Hash.ToLowerInvariant() -ne $receipt.executableSha256){throw 'Own window changed before normal close'}
+ $windowPid=[uint32]0
+ if(![OwnNativeWindow]::GetWindowThreadProcessId($window,[ref]$windowPid) -or $windowPid -ne $native.ProcessId){throw 'Owned window identity changed before WM_CLOSE'}
+ $closeRequested=$true
+ if(![OwnNativeWindow]::PostMessage($window,0x10,[IntPtr]::Zero,[IntPtr]::Zero)){throw 'Owned WM_CLOSE failed'}
+ if([NativeOwnGui]::WaitForSingleObject($native.Process,20000) -ne 0){throw 'Owned native app did not close normally; no force'}
+ $exit=[uint32]0;if(![NativeOwnGui]::GetExitCodeProcess($native.Process,[ref]$exit) -or $exit -ne 0){throw 'Owned app terminal exit unavailable/nonzero'}
+ $proof.normalClose=$true;$proof.exitCode=$exit;$proof.passed=$true
+}catch{
+ $proof.error=$_.Exception.Message
+ $cleanup=[ordered]@{attempted=$false;normalClose=$false;noForce=$true}
+ try{
+  if($native -and $created -gt 0 -and !$closeRequested){
+   $currentCreated=[long]0;$currentExited=[long]0;$currentKernel=[long]0;$currentUser=[long]0
+   if([NativeOwnGui]::WaitForSingleObject($native.Process,0) -eq 258 -and [NativeOwnGui]::GetProcessTimes($native.Process,[ref]$currentCreated,[ref]$currentExited,[ref]$currentKernel,[ref]$currentUser) -and $currentCreated -eq $created){
+    $current=Get-Process -Id $native.ProcessId
+    if($current.StartTime.ToUniversalTime().ToFileTimeUtc() -eq $created -and $current.MainModule.FileName -eq $image -and (Get-FileHash -LiteralPath $image -Algorithm SHA256).Hash.ToLowerInvariant() -eq $receipt.executableSha256){
+     $ownedWindow=$current.MainWindowHandle;$ownedPid=[uint32]0
+     if($ownedWindow -and [OwnNativeWindow]::GetWindowThreadProcessId($ownedWindow,[ref]$ownedPid) -and $ownedPid -eq $native.ProcessId){
+      $cleanup.attempted=$true;$closeRequested=$true
+      if([OwnNativeWindow]::PostMessage($ownedWindow,0x10,[IntPtr]::Zero,[IntPtr]::Zero) -and [NativeOwnGui]::WaitForSingleObject($native.Process,20000) -eq 0){
+       $terminalCode=[uint32]0;if([NativeOwnGui]::GetExitCodeProcess($native.Process,[ref]$terminalCode)){$cleanup.exitCode=$terminalCode;$cleanup.normalClose=($terminalCode -eq 0);$proof.normalClose=$cleanup.normalClose}
+      }
+     }else{$cleanup.reason='No verified own native main window; retained without force'}
+    }else{$cleanup.reason='Own image/start identity changed; no close'}
+   }else{$cleanup.reason='Retained child identity/liveness unavailable; no close'}
+  }elseif($closeRequested){$cleanup.reason='One close was already requested; no repeat or force'}else{$cleanup.reason='No bound own GUI was created'}
+ }catch{$cleanup.error=$_.Exception.Message}
+ $proof.failureCleanup=$cleanup
+ throw
+}finally{
+ if($native){[NativeOwnGui]::CloseHandle($native.Process)|Out-Null}
+ $proof|ConvertTo-Json -Depth 8|Set-Content -LiteralPath (Join-Path $rootPath 'reports\capability.json') -Encoding UTF8
+}

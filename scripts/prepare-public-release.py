@@ -18,7 +18,9 @@ FILES = (
 )
 TREES = ('.github', 'src', 'src-tauri', 'crates', 'tests', 'scripts', 'docs', 'packages/runtime')
 SKIP_PARTS = {'gen', '__pycache__', 'node_modules', 'target', 'dist', '.git', '.local', '.tools'}
-OWN_TEXT_FILES = {'packages/runtime/LICENSE'}
+OWN_TEXT_FILES = {'packages/runtime/LICENSE',
+                  'scripts/native-acceptance/nul-gui-launch.cs',
+                  'scripts/native-acceptance/mac.swift'}
 EXTENSIONS = {'.md', '.json', '.rs', '.toml', '.ts', '.mts', '.mjs', '.vue',
               '.css', '.html', '.yaml', '.yml', '.py', '.sh', '.ps1', '.bat',
               '.svg', '.png', '.ico', '.icns'}

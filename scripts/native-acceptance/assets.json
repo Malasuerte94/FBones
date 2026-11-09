@@ -1,0 +1,53 @@
+{
+  "repository": "Malasuerte94/FBones",
+  "oldTag": "v0.9.5-beta.2",
+  "oldCommit": "1913f20e477caa73b6a5e08441661ba04332760b",
+  "oldReleaseId": 438536371,
+  "newTag": "v0.9.6-beta.1",
+  "newCommit": "cfc60a45b5d73e25f35125f5353da56ff9027236",
+  "newReleaseId": 439062261,
+  "version": "0.9.5",
+  "nextVersion": "0.9.6",
+  "routes": {
+    "windows-nsis": {
+      "target": "x86_64-pc-windows-msvc",
+      "asset": {
+        "name": "FBones_0.9.5_x64-setup.exe",
+        "id": 725256896,
+        "bytes": 4488896,
+        "sha256": "056dc4373718b2a955ce94244fe784c57b7bcee10a5c02cbdb6f588c2f245d60"
+      },
+      "executableSha256": "eccb94aafa7f6613e783f959e3f07ae7f38512ab85bc6a0189b0cdae7cfa23f8"
+    },
+    "linux-deb": {
+      "target": "x86_64-unknown-linux-gnu",
+      "asset": {
+        "name": "FBones_0.9.5_amd64.deb",
+        "id": 725256852,
+        "bytes": 5564052,
+        "sha256": "0b731ab1a9b7e3c146ce281c58ee32450d186ff39447056e27bdf517f56bee65"
+      },
+      "executableSha256": "976ce9fdc654d6e014ff5c6b23ec6da3aca46bc436cb072996c94ffbe2731210"
+    },
+    "linux-appimage": {
+      "target": "x86_64-unknown-linux-gnu",
+      "asset": {
+        "name": "FBones_0.9.5_amd64.AppImage",
+        "id": 725256848,
+        "bytes": 83761656,
+        "sha256": "5c23cfa6c6ad7f2092ffaec59cde0a090f600532a4ccb468e05350146c3ddc0b"
+      },
+      "executableSha256": "976ce9fdc654d6e014ff5c6b23ec6da3aca46bc436cb072996c94ffbe2731210"
+    },
+    "mac-dmg": {
+      "target": "universal-apple-darwin",
+      "asset": {
+        "name": "FBones_0.9.5_universal.dmg",
+        "id": 725256876,
+        "bytes": 10672930,
+        "sha256": "82dc4c9cb1fd487c9e6ba620cc72373002b3f1294e8842105eb9caaff873e0ca"
+      },
+      "executableSha256": "6824b30a87869d90337a68e4e45b884c61c8c7ab34695da28bc3f59c35797589"
+    }
+  }
+}

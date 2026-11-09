@@ -108,6 +108,11 @@
       "sha256": "68120cc83bd5462ba7957ce03ac0abfe24f0816e2620b485af2fa99f90048007"
     },
     {
+      "path": ".github/workflows/native-install-upgrade.yml",
+      "bytes": 2964,
+      "sha256": "17d2b1fa594c8deb8d876f2edaa34621d3eefd86338e71b5e3dc4a9e71f19e22"
+    },
+    {
       "path": "src/App.vue",
       "bytes": 42696,
       "sha256": "54a7e8bc5ebfdd22e76305479e3ae481216e81a96855871012d14129c25ec0e0"
@@ -2053,14 +2058,59 @@
       "sha256": "93e2370ad15b26a92a33c7557992cac0adfe462d97d5210ff5877bae36de2d30"
     },
     {
+      "path": "scripts/native-acceptance/assets.json",
+      "bytes": 1827,
+      "sha256": "16f18317682e0fc7e630956f721b1e22733ac4d38179e883c9fca19909b90b63"
+    },
+    {
+      "path": "scripts/native-acceptance/assets.py",
+      "bytes": 3243,
+      "sha256": "aa0ac7984d82c6830516352a792afdbd9285df69f29ba08319c607451c750588"
+    },
+    {
+      "path": "scripts/native-acceptance/linux-launch.py",
+      "bytes": 2240,
+      "sha256": "3985b4c2775df17adb496de119fd17bb09fa375f27ad6f9614de54f7e898ccdf"
+    },
+    {
+      "path": "scripts/native-acceptance/linux.py",
+      "bytes": 10498,
+      "sha256": "6724333d01bfcf0f0d1aff0839aa129b93bbbfaa4776446f4e216d28b9494bb9"
+    },
+    {
+      "path": "scripts/native-acceptance/mac.sh",
+      "bytes": 1400,
+      "sha256": "293c1118e53b8365207927e8ecab5a378b03a758ab3a18973aa0e4cb03a9d68a"
+    },
+    {
+      "path": "scripts/native-acceptance/mac.swift",
+      "bytes": 7328,
+      "sha256": "04954b51115f47e33f1053cbdc3e72ec2d3ab70d0b1112915add183058f1dd25"
+    },
+    {
+      "path": "scripts/native-acceptance/nul-gui-launch.cs",
+      "bytes": 5311,
+      "sha256": "55289d4709dd52249adfc053debf09f97a31737f356bca0e32ada6c6ecc8384b"
+    },
+    {
+      "path": "scripts/native-acceptance/windows-cdp.mjs",
+      "bytes": 4582,
+      "sha256": "e2654f44f3ef5543d31e619e98000bd3b6fd2ebca5cf8ed1e4218dabed8c15ec"
+    },
+    {
+      "path": "scripts/native-acceptance/windows.ps1",
+      "bytes": 8664,
+      "sha256": "dde29597dae698baedf0f830d418992db1b187dc949026c869f4a3e574f6032c"
+    },
+    {
       "path": "scripts/prepare-installer-release.py",
       "bytes": 13878,
       "sha256": "f60c96a09e52eb0503f3dde86633727e90379f77a34d3d5372b2e4eaebf9b83b"
     },
     {
       "path": "scripts/prepare-public-release.py",
-      "bytes": 7730,
-      "sha256": "312cb84a0b61570aa7b942238bc2bd9a0499c1cb9fd4b5135e8028880caa9e96"
+      "bytes": 7852,
+      "sha256": "0aef6179c3df4ebe6d4bf7f5ed68f9b24cc7545cf17ace8e8ca6bcebeee654be"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -2916,6 +2966,16 @@
       "path": "docs/research/NATIVE-FILE-MENU-UI-GATE-2026-11-08.md",
       "bytes": 5520,
       "sha256": "32dd86d23e9b72726bc0a017f8523336df043bdfcedf1e6bd58dc797d4300b1c"
+    },
+    {
+      "path": "docs/research/NATIVE-INSTALL-UPGRADE-UI-GATE-2026-11-09.md",
+      "bytes": 5696,
+      "sha256": "280c02a813a99059d6a7a2bd3795f21760afb230e6de190ab5f34772e3b2cc39"
+    },
+    {
+      "path": "docs/research/NATIVE-INSTALLED-UPGRADE-DATA-GATE-2026-11-09.md",
+      "bytes": 4408,
+      "sha256": "bfea35c12634f320d2be6e4d574c8498cf18b25d775b7fc95552cd218efa26ad"
     },
     {
       "path": "docs/research/PHYSICS-BATCH-AUTHORING-POLICY.md",

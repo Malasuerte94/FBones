@@ -1,0 +1,75 @@
+name: Native stock-package capability
+on:
+  push:
+    branches: [work/native-install-upgrade-0.9.6]
+    paths:
+      - '.github/workflows/native-install-upgrade.yml'
+      - 'scripts/native-acceptance/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  capability:
+    name: Native capability ${{ matrix.route }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - route: windows-nsis
+            os: windows-latest
+          - route: linux-deb
+            os: ubuntu-22.04
+          - route: linux-appimage
+            os: ubuntu-22.04
+          - route: mac-dmg
+            os: macos-latest
+    env:
+      FBONES_ROUTE: ${{ matrix.route }}
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        if: runner.os == 'Windows'
+        with:
+          node-version: '24'
+      - name: Select fresh private runner output root
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']) / ('fbones-native-' + os.environ['GITHUB_RUN_ID'] + '-' + os.environ['GITHUB_RUN_ATTEMPT'] + '-' + os.environ['FBONES_ROUTE'])
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write('RUN_ROOT=' + str(root) + '\n')
+      - name: Install ordinary native Linux prerequisites on this ephemeral VM
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-0 libgtk-3-0 webkit2gtk-driver xvfb x11-utils dbus-x11 libfuse2 libgl1-mesa-dri
+      - name: Verify and fetch one exact published stock 0.9.5 package
+        shell: bash
+        run: python scripts/native-acceptance/assets.py '${{ matrix.route }}' --root "$RUN_ROOT"
+      - name: Real Windows NSIS installation and native WebView2 control
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/native-acceptance/windows.ps1 -Root $env:RUN_ROOT
+      - name: Real Linux package installation and native GTK control
+        if: runner.os == 'Linux'
+        shell: bash
+        run: xvfb-run --auto-servernum --server-args='-screen 0 1440x900x24' dbus-run-session -- python scripts/native-acceptance/linux.py "$RUN_ROOT" '${{ matrix.route }}'
+      - name: Real macOS DMG installation and permitted native Aqua AX control
+        if: runner.os == 'macOS'
+        shell: bash
+        run: bash scripts/native-acceptance/mac.sh "$RUN_ROOT"
+      - name: Preserve bounded native capability receipts, including blockers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-capability-${{ matrix.route }}
+          path: ${{ env.RUN_ROOT }}/reports/
+          retention-days: 7
+          if-no-files-found: warn
