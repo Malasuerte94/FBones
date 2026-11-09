@@ -17,7 +17,16 @@
         "bytes": 4488896,
         "sha256": "056dc4373718b2a955ce94244fe784c57b7bcee10a5c02cbdb6f588c2f245d60"
       },
-      "executableSha256": "eccb94aafa7f6613e783f959e3f07ae7f38512ab85bc6a0189b0cdae7cfa23f8"
+      "executableSha256": "aa57d9bc1c20c185e3b46472b9c74ca9cd8c1e411d6bffecea0c0951f270b5fe",
+      "ciReportExecutableSha256": "eccb94aafa7f6613e783f959e3f07ae7f38512ab85bc6a0189b0cdae7cfa23f8",
+      "rawCiExecutableSha256": "eccb94aafa7f6613e783f959e3f07ae7f38512ab85bc6a0189b0cdae7cfa23f8",
+      "bundleMemberIdentity": {
+        "sha256": "aa57d9bc1c20c185e3b46472b9c74ca9cd8c1e411d6bffecea0c0951f270b5fe",
+        "path": "fbones.exe",
+        "nativeBytes": 16827904,
+        "offlineProofSha256": "9b740abe4d4644fe05f3fc9f92742aaf88325b460b9a985d47ad57cbbe8e81bb",
+        "rawCiRelation": "whole-byte identity or marker-only replay proven"
+      }
     },
     "linux-deb": {
       "target": "x86_64-unknown-linux-gnu",
@@ -27,7 +36,16 @@
         "bytes": 5564052,
         "sha256": "0b731ab1a9b7e3c146ce281c58ee32450d186ff39447056e27bdf517f56bee65"
       },
-      "executableSha256": "976ce9fdc654d6e014ff5c6b23ec6da3aca46bc436cb072996c94ffbe2731210"
+      "executableSha256": "1829501fd07758dc913f21ce7aaa6ecf4689f1bfe26dfc5f16106a5b1035b786",
+      "ciReportExecutableSha256": "976ce9fdc654d6e014ff5c6b23ec6da3aca46bc436cb072996c94ffbe2731210",
+      "rawCiExecutableSha256": "976ce9fdc654d6e014ff5c6b23ec6da3aca46bc436cb072996c94ffbe2731210",
+      "bundleMemberIdentity": {
+        "sha256": "1829501fd07758dc913f21ce7aaa6ecf4689f1bfe26dfc5f16106a5b1035b786",
+        "path": "usr/bin/fbones",
+        "nativeBytes": 14169992,
+        "offlineProofSha256": "9b740abe4d4644fe05f3fc9f92742aaf88325b460b9a985d47ad57cbbe8e81bb",
+        "rawCiRelation": "whole-byte identity or marker-only replay proven"
+      }
     },
     "linux-appimage": {
       "target": "x86_64-unknown-linux-gnu",
@@ -37,7 +55,16 @@
         "bytes": 83761656,
         "sha256": "5c23cfa6c6ad7f2092ffaec59cde0a090f600532a4ccb468e05350146c3ddc0b"
       },
-      "executableSha256": "976ce9fdc654d6e014ff5c6b23ec6da3aca46bc436cb072996c94ffbe2731210"
+      "executableSha256": "f53aa2fbb829ddaa39d5abf30094c2306831fc0e7d593c295d5fd4a45dfe27ab",
+      "ciReportExecutableSha256": "976ce9fdc654d6e014ff5c6b23ec6da3aca46bc436cb072996c94ffbe2731210",
+      "rawCiExecutableSha256": "976ce9fdc654d6e014ff5c6b23ec6da3aca46bc436cb072996c94ffbe2731210",
+      "bundleMemberIdentity": {
+        "sha256": "f53aa2fbb829ddaa39d5abf30094c2306831fc0e7d593c295d5fd4a45dfe27ab",
+        "path": "usr/bin/fbones",
+        "nativeBytes": 14204321,
+        "offlineProofSha256": "9b740abe4d4644fe05f3fc9f92742aaf88325b460b9a985d47ad57cbbe8e81bb",
+        "rawCiRelation": "UNKNOWN (marker-only disproved)"
+      }
     },
     "mac-dmg": {
       "target": "universal-apple-darwin",
@@ -47,7 +74,16 @@
         "bytes": 10672930,
         "sha256": "82dc4c9cb1fd487c9e6ba620cc72373002b3f1294e8842105eb9caaff873e0ca"
       },
-      "executableSha256": "6824b30a87869d90337a68e4e45b884c61c8c7ab34695da28bc3f59c35797589"
+      "executableSha256": "6824b30a87869d90337a68e4e45b884c61c8c7ab34695da28bc3f59c35797589",
+      "ciReportExecutableSha256": "6824b30a87869d90337a68e4e45b884c61c8c7ab34695da28bc3f59c35797589",
+      "bundleMemberIdentity": {
+        "sha256": "6824b30a87869d90337a68e4e45b884c61c8c7ab34695da28bc3f59c35797589",
+        "path": "FBones.app/Contents/MacOS/fbones",
+        "nativeBytes": 26357856,
+        "offlineProofSha256": "9b740abe4d4644fe05f3fc9f92742aaf88325b460b9a985d47ad57cbbe8e81bb",
+        "rawCiRelation": "whole-byte identity or marker-only replay proven"
+      }
     }
-  }
+  },
+  "harnessRevision": 2
 }

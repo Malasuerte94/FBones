@@ -1,4 +1,4 @@
-name: Native stock-package capability
+name: Native stock-package capability v2
 on:
   push:
     branches: [work/native-install-upgrade-0.9.6]
@@ -52,6 +52,8 @@ jobs:
           sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-0 libgtk-3-0 webkit2gtk-driver xvfb x11-utils dbus-x11 libfuse2 libgl1-mesa-dri
       - name: Verify and fetch one exact published stock 0.9.5 package
         shell: bash
+        env:
+          FBONES_METADATA_TOKEN: ${{ github.token }}
         run: python scripts/native-acceptance/assets.py '${{ matrix.route }}' --root "$RUN_ROOT"
       - name: Real Windows NSIS installation and native WebView2 control
         if: runner.os == 'Windows'

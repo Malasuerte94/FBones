@@ -16,7 +16,7 @@ using System;using System.Runtime.InteropServices;public static class OwnNativeW
  [DllImport("user32.dll",SetLastError=true)]public static extern bool PostMessage(IntPtr h,uint msg,IntPtr w,IntPtr l);
 }
 '@
-$proof=[ordered]@{passed=$false;route='windows-nsis';stage='capability-only';upgradeAttempted=$false;normalClose=$false};$app=$null;$native=$null;$created=[long]0;$closeRequested=$false
+$proof=[ordered]@{passed=$false;route='windows-nsis';stage='capability-only';upgradeAttempted=$false;normalClose=$false;currentStage='stock-nsis-install'};$app=$null;$native=$null;$created=[long]0;$closeRequested=$false
 try{
  $installer=Join-Path $rootPath $receipt.asset.name
  if((Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant() -ne $receipt.asset.sha256){throw 'Installer hash changed'}
@@ -27,9 +27,13 @@ try{
   $exit=[uint32]0;if(![NativeOwnGui]::GetExitCodeProcess($ownedInstaller.Process,[ref]$exit) -or $exit -ne 0){throw 'Stock NSIS installer failed'}
   $proof.installerExitCode=$exit
  }finally{[NativeOwnGui]::CloseHandle($ownedInstaller.Process)|Out-Null}
+ $proof.currentStage='verify-installed-native-identity'
  $registry=Get-ItemProperty -LiteralPath $key;$image=Join-Path $installDir 'FBones.exe'
- if($registry.DisplayVersion -ne '0.9.5' -or (Get-FileHash -LiteralPath $image -Algorithm SHA256).Hash.ToLowerInvariant() -ne $receipt.executableSha256){throw 'Installed version/executable identity differs'}
+ $installedExists=Test-Path -LiteralPath $image -PathType Leaf;$installedSha=if($installedExists){(Get-FileHash -LiteralPath $image -Algorithm SHA256).Hash.ToLowerInvariant()}else{$null}
+ $proof.observedInstallation=[ordered]@{registryVersion=$registry.DisplayVersion;registryInstallLocation=$registry.InstallLocation;nativeExecutableExists=$installedExists;actualNativeSha256=$installedSha;expectedBundledNativeSha256=$receipt.executableSha256;rawCiExecutableSha256=$receipt.ciReportExecutableSha256;bundleMemberIdentity=$receipt.bundleMemberIdentity}
+ if($registry.DisplayVersion -ne '0.9.5' -or $installedSha -ne $receipt.executableSha256){throw 'Installed version/executable identity differs'}
  $proof.installation=[ordered]@{stockNsisExecuted=$true;registryVersion=$registry.DisplayVersion;executableSha256=$receipt.executableSha256}
+ $proof.currentStage='launch-owned-native-gui'
  $port=9331;if(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue){throw 'Dedicated CDP port occupied before launch'}
  $env:WEBVIEW2_USER_DATA_FOLDER=Join-Path $rootPath 'webview-profile';$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="--remote-debugging-port=$port"
  $native=[NativeOwnGui]::Start($image,$installDir);$app=Get-Process -Id $native.ProcessId
@@ -40,15 +44,18 @@ try{
  $window=$app.MainWindowHandle;$windowPid=[uint32]0
  if(!$window -or ![OwnNativeWindow]::IsWindowVisible($window) -or ![OwnNativeWindow]::GetWindowThreadProcessId($window,[ref]$windowPid) -or $windowPid -ne $native.ProcessId -or $app.StartTime.ToUniversalTime().ToFileTimeUtc() -ne $created -or $app.MainModule.FileName -ne $image){throw 'Native visible window identity mismatch'}
  $proof.native=[ordered]@{processId=$native.ProcessId;creationFileTime=$created;window=$window.ToInt64();visible=$true;sha256=$receipt.executableSha256;stdio='NUL-handle-allowlist'}
+ $proof.currentStage='bind-native-cdp-listener'
  $connection=$null;for($i=0;$i -lt 100;$i++){$connection=Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue;if($connection){break};Start-Sleep -Milliseconds 200}
  if(!$connection -or @($connection).Count -ne 1){throw 'Missing/ambiguous native CDP listener'}
  $listener=Get-CimInstance Win32_Process -Filter "ProcessId=$($connection.OwningProcess)";$cursor=$listener;$seen=@{}
  while($cursor -and $cursor.ProcessId -ne $native.ProcessId){if($seen.ContainsKey([string]$cursor.ProcessId)){throw 'CDP ancestry cycle'};$seen[[string]$cursor.ProcessId]=$true;$cursor=Get-CimInstance Win32_Process -Filter "ProcessId=$($cursor.ParentProcessId)"}
  if(!$listener -or $listener.Name -ne 'msedgewebview2.exe' -or !$cursor){throw 'CDP listener is not a descendant of our created native app'}
+ $proof.currentStage='native-frontend-one-toggle'
  & node (Join-Path $PSScriptRoot 'windows-cdp.mjs') $rootPath $port
  if($LASTEXITCODE -ne 0){throw 'Native WebView2 frontend/control probe failed'}
  $frontend=Get-Content -Raw -LiteralPath (Join-Path $rootPath 'reports\frontend.json')|ConvertFrom-Json
  if($frontend.passed -ne $true){throw 'Native frontend probe did not pass'}
+ $proof.currentStage='normal-owned-close'
  $app.Refresh();$nowCreated=[long]0
  if($app.HasExited -or ![NativeOwnGui]::GetProcessTimes($native.Process,[ref]$nowCreated,[ref]$exited,[ref]$kernel,[ref]$user) -or $nowCreated -ne $created -or (Get-FileHash -LiteralPath $image -Algorithm SHA256).Hash.ToLowerInvariant() -ne $receipt.executableSha256){throw 'Own window changed before normal close'}
  $windowPid=[uint32]0
@@ -57,7 +64,7 @@ try{
  if(![OwnNativeWindow]::PostMessage($window,0x10,[IntPtr]::Zero,[IntPtr]::Zero)){throw 'Owned WM_CLOSE failed'}
  if([NativeOwnGui]::WaitForSingleObject($native.Process,20000) -ne 0){throw 'Owned native app did not close normally; no force'}
  $exit=[uint32]0;if(![NativeOwnGui]::GetExitCodeProcess($native.Process,[ref]$exit) -or $exit -ne 0){throw 'Owned app terminal exit unavailable/nonzero'}
- $proof.normalClose=$true;$proof.exitCode=$exit;$proof.passed=$true
+ $proof.normalClose=$true;$proof.exitCode=$exit;$proof.passed=$true;$proof.currentStage='passed'
 }catch{
  $proof.error=$_.Exception.Message
  $cleanup=[ordered]@{attempted=$false;normalClose=$false;noForce=$true}

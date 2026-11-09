@@ -109,8 +109,8 @@
     },
     {
       "path": ".github/workflows/native-install-upgrade.yml",
-      "bytes": 2964,
-      "sha256": "17d2b1fa594c8deb8d876f2edaa34621d3eefd86338e71b5e3dc4a9e71f19e22"
+      "bytes": 3033,
+      "sha256": "a67d3e70e0cb76a6f4b66eca8c34c02ac3047d31796ea3d141287148e78cc77e"
     },
     {
       "path": "src/App.vue",
@@ -2059,23 +2059,23 @@
     },
     {
       "path": "scripts/native-acceptance/assets.json",
-      "bytes": 1827,
-      "sha256": "16f18317682e0fc7e630956f721b1e22733ac4d38179e883c9fca19909b90b63"
+      "bytes": 4025,
+      "sha256": "d749af846f064141c976a304ad9d52f09eca8e9205177642fcf90f81ffb9c0ce"
     },
     {
       "path": "scripts/native-acceptance/assets.py",
-      "bytes": 3243,
-      "sha256": "aa0ac7984d82c6830516352a792afdbd9285df69f29ba08319c607451c750588"
+      "bytes": 3919,
+      "sha256": "d5a0700c7b00e1a1074644b66c767498b1c2d2dfe1cfa2da278c36e2ce314b81"
     },
     {
       "path": "scripts/native-acceptance/linux-launch.py",
-      "bytes": 2240,
-      "sha256": "3985b4c2775df17adb496de119fd17bb09fa375f27ad6f9614de54f7e898ccdf"
+      "bytes": 2303,
+      "sha256": "6107417fcbc9669e37f169ed239802201ed06f307ab35fa35331acb10935b620"
     },
     {
       "path": "scripts/native-acceptance/linux.py",
-      "bytes": 10498,
-      "sha256": "6724333d01bfcf0f0d1aff0839aa129b93bbbfaa4776446f4e216d28b9494bb9"
+      "bytes": 11865,
+      "sha256": "6e2c9ccdf13c5f2a3721f3a257285047451aa3e0f5297a02376fe9933164d34d"
     },
     {
       "path": "scripts/native-acceptance/mac.sh",
@@ -2099,8 +2099,8 @@
     },
     {
       "path": "scripts/native-acceptance/windows.ps1",
-      "bytes": 8664,
-      "sha256": "dde29597dae698baedf0f830d418992db1b187dc949026c869f4a3e574f6032c"
+      "bytes": 9460,
+      "sha256": "e80b57097a8214f42fb4f9c21152f2ae99510984eaed6624e5eb394b45adb01a"
     },
     {
       "path": "scripts/prepare-installer-release.py",
@@ -2968,9 +2968,19 @@
       "sha256": "32dd86d23e9b72726bc0a017f8523336df043bdfcedf1e6bd58dc797d4300b1c"
     },
     {
+      "path": "docs/research/NATIVE-INSTALL-BUNDLED-IDENTITY-DATA-GATE-2026-11-09.md",
+      "bytes": 3175,
+      "sha256": "0fd95469944db9729f3209cc3cc652f56f451816b5ab3281b98b9f9d456a1e3c"
+    },
+    {
       "path": "docs/research/NATIVE-INSTALL-UPGRADE-UI-GATE-2026-11-09.md",
       "bytes": 5696,
       "sha256": "280c02a813a99059d6a7a2bd3795f21760afb230e6de190ab5f34772e3b2cc39"
+    },
+    {
+      "path": "docs/research/NATIVE-INSTALL-UPGRADE-V2-UI-GATE-2026-11-09.md",
+      "bytes": 4157,
+      "sha256": "9e9370e8ced031e2dcd32cd26cbccf826d3dc62c202136ae59fc30e416178727"
     },
     {
       "path": "docs/research/NATIVE-INSTALLED-UPGRADE-DATA-GATE-2026-11-09.md",
