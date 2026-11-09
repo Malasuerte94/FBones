@@ -17,6 +17,7 @@ class TextNode:
   return self.value
 row_text={'role':'footer','editable':False,'showing':True,'visible':True}
 node=TextNode();budget={'characters':0};result=native_access.read_passive_text(node,row_text,budget);assert result['nativeText']=='Version 0.9.6'and result['textReadComplete']and budget['characters']==13
+timer=TextNode();timer_read=native_access.read_passive_text(timer,dict(row_text,role='timer'),{'characters':0});assert timer_read['nativeText']=='Version 0.9.6'and timer_read['textReadComplete']and timer.calls==['interface','count',('text',0,13)]
 node=TextNode(available=False);result=native_access.read_passive_text(node,row_text,{'characters':0});assert result['textInterfaceAvailable']is False and result['textReadComplete']
 for delta in[{'role':'password text'},{'role':'protected text'},{'editable':True},{'visible':False},{'showing':False},{'role':'push button'}]:
  node=TextNode();result=native_access.read_passive_text(node,dict(row_text,**delta),{'characters':0});assert result['textSkipReason']and not node.calls

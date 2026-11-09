@@ -2154,8 +2154,8 @@
     },
     {
       "path": "scripts/native-debian-upgrade/native_access.py",
-      "bytes": 20490,
-      "sha256": "b516fa2973b24c9b86cdbdb979cbcb750e830a7f88a4643e8a86ea78958c7fdf"
+      "bytes": 20498,
+      "sha256": "57a9638034518746aa9f7796e6968b726646b4194b3fba3f2c02700233432052"
     },
     {
       "path": "scripts/native-debian-upgrade/own-minimal-checkpoint.py",
@@ -2179,8 +2179,8 @@
     },
     {
       "path": "scripts/native-debian-upgrade/selftest.py",
-      "bytes": 4132,
-      "sha256": "6399af30ebfcde8802e01405176b9b7141fdc9dcd3440176739c22e614646383"
+      "bytes": 4379,
+      "sha256": "7de019c4a678b0d3055dcd6b2e716998bd1e5dd59983774ef54a951e1c20ef17"
     },
     {
       "path": "scripts/native-debian-upgrade/session.py",
@@ -3128,6 +3128,11 @@
       "sha256": "aa50ace3675e7043cbad0815c2822423f44311281de6614966c2256b303ae392"
     },
     {
+      "path": "docs/research/NATIVE-LINUX-DEBIAN-TIMER-TEXT-V3-UI-GATE-2026-11-09.md",
+      "bytes": 2446,
+      "sha256": "353502ee9fab296011fc3c2830d3b7bd7d8345d40ac4d0b2f8ede2ca718ba667"
+    },
+    {
       "path": "docs/research/NATIVE-LINUX-PICKER-UI-GATE-2026-11-09.md",
       "bytes": 2872,
       "sha256": "b5430cc12ffe9edbcd04d221af5e48d48a0d5f411cc7ff9cf6238cd64c4e86d9"
@@ -3156,6 +3161,11 @@
       "path": "docs/research/NATIVE-PROVIDER-TEXT-AND-INITIALIZATION-DATA-GATE-2026-11-09.md",
       "bytes": 5193,
       "sha256": "06cc92dce7a587f4821c3a5e51d4238f71e80d29b2df76dd1cc240805908a770"
+    },
+    {
+      "path": "docs/research/NATIVE-TIMER-TEXT-AND-LEGACY-METADATA-DATA-GATE-2026-11-09.md",
+      "bytes": 4890,
+      "sha256": "f319990d85900d94f1769ee2beaffb247175736823765891790ff7618ee36807"
     },
     {
       "path": "docs/research/NATIVE-WINDOWS-CAPABILITY-V6-UI-GATE-2026-11-09.md",

@@ -140,7 +140,7 @@ def selftest():
   else:raise AssertionError('Unbound click action accepted')
  print('PASS pure selector guards; no GI/desktop/process calls')
 
-PASSIVE_TEXT_ROLES={'static','label','page','footer','status bar','document text','document frame','paragraph','text'}
+PASSIVE_TEXT_ROLES={'static','label','page','footer','status bar','document text','document frame','paragraph','text','timer'}
 PROTECTED_TEXT_ROLES={'password text','password-text','protected text','protected-text'}
 def read_passive_text(node,row,budget):
  """Read-only standard Text; fake-node tests never load an AT-SPI provider."""
