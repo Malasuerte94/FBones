@@ -227,10 +227,10 @@ def updates_action_metadata(node):
  return row,action
 
 def qualified_updates_action(row):
- return row.get('complete')is True and len(updates_rows([row]))==1 and row.get('actionInterfaceAvailable')is True and row.get('actionCount')==1 and row.get('actionNames')==['click']
+ return row.get('complete')is True and len(updates_rows([row]))==1 and row.get('actionInterfaceAvailable')is True and row.get('actionCount')==1 and row.get('actionNames')==['press']
 
 def native_successor_current_version(run,baseline,expected_sha,expected_window):
- """ONE newly authorized native Updates click, then actual CURRENT version."""
+ """ONE newly authorized native Updates press, then actual CURRENT version."""
  from lifecycle import process,same,tree
  from session import main_window
  root=Path(run);reports=root/'reports';end=time.monotonic()+20;attempts=0;before=None;captured={}
@@ -245,23 +245,23 @@ def native_successor_current_version(run,baseline,expected_sha,expected_window):
   candidates=updates_rows(before['nodes']);require(len(candidates)<=1,'Ambiguous native Updates before action')
   if candidates:break
   time.sleep(.2)
- require(before is not None,'No native Updates before observation');output('automatic-updates-before.json',before);require(len(candidates)==1 and not before['versionVerified'],'Unique closed native Updates panel required before one discovery press');selected=candidates[0];node=captured['nodes'][tuple(selected['path'])];metadata,action=updates_action_metadata(node);output('automatic-updates-action-capability.json',metadata);require(qualified_updates_action(metadata),'Actual native Updates sole click[0] unavailable')
+ require(before is not None,'No native Updates before observation');output('automatic-updates-before.json',before);require(len(candidates)==1 and not before['versionVerified'],'Unique closed native Updates panel required before one discovery press');selected=candidates[0];node=captured['nodes'][tuple(selected['path'])];metadata,action=updates_action_metadata(node);output('automatic-updates-action-capability.json',metadata);require(qualified_updates_action(metadata),'Actual native Updates sole press[0] unavailable')
  # A second complete traversal rebinds the retained object/path to the same live frame.
  bound();fresh_nodes={};fresh=_successor_attempt(run,baseline,expected_sha,fresh_nodes,current_version_only=True);output('automatic-updates-pre-action.json',fresh);now=updates_rows(fresh['nodes']);require(fresh.get('nativeTextReadsComplete')is True and not fresh['startupErrorVisible']and not fresh['versionVerified']and len(now)==1 and now[0]['path']==selected['path']and now[0]['exporterPid']==selected['exporterPid'],'Native Updates scope/shape changed');require(fresh_nodes['frame']==captured['frame']and fresh_nodes['nodes'][tuple(selected['path'])]==node,'Retained native Updates object/frame/path changed')
  exporter=next(r for r in fresh['exporters']if r['pid']==selected['exporterPid']);current=process(exporter['pid']);descendants=tree(baseline['pid']);require((exporter['pid']==baseline['pid']or exporter['pid']in descendants)and current['startTicks']==exporter['startTicks']and current['executablePath']==exporter['executablePath'],'Updates exporter left current own descendant tree');current_metadata,action=updates_action_metadata(node);output('automatic-updates-action-recheck.json',current_metadata);require(qualified_updates_action(current_metadata)and current_metadata['exporterPid']==exporter['pid'],'Native Updates current object/action changed');bound()
- intent={'oneNativeUpdatesClick':True,'main':baseline,'window':expected_window,'selected':selected,'exporter':exporter,'actionMetadata':current_metadata,'actionIndex':0,'readOnly':False,'maximumActions':1};output('automatic-updates-click-intent.json',intent)
+ intent={'oneNativeUpdatesPress':True,'main':baseline,'window':expected_window,'selected':selected,'exporter':exporter,'actionMetadata':current_metadata,'actionIndex':0,'readOnly':False,'maximumActions':1};output('automatic-updates-press-intent.json',intent)
  action_result={'attempted':True,'returned':None,'apiError':None,'repeatOrFallback':False}
  try:action_result['returned']=action.do_action(0)
  except Exception as error:action_result['apiError']=(type(error).__name__+': '+str(error))[:512]
- finally:output('automatic-updates-click-result.json',action_result)
- require(action_result['apiError']is None and action_result['returned']is True,'One native Updates click did not return success; no retry')
+ finally:output('automatic-updates-press-result.json',action_result)
+ require(action_result['apiError']is None and action_result['returned']is True,'One native Updates press did not return success; no retry')
  end=time.monotonic()+20;after=None;after_attempts=0
  while time.monotonic()<end:
   after_attempts+=1;bound();after=_successor_attempt(run,baseline,expected_sha,current_version_only=True);after['readOnlyAttempts']=after_attempts;data=json.dumps(after,indent=2,ensure_ascii=True).encode();require(len(data)<=2*1024*1024,'After native Updates inventory cap');(reports/'automatic-updates-after-progress.json').write_bytes(data+b'\n')
   if after['startupErrorVisible']or after['versionVerified']or after.get('nativeTextReadsComplete')is False:break
   time.sleep(.2)
- require(after is not None,'No native Updates after inventory');output('automatic-updates-after.json',after);require(after.get('nativeTextReadsComplete')is True and after['versionVerified']and not after['startupErrorVisible'],'Actual native CURRENT version0.9.6 unproved after one Updates click');bound()
- return{'versionVerified':True,'version':'0.9.6','requiredLabel':'Current version: 0.9.6','readOnly':False,'nativeUpdatesClickAttempts':1,'clickReturned':True,'readOnlyBeforeAttempts':attempts,'readOnlyAfterAttempts':after_attempts,'versionMatches':after['versionMatches'],'exporterPids':sorted(r['pid']for r in after['exporters']),'nodeCount':len(after['nodes'])}
+ require(after is not None,'No native Updates after inventory');output('automatic-updates-after.json',after);require(after.get('nativeTextReadsComplete')is True and after['versionVerified']and not after['startupErrorVisible'],'Actual native CURRENT version0.9.6 unproved after one Updates press');bound()
+ return{'versionVerified':True,'version':'0.9.6','requiredLabel':'Current version: 0.9.6','readOnly':False,'nativeUpdatesPressAttempts':1,'pressReturned':True,'readOnlyBeforeAttempts':attempts,'readOnlyAfterAttempts':after_attempts,'versionMatches':after['versionMatches'],'exporterPids':sorted(r['pid']for r in after['exporters']),'nodeCount':len(after['nodes'])}
 
 def readonly_successor_version(run,baseline,expected_sha):
  end=time.monotonic()+20;attempts=0;last=None

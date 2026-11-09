@@ -2170,7 +2170,7 @@
     {
       "path": "scripts/native-debian-upgrade/native_access.py",
       "bytes": 28002,
-      "sha256": "d2d68b1b9cb32d93429d5053b0fb0d6915b035a295d5a1936292ee4f07ce6aba"
+      "sha256": "bfade1a669e82600324b8ffc4c90e84fac652c30a87c15701123b1f6381b1bcc"
     },
     {
       "path": "scripts/native-debian-upgrade/own-minimal-checkpoint.py",
@@ -2190,12 +2190,12 @@
     {
       "path": "scripts/native-debian-upgrade/run.py",
       "bytes": 15987,
-      "sha256": "6a1d2d3b9a0278cdc8fb72fe7a2c5b35868d0aa17a30ea9a0304ad4d3842d23b"
+      "sha256": "5f8c11746b4806b175dd3f21d71d2aeedaef1423d666a13669d15f626bbc2774"
     },
     {
       "path": "scripts/native-debian-upgrade/selftest.py",
-      "bytes": 5504,
-      "sha256": "9d2340b65036fa21a54f889f9a7bbda696de8edd31fb767cec400dfced735bd7"
+      "bytes": 5541,
+      "sha256": "33d65ef88cb72a49d15c21be0c51151aec5bdfa27968e3116d4255b489a0448c"
     },
     {
       "path": "scripts/native-debian-upgrade/session.py",
@@ -3186,6 +3186,16 @@
       "path": "docs/research/NATIVE-NEXT-PICKER-AND-LAUNCH-DATA-GATE-2026-11-09.md",
       "bytes": 5841,
       "sha256": "efee44ba4f18c6ec654610afa8b9343e31b46a96302031dfa583177e6728f250"
+    },
+    {
+      "path": "docs/research/NATIVE-PRESS-ACTIONS-LINUX-V5-WINDOWS-V8-DATA-GATE-2026-11-09.md",
+      "bytes": 4992,
+      "sha256": "a41de3316f5970074c905c22000ec28ad26b4dbd2c3864c19fe60adf9a587654"
+    },
+    {
+      "path": "docs/research/NATIVE-PRESS-ACTIONS-LINUX-V5-WINDOWS-V8-UI-GATE-2026-11-09.md",
+      "bytes": 3874,
+      "sha256": "199af8d523b86f7bbe734570d245b90f76f7dd73403883bd8532c3b77cb5cb7a"
     },
     {
       "path": "docs/research/NATIVE-PROVIDER-TEXT-AND-INITIALIZATION-DATA-GATE-2026-11-09.md",

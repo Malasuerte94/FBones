@@ -8,9 +8,9 @@ from lifecycle import SuccessorObserver,same
 
 native_access.selftest()
 update={'path':[0,1],'exporterPid':1,'role':'push button','name':'Updates','showing':True,'visible':True,'enabled':True,'sensitive':True,'editable':False}
-action=dict(update,complete=True,actionInterfaceAvailable=True,actionCount=1,actionNames=['click'])
+action=dict(update,complete=True,actionInterfaceAvailable=True,actionCount=1,actionNames=['press'])
 assert native_access.qualified_updates_action(action)
-for delta in[{'name':'Updates extra'},{'role':'toggle button'},{'visible':False},{'enabled':False},{'sensitive':False},{'editable':True},{'complete':False},{'actionInterfaceAvailable':False},{'actionCount':2},{'actionNames':['press']},{'actionNames':['click','click']}]:assert not native_access.qualified_updates_action(dict(action,**delta))
+for delta in[{'name':'Updates extra'},{'role':'toggle button'},{'visible':False},{'enabled':False},{'sensitive':False},{'editable':True},{'complete':False},{'actionInterfaceAvailable':False},{'actionCount':2},{'actionNames':['click']},{'actionNames':['Press']},{'actionNames':['press','press']}]:assert not native_access.qualified_updates_action(dict(action,**delta))
 for value in['Current version: 0.9.6',' Current\nversion: 0.9.6 ']:assert native_access.native_version_matches([dict(update,name='',nativeText=value)],True)
 for value in['Version 0.9.6','Version 0.9.6 is ready to install.','Current version: 0.9.6-beta.1','Current version: 0.9.60','Current version: 0.9.5','unrelated Current version: 0.9.6 suffix']:assert not native_access.native_version_matches([dict(update,name='',nativeText=value)],True)
 class TextNode:
@@ -57,4 +57,4 @@ with tempfile.TemporaryDirectory(prefix='fbones-own-native-tar-')as folder:
   except(ValueError,struct.error):pass
   else:raise AssertionError('Invalid/ambiguous package native member accepted')
 for path in BASE.glob('*.py'):ast.parse(path.read_text())
-print(json.dumps({'passed':True,'scope':'pure strictUpdates/currentVersion selectors, late-observer/nativeText-fakeNode/metadata and synthetic package member guards only','targetExecutions':0,'networkOperations':0,'accessibilityProviderCalls':0,'temporaryTarCleaned':True}))
+print(json.dumps({'passed':True,'scope':'pure press-only strictUpdates/currentVersion selectors, late-observer/nativeText-fakeNode/metadata and synthetic package member guards only','targetExecutions':0,'networkOperations':0,'accessibilityProviderCalls':0,'temporaryTarCleaned':True}))
