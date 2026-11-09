@@ -128,6 +128,11 @@
       "sha256": "3057b07ce1b703d7d54799bd4c86287579304d5ceead38bb7d4ec965f1b877b9"
     },
     {
+      "path": ".github/workflows/native-macos-nonchild.yml",
+      "bytes": 939,
+      "sha256": "89879c314233aeefb1896ebf353b27449ad9dc661cfea2cf012a04c54958b2a8"
+    },
+    {
       "path": "src/App.vue",
       "bytes": 42696,
       "sha256": "54a7e8bc5ebfdd22e76305479e3ae481216e81a96855871012d14129c25ec0e0"
@@ -2169,8 +2174,8 @@
     },
     {
       "path": "scripts/native-debian-upgrade/native_access.py",
-      "bytes": 28002,
-      "sha256": "bfade1a669e82600324b8ffc4c90e84fac652c30a87c15701123b1f6381b1bcc"
+      "bytes": 28216,
+      "sha256": "06c09680b4edcad960b65a80fa9e8e8a3c8f679fc6adf87011e76c9b702a86c4"
     },
     {
       "path": "scripts/native-debian-upgrade/own-minimal-checkpoint.py",
@@ -2194,13 +2199,18 @@
     },
     {
       "path": "scripts/native-debian-upgrade/selftest.py",
-      "bytes": 5541,
-      "sha256": "33d65ef88cb72a49d15c21be0c51151aec5bdfa27968e3116d4255b489a0448c"
+      "bytes": 8152,
+      "sha256": "a1cefe71bdff320bba7c105698c3f20a29ca49b838886fdfdd85ce97101a58b2"
     },
     {
       "path": "scripts/native-debian-upgrade/session.py",
       "bytes": 10399,
       "sha256": "676959b66eb5fd9c1a303dbce63a90b3d52f35e6989696dae27a051d9659d54d"
+    },
+    {
+      "path": "scripts/native-debian-upgrade/table_open.py",
+      "bytes": 12020,
+      "sha256": "84d6b6b027e08d756844de2cd3f5ae4999d4bcc126945586097bd1a208729433"
     },
     {
       "path": "scripts/native-debian-upgrade/target.json",
@@ -2211,6 +2221,16 @@
       "path": "scripts/native-lifecycle/probe.py",
       "bytes": 9037,
       "sha256": "c69f6502d7af73b12e5a59ec2f88549e9ac4127a6bdbc193256dbd52d2ffaade"
+    },
+    {
+      "path": "scripts/native-mac-nonchild/own-nonchild.c",
+      "bytes": 14181,
+      "sha256": "e1f2127b2b5f3efb82212f825ca2608c4c53a963f4fa282e884d3f1d8dcf7eda"
+    },
+    {
+      "path": "scripts/native-mac-nonchild/run.py",
+      "bytes": 4989,
+      "sha256": "7b8ff922010bf6e346e5f5dc0129e590fe7a96504e71f82e7cf7ac5377f37d96"
     },
     {
       "path": "scripts/native-picker/assets.json",
@@ -2244,8 +2264,8 @@
     },
     {
       "path": "scripts/prepare-public-release.py",
-      "bytes": 8194,
-      "sha256": "e2afddbe78124cb9897744589d333095235bbc7d39cf96bbf92b2c00a0a92c5c"
+      "bytes": 8258,
+      "sha256": "4a80a71100084b51d2dfe7cf08a602ab484aba330744e1b61b1515b085f77acb"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -3158,6 +3178,16 @@
       "sha256": "aa50ace3675e7043cbad0815c2822423f44311281de6614966c2256b303ae392"
     },
     {
+      "path": "docs/research/NATIVE-LINUX-DEBIAN-TABLE-OPEN-V6-DATA-GATE-2026-11-09.md",
+      "bytes": 4698,
+      "sha256": "df9368ee6fbe59cfe4d5e4162c94f014030c93561f12e7757dc39d417274a791"
+    },
+    {
+      "path": "docs/research/NATIVE-LINUX-DEBIAN-TABLE-OPEN-V6-UI-GATE-2026-11-09.md",
+      "bytes": 3438,
+      "sha256": "985866d5c9056b8d604c0da93389b3b01d3b17760800a5987134098a445c4bf8"
+    },
+    {
       "path": "docs/research/NATIVE-LINUX-DEBIAN-TIMER-TEXT-V3-UI-GATE-2026-11-09.md",
       "bytes": 2446,
       "sha256": "353502ee9fab296011fc3c2830d3b7bd7d8345d40ac4d0b2f8ede2ca718ba667"
@@ -3178,9 +3208,24 @@
       "sha256": "508e916e03384a06ebd2e4b6002f04f3ba7dbcf7139326e655503d710f1d40a1"
     },
     {
+      "path": "docs/research/NATIVE-LINUX-TABLE-OPEN-CURRENT-CHECKPOINT-DATA-ADDENDUM-2026-11-09.md",
+      "bytes": 956,
+      "sha256": "847852141711a714708971d96c597d89fa58de59416e130b5f63fddc311b972f"
+    },
+    {
       "path": "docs/research/NATIVE-MAC-PROCESS-IDENTITY-AND-WINDOWS-CDP-DATA-GATE-2026-11-09.md",
       "bytes": 4581,
       "sha256": "c4aabd8e7ee736414b3ef0c8d961a681c8be2a89d98ce18a45ba2f35e2146213"
+    },
+    {
+      "path": "docs/research/NATIVE-MACOS-OWN-NONCHILD-EXIT-DATA-GATE-2026-11-09.md",
+      "bytes": 3740,
+      "sha256": "971fad8eab51de56dfaaffb688357779cf6f6d651efb66e6c843bc1a4d3914ba"
+    },
+    {
+      "path": "docs/research/NATIVE-MACOS-OWN-NONCHILD-EXIT-UI-GATE-2026-11-09.md",
+      "bytes": 1846,
+      "sha256": "bc721f78b16ff21073755f4186d190f617145b75573187a768d4272f852a5fb4"
     },
     {
       "path": "docs/research/NATIVE-NEXT-PICKER-AND-LAUNCH-DATA-GATE-2026-11-09.md",

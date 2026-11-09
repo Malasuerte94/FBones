@@ -4,9 +4,30 @@ from pathlib import Path
 sys.dont_write_bytecode=True
 BASE=Path(__file__).resolve().parent
 import native_access
+import table_open
 from lifecycle import SuccessorObserver,same
 
 native_access.selftest()
+open_shape={'role':'push button','name':'Open','showing':True,'visible':True,'enabled':False,'sensitive':False,'clickActions':[0]}
+assert table_open.structural_open([open_shape])==open_shape
+for rows_bad in[[],[open_shape,open_shape],[dict(open_shape,name='Other')],[dict(open_shape,visible=False)],[dict(open_shape,clickActions=[])]]:
+ try:table_open.structural_open(rows_bad)
+ except ValueError:pass
+ else:raise AssertionError('Unqualified structural Open accepted')
+file={'basename':'own.fbones','location':'work/own/projects','sizeLabel':'17 bytes'}
+table_row=lambda name,location,size:{'cells':{'Name':{'leaves':name},'Location':{'leaves':location},'Size':{'leaves':size}}}
+good_row=table_row(['own.fbones'],['work/own/projects'],['17 bytes']);assert table_open.matching_rows([good_row],file)==[good_row]
+for rows_bad in[[table_row(['own.fbones','own.fbones'],['work/own/projects'],['17 bytes'])],[table_row(['own.fbones'],['other'],['17 bytes']),table_row(['other'],['work/own/projects'],['17 bytes'])],[table_row(['own.fbones'],['work/own/projects'],['18 bytes'])]]:assert table_open.matching_rows(rows_bad,file)==[]
+large_row={'cells':{name:{'nodes':[{'name':'\u4f60'*512}for _ in range(16)]}for name in['Name','Location','Size']}}
+oversize={'complete':True,'error':'own retained cap-negative diagnostic','rows':[large_row for _ in range(6)]};bounded=table_open.bounded_table_proof(oversize);assert not bounded['complete']and bounded['diagnosticByteCapHit']and bounded['diagnosticTruncated']and bounded['originalRecordedRows']==6 and bounded['retainedRecordedRows']<6 and bounded['error']=='own retained cap-negative diagnostic'and len(json.dumps(bounded,ensure_ascii=True).encode())<=500*1024
+with tempfile.TemporaryDirectory(prefix='own-table-file-',dir=BASE)as scratch:
+ own_root=Path(scratch);(own_root/'projects').mkdir();destination=own_root/'projects/own.fbones';destination.write_bytes(b'own current bytes');digest=__import__('hashlib').sha256(destination.read_bytes()).hexdigest();picker=type('OwnPathOnly',(),{'root':own_root})()
+ actual_file=table_open.own_file(picker,destination,digest);assert actual_file['size']==len(b'own current bytes')and actual_file['sizeLabel']==str(len(b'own current bytes'))+' bytes'
+ alias=own_root/'projects/alias.fbones';alias.symlink_to(destination)
+ for candidate,expected in[(destination,'0'*64),(alias,digest),(own_root/'projects/../projects/own.fbones',digest)]:
+  try:table_open.own_file(picker,candidate,expected)
+  except ValueError:pass
+  else:raise AssertionError('Wrong hash/alias/traversal accepted')
 update={'path':[0,1],'exporterPid':1,'role':'push button','name':'Updates','showing':True,'visible':True,'enabled':True,'sensitive':True,'editable':False}
 action=dict(update,complete=True,actionInterfaceAvailable=True,actionCount=1,actionNames=['press'])
 assert native_access.qualified_updates_action(action)
@@ -57,4 +78,4 @@ with tempfile.TemporaryDirectory(prefix='fbones-own-native-tar-')as folder:
   except(ValueError,struct.error):pass
   else:raise AssertionError('Invalid/ambiguous package native member accepted')
 for path in BASE.glob('*.py'):ast.parse(path.read_text())
-print(json.dumps({'passed':True,'scope':'pure press-only strictUpdates/currentVersion selectors, late-observer/nativeText-fakeNode/metadata and synthetic package member guards only','targetExecutions':0,'networkOperations':0,'accessibilityProviderCalls':0,'temporaryTarCleaned':True}))
+print(json.dumps({'passed':True,'scope':'pure Table-own-row/path/alias plus press-only strictUpdates/currentVersion selectors, late-observer/nativeText-fakeNode/metadata and synthetic package member guards only','targetExecutions':0,'networkOperations':0,'accessibilityProviderCalls':0,'temporaryTarCleaned':True}))

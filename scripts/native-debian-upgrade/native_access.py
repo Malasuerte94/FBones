@@ -78,7 +78,11 @@ class NativePicker:
   self.output('picker-windows.json',{'ownedPid':self.pid,'startTicks':self.start,'windows':windows,'privateDisplay':os.environ['DISPLAY'],'privateBus':os.environ['DBUS_SESSION_BUS_ADDRESS']})
   require(len(candidates)==1 and native is not None,'Owned modal accessibility/native Save dialog unavailable before deadline')
   self.dialog,self.dialog_path=candidates[0];self.x=native;self.inventory('picker-inventory.json')
-  self.cancel=choose(self.rows,'Cancel');self.accept=choose(self.rows,self.kind)
+  self.cancel=choose(self.rows,'Cancel')
+  if self.kind=='Open':
+   from table_open import prepare_open
+   prepare_open(self);return
+  self.accept=choose(self.rows,self.kind)
   found=entries(self.rows,self.allowed_labels);require(len(found)<=1,'Ambiguous filename entry; no reveal fallback')
   if not found:
    require(self.kind=='Open','Save filename contract unavailable');reveal=choose(self.rows,'Type a file name')
@@ -98,6 +102,9 @@ class NativePicker:
  def click(self,row):
   node=self.nodes[tuple(row['path'])];current=self.describe(node,row['path']);require(current==row,'Owned native button changed');action=node.get_action_iface();require(action is not None and action.do_action(0),'Scoped native click failed')
  def submit_once(self,destination,expected_existing_sha=None):
+  if self.kind=='Open':
+   from table_open import open_once
+   return open_once(self,destination,expected_existing_sha)
   import hashlib
   destination=Path(destination);require(destination.is_absolute()and destination.parent==self.root/'projects'and destination.suffix=='.fbones','Exact own project destination required')
   if self.kind=='Save':require(not destination.exists()and expected_existing_sha is None,'Save must use a new own path')

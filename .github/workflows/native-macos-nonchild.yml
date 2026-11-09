@@ -1,0 +1,30 @@
+name: Own macOS nonchild SDK exit-status capability
+on:
+  push:
+    branches: [work/native-install-upgrade-0.9.6]
+    paths:
+      - '.github/workflows/native-macos-nonchild.yml'
+      - 'scripts/native-mac-nonchild/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  own-nonchild:
+    runs-on: macos-latest
+    timeout-minutes: 3
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare one private own directory and actual SDK compile
+        shell: bash
+        run: |
+          python3 -B scripts/native-mac-nonchild/run.py
+      - name: Retain own capability and failure receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: own-macos-nonchild-exit
+          path: ${{ runner.temp }}/fbones-own-nonchild-${{ github.run_id }}-${{ github.run_attempt }}/reports/
+          retention-days: 7
+          if-no-files-found: warn
