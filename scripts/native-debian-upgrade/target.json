@@ -1,0 +1,31 @@
+{
+  "repository": "Malasuerte94/FBones",
+  "tag": "v0.9.6-beta.1",
+  "releaseId": 439062261,
+  "sourceCommit": "cfc60a45b5d73e25f35125f5353da56ff9027236",
+  "asset": {
+    "name": "FBones_0.9.6_amd64.deb",
+    "id": 727275935,
+    "bytes": 5564568,
+    "sha256": "8c762e92ec52018e6d778d86c770e48ae8642b7fc528ab684077e82e5f5aad59",
+    "route": "linux-deb",
+    "assetUrl": "https://github.com/Malasuerte94/FBones/releases/download/v0.9.6-beta.1/FBones_0.9.6_amd64.deb",
+    "localLargePackageRetained": false,
+    "nativeMemberSelection": "usr/bin/fbones",
+    "nativeMemberSha256": null,
+    "nativeMemberStatus": "UNMEASURED_REQUIRE_EXACT_HASHED_PACKAGE_EXTRACTION_BEFORE_UPGRADE",
+    "matchingReports": [
+      "x86_64-unknown-linux-gnu.json"
+    ],
+    "rawCiExecutableRelationship": "UNKNOWN_OPTIONAL_NOT_NATIVE_IMAGE_PIN",
+    "updaterPlatform": "linux-x86_64-deb",
+    "updaterUrl": "https://github.com/Malasuerte94/FBones/releases/download/v0.9.6-beta.1/FBones_0.9.6_amd64.deb",
+    "signatureAsset": {
+      "name": "FBones_0.9.6_amd64.deb.sig",
+      "id": 727275955,
+      "bytes": 428,
+      "sha256": "a0913d3641b4049e4cbbca758928c3287b03997c69bf1ce0cf815eb88f3a2072"
+    }
+  },
+  "preparation": "package metadata only; member SHA measured on CI before install"
+}

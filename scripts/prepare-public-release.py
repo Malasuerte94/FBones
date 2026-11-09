@@ -20,6 +20,7 @@ TREES = ('.github', 'src', 'src-tauri', 'crates', 'tests', 'scripts', 'docs', 'p
 SKIP_PARTS = {'gen', '__pycache__', 'node_modules', 'target', 'dist', '.git', '.local', '.tools'}
 OWN_TEXT_FILES = {'packages/runtime/LICENSE',
                   'scripts/native-acceptance/nul-gui-launch.cs',
+                  'scripts/native-acceptance/native-updater-uia.cs',
                   'scripts/native-acceptance/mac.swift',
                   'scripts/native-acceptance/own-process-identity.c',
                   'scripts/native-acceptance/own-process-identity.h'}

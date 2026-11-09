@@ -30,22 +30,29 @@ public static class NativeOwnGui {
   // NSIS explicitly requires /D to be LAST and UNQUOTED, including paths with spaces.
   return StartCommand(image,workingDirectory,new StringBuilder(Quote(image)+" /S /NS /D="+installDirectory));
  }
- private static PI StartCommand(string image,string workingDirectory,StringBuilder cmd) {
+ public static PI StartWithOwnedLog(string image,string workingDirectory,string logPath) {
+  if(!System.IO.Path.IsPathRooted(logPath)||System.IO.File.Exists(logPath))throw new ArgumentException("Fresh own absolute direct log required");
+  return StartCommand(image,workingDirectory,new StringBuilder(Quote(image)),logPath);
+ }
+ private static PI StartCommand(string image,string workingDirectory,StringBuilder cmd) {return StartCommand(image,workingDirectory,cmd,null);}
+ private static PI StartCommand(string image,string workingDirectory,StringBuilder cmd,string logPath) {
   if(!System.IO.Path.IsPathRooted(image)||!System.IO.File.Exists(image)||!System.IO.Directory.Exists(workingDirectory))throw new ArgumentException("Own absolute image and existing working directory required");
   var sa=new SA{Length=Marshal.SizeOf(typeof(SA)),Inherit=true};
   var nul=CreateFile("NUL",0xc0000000,3,ref sa,3,0x80,IntPtr.Zero);
   if(nul==new IntPtr(-1))throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
-  IntPtr list=IntPtr.Zero,handles=IntPtr.Zero;bool initialized=false;
+  IntPtr list=IntPtr.Zero,handles=IntPtr.Zero,log=IntPtr.Zero;bool initialized=false;
   try {
+   if(logPath!=null){log=CreateFile(logPath,0x40000000,3,ref sa,1,0x80,IntPtr.Zero);if(log==new IntPtr(-1)){log=IntPtr.Zero;throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());}}
+   int count=log==IntPtr.Zero?1:2;
    UIntPtr bytes=UIntPtr.Zero;InitializeProcThreadAttributeList(IntPtr.Zero,1,0,ref bytes);
    if(bytes==UIntPtr.Zero)throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
    list=Marshal.AllocHGlobal(checked((int)bytes.ToUInt64()));
    if(!InitializeProcThreadAttributeList(list,1,0,ref bytes))throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
-   initialized=true;handles=Marshal.AllocHGlobal(IntPtr.Size);Marshal.WriteIntPtr(handles,nul);
-   if(!UpdateProcThreadAttribute(list,0,new UIntPtr(0x20002),handles,new UIntPtr((uint)IntPtr.Size),IntPtr.Zero,IntPtr.Zero))throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
-   var si=new SIEX{StartupInfo=new SI{cb=Marshal.SizeOf(typeof(SIEX)),Flags=0x100,Input=nul,Output=nul,Error=nul},AttributeList=list}; PI pi;
+   initialized=true;handles=Marshal.AllocHGlobal(IntPtr.Size*count);Marshal.WriteIntPtr(handles,nul);if(count==2)Marshal.WriteIntPtr(handles,IntPtr.Size,log);
+   if(!UpdateProcThreadAttribute(list,0,new UIntPtr(0x20002),handles,new UIntPtr((uint)(IntPtr.Size*count)),IntPtr.Zero,IntPtr.Zero))throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+   var si=new SIEX{StartupInfo=new SI{cb=Marshal.SizeOf(typeof(SIEX)),Flags=0x100,Input=nul,Output=log==IntPtr.Zero?nul:log,Error=log==IntPtr.Zero?nul:log},AttributeList=list}; PI pi;
    if(!CreateProcess(image,cmd,IntPtr.Zero,IntPtr.Zero,true,0x80200,IntPtr.Zero,workingDirectory,ref si,out pi))throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
    CloseHandle(pi.Thread); pi.Thread=IntPtr.Zero; return pi;
-  } finally {if(initialized)DeleteProcThreadAttributeList(list);if(handles!=IntPtr.Zero)Marshal.FreeHGlobal(handles);if(list!=IntPtr.Zero)Marshal.FreeHGlobal(list);CloseHandle(nul);}
+  } finally {if(initialized)DeleteProcThreadAttributeList(list);if(handles!=IntPtr.Zero)Marshal.FreeHGlobal(handles);if(list!=IntPtr.Zero)Marshal.FreeHGlobal(list);if(log!=IntPtr.Zero)CloseHandle(log);CloseHandle(nul);}
  }
 }

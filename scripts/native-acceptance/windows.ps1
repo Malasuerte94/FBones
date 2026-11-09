@@ -1,20 +1,52 @@
 param([Parameter(Mandatory=$true)][string]$Root)
 $ErrorActionPreference='Stop'
-function Format-OwnNetTcpErrors($Records){
- $items=@($Records|Where-Object {$null -ne $_});$first=@();$last=@()
- foreach($item in @($items|Select-Object -First 4)){$message=[string]$item.Exception.Message;$first+=@([ordered]@{id=[string]$item.FullyQualifiedErrorId;category=[string]$item.CategoryInfo.Category;message=$message.Substring(0,[Math]::Min(1024,$message.Length))})}
- foreach($item in @($items|Select-Object -Last 4)){$message=[string]$item.Exception.Message;$last+=@([ordered]@{id=[string]$item.FullyQualifiedErrorId;category=[string]$item.CategoryInfo.Category;message=$message.Substring(0,[Math]::Min(1024,$message.Length))})}
- return [ordered]@{totalCount=$items.Count;first=$first;last=$last;maximumEach=4;messageCharCap=1024}
-}
 if($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or $env:RUNNER_OS -ne 'Windows'){throw 'Ephemeral hosted Windows job only'}
 $rootPath=[IO.Path]::GetFullPath($Root);$tempPath=[IO.Path]::GetFullPath($env:RUNNER_TEMP).TrimEnd('\')+'\'
 if(!$rootPath.StartsWith($tempPath,[StringComparison]::OrdinalIgnoreCase) -or !(Test-Path -LiteralPath (Join-Path $rootPath 'reports\stock-package.json'))){throw 'Verified private runner root required'}
-$receipt=Get-Content -Raw -LiteralPath (Join-Path $rootPath 'reports\stock-package.json')|ConvertFrom-Json
+$receipt=Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $rootPath 'reports\stock-package.json')|ConvertFrom-Json
 if($receipt.route -ne 'windows-nsis' -or $receipt.tag -ne 'v0.9.5-beta.2'){throw 'Wrong initial stock package'}
 if(Get-Process -Name FBones -ErrorAction SilentlyContinue){throw 'Fresh runner unexpectedly has FBones process'}
 $key='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\FBones'
 if(Test-Path -LiteralPath $key){throw 'Fresh runner unexpectedly has existing FBones installation'}
 Add-Type -Path (Join-Path $PSScriptRoot 'nul-gui-launch.cs')
+Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes,WindowsBase
+$uiaReferences=@([System.Diagnostics.Stopwatch].Assembly.Location,[System.Linq.Enumerable].Assembly.Location,[System.Windows.Automation.AutomationElement].Assembly.Location,[System.Windows.Automation.AutomationElementIdentifiers].Assembly.Location,[System.Windows.DependencyObject].Assembly.Location)|Sort-Object -Unique
+Add-Type -Path (Join-Path $PSScriptRoot 'native-updater-uia.cs') -ReferencedAssemblies $uiaReferences
+function Write-OwnUiaJson([string]$Name,$Value){
+ $path=Join-Path $rootPath ('reports\'+$Name);$json=$Value|ConvertTo-Json -Depth 20;$bytes=[Text.Encoding]::UTF8.GetBytes($json)
+ if($bytes.Length -gt 524288){throw 'Own diagnostic JSON exceeds512KiB'}
+ $file=[IO.File]::Open($path,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read);try{$file.Write($bytes,0,$bytes.Length)}finally{$file.Dispose()}
+}
+function Write-OwnUiaInventory([string]$Name,$Value){
+ $Value.OriginalRowCount=$Value.Rows.Count
+ while([Text.Encoding]::UTF8.GetByteCount(($Value|ConvertTo-Json -Depth 20)) -gt 524288){$Value.ByteCapHit=$true;$Value.Complete=$false;if($Value.Rows.Count -lt 2){throw 'Bounded UIA inventory cannot be serialized'};$keep=[int][Math]::Floor($Value.Rows.Count/2);$Value.Rows.RemoveRange($keep,$Value.Rows.Count-$keep)}
+ Write-OwnUiaJson $Name $Value
+}
+function Own-VisibleText($Snapshot){return [OwnUpdaterUia]::VisibleText($Snapshot)}
+function Own-PanelPresent($Snapshot){return (Own-VisibleText $Snapshot) -match 'Current\s+version:\s*0\.9\.5\b'}
+function Assert-OwnNativeIdentity{
+ $app.Refresh();$a=[long]0;$b=[long]0;$c=[long]0;$d=[long]0;$pidOwner=[uint32]0
+ if($app.HasExited -or [NativeOwnGui]::WaitForSingleObject($native.Process,0) -ne 258 -or ![NativeOwnGui]::GetProcessTimes($native.Process,[ref]$a,[ref]$b,[ref]$c,[ref]$d) -or $a -ne $created -or $app.StartTime.ToUniversalTime().ToFileTimeUtc() -ne $created -or $app.MainModule.FileName -ne $image -or $app.MainWindowHandle -ne $window -or ![OwnNativeWindow]::IsWindowVisible($window) -or ![OwnNativeWindow]::GetWindowThreadProcessId($window,[ref]$pidOwner) -or $pidOwner -ne $native.ProcessId -or (Get-FileHash -LiteralPath $image -Algorithm SHA256).Hash.ToLowerInvariant() -ne $receipt.executableSha256){throw 'Retained own native process/start/image/window changed'}
+}
+function Get-OwnUiaProviders{
+ $rows=@();$queue=@([uint32]$native.ProcessId);$visited=@{};$count=0
+ while($queue.Count -gt 0 -and $count -lt 64){$parent=[uint32]$queue[0];$queue=@($queue|Select-Object -Skip 1);if($visited.ContainsKey([string]$parent)){continue};$visited[[string]$parent]=$true
+  foreach($row in @(Get-CimInstance Win32_Process -Filter "ParentProcessId=$parent")){$count++;if($count -gt 64){break};$queue+=@([uint32]$row.ProcessId);$valid=$false;$stamp=$null
+   try{$child=Get-Process -Id $row.ProcessId;$stamp=$child.StartTime.ToUniversalTime().ToFileTimeUtc();$valid=($stamp -ge $created -and $row.Name -eq 'msedgewebview2.exe')}catch{}
+   $line=[string]$row.CommandLine;$rows+=@([ordered]@{pid=$row.ProcessId;parent=$row.ParentProcessId;name=$row.Name;start=$stamp;validCreatedWebview=$valid;profileMentioned=($line.IndexOf($env:WEBVIEW2_USER_DATA_FOLDER,[StringComparison]::OrdinalIgnoreCase) -ge 0);commandLine=$line.Substring(0,[Math]::Min(4096,$line.Length))})
+  }
+ }
+ $allowed=@([int]$native.ProcessId)
+ foreach($row in $rows){if(!$row.validCreatedWebview){continue};$cursor=[uint32]$row.pid;$profile=$false;$seen=@{}
+  while($cursor -ne $native.ProcessId -and !$seen.ContainsKey([string]$cursor)){$seen[[string]$cursor]=$true;$matches=@($rows|Where-Object {$_.pid -eq $cursor});if($matches.Count -ne 1 -or !$matches[0].validCreatedWebview){break};if($matches[0].profileMentioned){$profile=$true};$cursor=[uint32]$matches[0].parent}
+  if($profile -and $cursor -eq $native.ProcessId){$allowed+=@([int]$row.pid)}
+ }
+ return [ordered]@{allowedPids=[int[]]$allowed;createdDescendants=$rows;cap=64}
+}
+function Read-OwnNativeBytes{
+ if(!(Test-Path -LiteralPath $nativeLogPath)){return ,([byte[]]@())};$file=[IO.File]::Open($nativeLogPath,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::ReadWrite);try{$buffer=New-Object byte[] 65536;$n=$file.Read($buffer,0,$buffer.Length);$slice=New-Object byte[] $n;[Array]::Copy($buffer,$slice,$n);return ,$slice}finally{$file.Dispose()}
+}
+function Read-OwnNativePrefix{return [Text.Encoding]::UTF8.GetString([byte[]](Read-OwnNativeBytes))}
 Add-Type @'
 using System;using System.Runtime.InteropServices;public static class OwnNativeWindow{
  [DllImport("user32.dll")]public static extern bool IsWindowVisible(IntPtr h);
@@ -22,7 +54,7 @@ using System;using System.Runtime.InteropServices;public static class OwnNativeW
  [DllImport("user32.dll",SetLastError=true)]public static extern bool PostMessage(IntPtr h,uint msg,IntPtr w,IntPtr l);
 }
 '@
-$proof=[ordered]@{passed=$false;route='windows-nsis';stage='capability-only';upgradeAttempted=$false;normalClose=$false;currentStage='stock-nsis-install'};$app=$null;$native=$null;$created=[long]0;$closeRequested=$false
+$proof=[ordered]@{passed=$false;route='windows-nsis';stage='updater-control-capability-v5';updaterControlCapabilityPassed=$false;viewportAccessibilityShapeVerified='unknown';previousCombinedViewportGatePassed=$false;upgradeAttempted=$false;normalClose=$false;currentStage='stock-nsis-install'};$app=$null;$native=$null;$created=[long]0;$closeRequested=$false
 try{
  $installer=Join-Path $rootPath $receipt.asset.name
  if((Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant() -ne $receipt.asset.sha256){throw 'Installer hash changed'}
@@ -40,10 +72,9 @@ try{
  if($registry.DisplayVersion -ne '0.9.5' -or $installedSha -ne $receipt.executableSha256){throw 'Installed version/executable identity differs'}
  $proof.installation=[ordered]@{stockNsisExecuted=$true;registryVersion=$registry.DisplayVersion;executableSha256=$receipt.executableSha256}
  $proof.currentStage='launch-owned-native-gui'
- $port=9331;$preflightNetErrors=@();$preflightListeners=@(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue -ErrorVariable +preflightNetErrors);$proof.netTcpPreflightErrors=Format-OwnNetTcpErrors $preflightNetErrors
- if($preflightListeners.Count -gt 0){throw 'Dedicated CDP port occupied before launch'}
- $env:WEBVIEW2_USER_DATA_FOLDER=Join-Path $rootPath 'webview-profile';$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="--remote-debugging-port=$port"
- $native=[NativeOwnGui]::Start($image,$installDir);$app=Get-Process -Id $native.ProcessId
+ $env:WEBVIEW2_USER_DATA_FOLDER=Join-Path $rootPath 'webview-profile'
+ $nativeLogPath=Join-Path $rootPath 'native-spool.log'
+ $native=[NativeOwnGui]::StartWithOwnedLog($image,$installDir,$nativeLogPath);$app=Get-Process -Id $native.ProcessId
  $created=[long]0;$exited=[long]0;$kernel=[long]0;$user=[long]0
  if(![NativeOwnGui]::GetProcessTimes($native.Process,[ref]$created,[ref]$exited,[ref]$kernel,[ref]$user) -or $created -le 0){throw 'New retained child creation identity unavailable'}
  $deadline=[DateTime]::UtcNow.AddSeconds(30);$ready=$false;$samples=@();$observed=$null
@@ -68,59 +99,28 @@ try{
   if($ready){break};if($app.HasExited){break};Start-Sleep -Milliseconds 200
  }while([DateTime]::UtcNow -lt $deadline)
  if(!$ready){throw 'Native full window identity/visibility readiness did not pass before deadline; see observed tuple'}
- $proof.native=[ordered]@{processId=$native.ProcessId;creationFileTime=$created;window=$window.ToInt64();visible=$true;sha256=$receipt.executableSha256;stdio='NUL-handle-allowlist'}
- $proof.currentStage='bind-native-cdp-listener'
- $connection=$null;$connectionErrors=@();for($i=0;$i -lt 100;$i++){$connection=Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue -ErrorVariable +connectionErrors;if($connection){break};Start-Sleep -Milliseconds 200}
- $rows=@();foreach($row in @($connection)){if($null -ne $row){$rows+=@([ordered]@{localAddress=$row.LocalAddress;localPort=$row.LocalPort;owningProcess=$row.OwningProcess;state=[string]$row.State;creationTime=[string]$row.CreationTime})}}
- $descendants=@();$queue=@([uint32]$native.ProcessId);$visited=@{};$observedChildren=0
- while($queue.Count -gt 0 -and $observedChildren -lt 64){
-  $parent=[uint32]$queue[0];$queue=@($queue|Select-Object -Skip 1)
-  if($visited.ContainsKey([string]$parent)){continue};$visited[[string]$parent]=$true
-  foreach($childRow in @(Get-CimInstance Win32_Process -Filter "ParentProcessId=$parent")){
-   $observedChildren++;if($observedChildren -gt 64){break};$queue+=@([uint32]$childRow.ProcessId)
-   $line=[string]$childRow.CommandLine;$childCreated=$null;$childPath=$null;$startValid=$false
-   try{$liveChild=Get-Process -Id $childRow.ProcessId;$childCreated=$liveChild.StartTime.ToUniversalTime().ToFileTimeUtc();$childPath=$liveChild.MainModule.FileName;$startValid=($childCreated -ge $created)}catch{}
-   $descendants+=@([ordered]@{processId=$childRow.ProcessId;parentProcessId=$childRow.ParentProcessId;name=$childRow.Name;creationFileTime=$childCreated;creationNotBeforeOwnApp=$startValid;actualImage=$childPath;commandLine=$line.Substring(0,[Math]::Min(4096,$line.Length));commandLineOriginalChars=$line.Length;profileMentioned=($line.IndexOf($env:WEBVIEW2_USER_DATA_FOLDER,[StringComparison]::OrdinalIgnoreCase) -ge 0);debugPortMentioned=$line.Contains(('--remote-debugging-port='+$port))})
-  }
- }
- $owners=@($rows|ForEach-Object {$_.owningProcess}|Sort-Object -Unique);$ownedWebviewIds=@($descendants|Where-Object {$_.name -eq 'msedgewebview2.exe' -and $_.creationNotBeforeOwnApp -eq $true}|ForEach-Object {$_.processId})
- $allOwned=($owners.Count -gt 0);foreach($owner in $owners){if($owner -notin $ownedWebviewIds){$allOwned=$false}}
- $profileOwners=@();$allProfiles=$allOwned
- foreach($owner in $owners){
-  $cursorId=[uint32]$owner;$profileBound=$false;$ownerSeen=@{}
-  while($cursorId -ne $native.ProcessId -and !$ownerSeen.ContainsKey([string]$cursorId)){
-   $ownerSeen[[string]$cursorId]=$true;$matches=@($descendants|Where-Object {$_.processId -eq $cursorId})
-   if($matches.Count -ne 1 -or !$matches[0].creationNotBeforeOwnApp){break}
-   if($matches[0].profileMentioned){$profileBound=$true};$cursorId=[uint32]$matches[0].parentProcessId
-  }
-  if($cursorId -ne $native.ProcessId){$profileBound=$false};if(!$profileBound){$allProfiles=$false}
-  $profileOwners+=@([ordered]@{ownerPid=$owner;privateProfileInOwnerOrVerifiedAncestor=$profileBound})
- }
- $proof.cdpDiagnostics=[ordered]@{netTcpConnectionErrors=(Format-OwnNetTcpErrors $connectionErrors);listenerRows=$rows;rowCount=$rows.Count;distinctOwners=$owners;ownDescendants=$descendants;childCap=64;allListenerOwnersAreCreatedWebviewDescendants=$allOwned;privateProfileAssociation=$profileOwners;allListenerOwnersPrivateProfileAssociated=$allProfiles;expectedProfile=$env:WEBVIEW2_USER_DATA_FOLDER;expectedBrowserArguments=$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS;http=@()}
- if($allOwned -and $allProfiles){
-  foreach($endpoint in @('json/version','json/list')){
-   $http=[ordered]@{endpoint=$endpoint;attempted=$true;maximumBytes=65536;timeoutMs=3000};$response=$null;$stream=$null
-   try{
-    $request=[Net.WebRequest]::CreateHttp(('http://127.0.0.1:'+ $port +'/'+$endpoint));$request.Timeout=3000;$request.ReadWriteTimeout=3000;$request.AllowAutoRedirect=$false
-    $response=$request.GetResponse();$http.status=[int]$response.StatusCode;$stream=$response.GetResponseStream();$memory=New-Object IO.MemoryStream;$buffer=New-Object byte[] 4096
-    while($memory.Length -le 65536){$take=[int][Math]::Min($buffer.Length,65537-$memory.Length);$n=$stream.Read($buffer,0,$take);if($n -eq 0){break};$memory.Write($buffer,0,$n)}
-    $body=$memory.ToArray();$memory.Dispose();$http.bytes=$body.Length;$http.truncated=($body.Length -gt 65536)
-    if($body.Length -le 65536){$text=[Text.Encoding]::UTF8.GetString($body);$http.body=$text;try{$http.json=$text|ConvertFrom-Json}catch{$http.jsonError=$_.Exception.Message}}
-   }catch{$http.error=$_.Exception.Message}finally{if($stream){$stream.Dispose()};if($response){$response.Dispose()}}
-   $proof.cdpDiagnostics.http+=@($http)
-  }
- }else{$proof.cdpDiagnostics.httpSkipped='Own WebView listener/private profile association unproved; no loopback request'}
- # Diagnostic metadata does not change the existing one-row acceptance predicate.
- if(!$connection -or @($connection).Count -ne 1){throw 'Missing/ambiguous native CDP listener'}
- if(!$allOwned -or !$allProfiles){throw 'Native CDP owner/private-profile association unproved; no HTTP/control'}
- $listener=Get-CimInstance Win32_Process -Filter "ProcessId=$($connection.OwningProcess)";$cursor=$listener;$seen=@{}
- while($cursor -and $cursor.ProcessId -ne $native.ProcessId){if($seen.ContainsKey([string]$cursor.ProcessId)){throw 'CDP ancestry cycle'};$seen[[string]$cursor.ProcessId]=$true;$cursor=Get-CimInstance Win32_Process -Filter "ProcessId=$($cursor.ParentProcessId)"}
- if(!$listener -or $listener.Name -ne 'msedgewebview2.exe' -or !$cursor){throw 'CDP listener is not a descendant of our created native app'}
- $proof.currentStage='native-frontend-one-toggle'
- & node (Join-Path $PSScriptRoot 'windows-cdp.mjs') $rootPath $port
- if($LASTEXITCODE -ne 0){throw 'Native WebView2 frontend/control probe failed'}
- $frontend=Get-Content -Raw -LiteralPath (Join-Path $rootPath 'reports\frontend.json')|ConvertFrom-Json
- if($frontend.passed -ne $true){throw 'Native frontend probe did not pass'}
+ $proof.native=[ordered]@{processId=$native.ProcessId;creationFileTime=$created;window=$window.ToInt64();visible=$true;sha256=$receipt.executableSha256;stdio='NULstdin-direct-owned-file-output-handle-allowlist'}
+ $proof.currentStage='actual-native-renderer-ready';$readyDeadline=[DateTime]::UtcNow.AddSeconds(20);$rendererReady=$false
+ do{Assert-OwnNativeIdentity;$nativeText=Read-OwnNativePrefix;$rendererReady=$nativeText.Contains('FBones UI ready; renderer=webgl');if($rendererReady){break};Start-Sleep -Milliseconds 200}while([DateTime]::UtcNow -lt $readyDeadline)
+ $proof.rendererReady=[ordered]@{observed=$rendererReady;source='stock native frontend_ready stdout from this created process';pixelParityClaimed=$false}
+ if(!$rendererReady){throw 'Actual stock native renderer-ready signal unavailable'}
+ $proof.currentStage='owned-uia-inventory';$provider=Get-OwnUiaProviders;Write-OwnUiaJson 'uia-providers.json' $provider
+ $before=[OwnUpdaterUia]::Capture($window.ToInt64(),[int]$native.ProcessId,[int[]]$provider.allowedPids);Write-OwnUiaInventory 'uia-before.json' $before
+ if(!$before.Complete){throw 'UIA inventory incomplete/foreign/errored; no action'}
+ $beforeText=Own-VisibleText $before
+ if($beforeText -notmatch '0\.9\.5\b' -or $beforeText.Contains('The viewport could not start.') -or $beforeText.Contains('Opening workspace') -or $beforeText.Contains('Automatic updates are unavailable for this copy.')){throw 'Native version/startup/updater-support evidence unqualified'}
+ $selected=[OwnUpdaterUia]::UniqueUpdates($before);$beforePanel=Own-PanelPresent $before
+ Assert-OwnNativeIdentity;$currentProvider=Get-OwnUiaProviders;$proof.currentStage='one-native-updates-invoke';$proof.invokeAttempted=$true
+ try{[OwnUpdaterUia]::InvokeOnce($before,$selected,[int]$native.ProcessId,[int[]]$currentProvider.allowedPids)}finally{$proof.selectedUpdates=[ordered]@{beforeName=$selected.Name;beforeVariant=$selected.NameVariant;actionName=$selected.ActionName;actionVariant=$selected.ActionNameVariant;runtimeId=$selected.RuntimeId}}
+ $proof.invokeReturned=$true;$after=$null;$changed=$false;$transitionDeadline=[DateTime]::UtcNow.AddSeconds(15)
+ do{
+  Assert-OwnNativeIdentity;$after=[OwnUpdaterUia]::Capture($window.ToInt64(),[int]$native.ProcessId,[int[]]$currentProvider.allowedPids)
+  if($after.Complete){$text=Own-VisibleText $after;$afterPanel=Own-PanelPresent $after;$changed=($afterPanel -ne $beforePanel -and $text -match '0\.9\.5\b' -and !$text.Contains('The viewport could not start.') -and !$text.Contains('Opening workspace') -and !$text.Contains('Automatic updates are unavailable for this copy.'))}
+  if($changed){break};Start-Sleep -Milliseconds 200
+ }while([DateTime]::UtcNow -lt $transitionDeadline)
+ Write-OwnUiaInventory 'uia-after.json' $after
+ $proof.updaterControl=[ordered]@{provider='owned native UIAutomationClient InvokePattern';beforePanel=$beforePanel;afterPanel=if($after.Complete){Own-PanelPresent $after}else{$null};actualPanelTransition=$changed;oneInvokeAttempt=$true;afterComplete=$after.Complete;version='0.9.5'}
+ if(!$changed -or !$after.Complete){throw 'One scoped Updates Invoke did not prove actual supported current-version panel transition'}
  $proof.currentStage='normal-owned-close'
  $app.Refresh();$nowCreated=[long]0
  if($app.HasExited -or ![NativeOwnGui]::GetProcessTimes($native.Process,[ref]$nowCreated,[ref]$exited,[ref]$kernel,[ref]$user) -or $nowCreated -ne $created -or (Get-FileHash -LiteralPath $image -Algorithm SHA256).Hash.ToLowerInvariant() -ne $receipt.executableSha256){throw 'Own window changed before normal close'}
@@ -130,7 +130,7 @@ try{
  if(![OwnNativeWindow]::PostMessage($window,0x10,[IntPtr]::Zero,[IntPtr]::Zero)){throw 'Owned WM_CLOSE failed'}
  if([NativeOwnGui]::WaitForSingleObject($native.Process,20000) -ne 0){throw 'Owned native app did not close normally; no force'}
  $exit=[uint32]0;if(![NativeOwnGui]::GetExitCodeProcess($native.Process,[ref]$exit) -or $exit -ne 0){throw 'Owned app terminal exit unavailable/nonzero'}
- $proof.normalClose=$true;$proof.exitCode=$exit;$proof.passed=$true;$proof.currentStage='passed'
+ $proof.normalClose=$true;$proof.exitCode=$exit;$proof.updaterControlCapabilityPassed=$true;$proof.status='UPDATER_CONTROL_CAPABILITY_PASS';$proof.currentStage='updater-control-passed'
 }catch{
  $proof.error=$_.Exception.Message
  $cleanup=[ordered]@{attempted=$false;normalClose=$false;noForce=$true}
@@ -155,5 +155,6 @@ try{
  throw
 }finally{
  if($native){[NativeOwnGui]::CloseHandle($native.Process)|Out-Null}
- $proof|ConvertTo-Json -Depth 8|Set-Content -LiteralPath (Join-Path $rootPath 'reports\capability.json') -Encoding UTF8
+ if($nativeLogPath -and (Test-Path -LiteralPath $nativeLogPath)){$bytes=[byte[]](Read-OwnNativeBytes);[IO.File]::WriteAllBytes((Join-Path $rootPath 'reports\native-prefix.log'),$bytes);$size=(Get-Item -LiteralPath $nativeLogPath).Length;$proof.diagnosticLog=[ordered]@{spoolBytesObserved=$size;retainedPrefixBytes=$bytes.Length;retainedPrefixCap=65536;rawSpoolHardByteCap=$false}}
+ Write-OwnUiaJson 'capability.json' $proof
 }

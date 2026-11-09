@@ -6,7 +6,7 @@ import Darwin
 let arguments=CommandLine.arguments
 if arguments.count != 4 { fatalError("Expected own installed bundle, reports directory and executable SHA256") }
 let bundleURL=URL(fileURLWithPath:arguments[1]), reports=URL(fileURLWithPath:arguments[2]), expected=arguments[3]
-var proof:[String:Any] = ["passed":false,"route":"mac-dmg","stage":"capability-only","upgradeAttempted":false,"normalClose":false]
+var proof:[String:Any] = ["passed":false,"route":"mac-dmg","stage":"updater-control-capability-v5","updaterControlCapabilityPassed":false,"previousCombinedViewportGatePassed":false,"viewportAccessibilityShapeVerified":"unknown","upgradeAttempted":false,"normalClose":false]
 var owned:NSRunningApplication?
 var child:Process?
 
@@ -71,7 +71,67 @@ func writeProof(){if let process=child{retainLaunchObservation(process)};retainL
 func pump(_ seconds:Double){RunLoop.current.run(until:Date(timeIntervalSinceNow:seconds))}
 func attribute(_ e:AXUIElement,_ name:String)->CFTypeRef? {var v:CFTypeRef?;if AXUIElementCopyAttributeValue(e,name as CFString,&v) != .success{return nil};return v}
 func text(_ e:AXUIElement)->[String]{return [kAXTitleAttribute,kAXValueAttribute,kAXDescriptionAttribute].compactMap{attribute(e,$0) as? String}.filter{!$0.isEmpty}}
-func inventory(_ root:AXUIElement)->[(AXUIElement,[String])]{var queue=[root],out:[(AXUIElement,[String])]=[];let end=Date(timeIntervalSinceNow:5);var i=0;while i<queue.count && i<4096 && Date()<end{let e=queue[i];i+=1;out.append((e,text(e)));if let children=attribute(e,kAXChildrenAttribute)as?[AXUIElement]{queue.append(contentsOf:children.prefix(4096-queue.count))}};return out}
+// Exact source-derived full-name forms; unbounded/null-total byte progress is declined.
+func updatesNameVariant(_ value:String)->String?{
+ let n=value.replacingOccurrences(of:"\\s+",with:" ",options:.regularExpression).trimmingCharacters(in:.whitespacesAndNewlines)
+ if n=="Updates"{return "title"}
+ if n.range(of:"\\AUpdates ?(?:0|[1-9][0-9]?|100)%\\z",options:.regularExpression) != nil{return "integer-percent"}
+ if n.range(of:"\\AUpdates ?Version 0\\.9\\.6 is ready to install\\.\\z",options:.regularExpression) != nil{return "ready-0.9.6"}
+ return nil
+}
+struct AXControlSnapshot {
+ var rows:[[String:Any]]=[];var nodes:[AXUIElement]=[];var window:AXUIElement?
+ var complete=true;var flags:[String]=[];var rootRows:[[String:Any]]=[];var bytes=0
+ var texts:[String]{return rows.flatMap{r in ["title","value","description"].compactMap{r[$0]as?String}}}
+ var visibleText:String{return texts.joined(separator:"\n")}
+ var updates:[Int]{return rows.indices.filter{i in let r=rows[i];return r["role"]as?String=="AXButton" && r["ownerMatches"]as?Bool==true && r["enabled"]as?Bool==true && ["title","value","description"].contains{updatesNameVariant((r[$0]as?String) ?? "") != nil} && (r["actions"]as?[String] ?? []).contains("AXPress")}}
+}
+func readAX(_ e:AXUIElement,_ name:String)->(CFTypeRef?,AXError){var value:CFTypeRef?;let error=AXUIElementCopyAttributeValue(e,name as CFString,&value);return(value,error)}
+func axOwner(_ e:AXUIElement)->(pid_t,AXError){var pid:pid_t=0;let error=AXUIElementGetPid(e,&pid);return(pid,error)}
+func expectedAbsent(_ error:AXError)->Bool{return error == .attributeUnsupported || error == .noValue || error == .actionUnsupported}
+func inventoryControls(_ root:AXUIElement,_ pid:pid_t)->AXControlSnapshot{
+ var s=AXControlSnapshot();let began=Date();let end=Date(timeIntervalSinceNow:15)
+ let windowsResult=readAX(root,kAXWindowsAttribute)
+ guard windowsResult.1 == .success,let windows=windowsResult.0 as?[AXUIElement],windows.count<=16 else{s.complete=false;s.flags.append("own-AXWindows-unavailable-or-count-cap");return s}
+ var candidates:[(AXUIElement,Int)]=[]
+ for(i,w)in windows.enumerated(){let owner=axOwner(w),role=readAX(w,kAXRoleAttribute),title=readAX(w,kAXTitleAttribute),minimized=readAX(w,kAXMinimizedAttribute);let titleText=(title.0 as?String) ?? "";s.rootRows.append(["windowIndex":i,"pid":owner.0,"pidError":owner.1.rawValue,"role":(role.0 as?String) ?? "missing","title":String(titleText.prefix(1024)),"minimized":(minimized.0 as?Bool) ?? true,"titleError":title.1.rawValue,"minimizedError":minimized.1.rawValue]);if owner.1 == .success && owner.0==pid && role.0 as?String=="AXWindow" && titleText=="FBones" && minimized.0 as?Bool==false{candidates.append((w,i))}}
+ guard candidates.count==1 else{s.complete=false;s.flags.append("unique-owned-nonminimized-FBones-AXWindow-unavailable");return s}
+ s.window=candidates[0].0;var queue:[(AXUIElement,[Int])]=[(candidates[0].0,[candidates[0].1])]
+ while !queue.isEmpty{
+  if s.rows.count>=1024{s.complete=false;s.flags.append("node-cap");break};if Date()>=end{s.complete=false;s.flags.append("time-cap");break}
+  let(e,path)=queue.removeFirst();var row:[String:Any]=["path":path];let owner=axOwner(e);row["pid"]=owner.0;row["pidError"]=owner.1.rawValue;row["ownerMatches"]=(owner.1 == .success && owner.0==pid)
+  if owner.1 != .success || owner.0 != pid{s.complete=false;s.flags.append("foreign-or-missing-node-owner")}
+  let role=readAX(e,kAXRoleAttribute);row["role"]=(role.0 as?String) ?? "missing";row["roleError"]=role.1.rawValue;if role.1 != .success{s.complete=false;s.flags.append("required-role-error")}
+  for(key,name)in[("title",kAXTitleAttribute),("value",kAXValueAttribute),("description",kAXDescriptionAttribute)]{
+   let result=readAX(e,name);row[key+"Error"]=result.1.rawValue
+   if let text=result.0 as?String{row[key]=String(text.prefix(1024));if text.count>1024{s.complete=false;s.flags.append("string-cap")}}
+   else if let number=result.0 as?NSNumber{row[key]=number.stringValue}
+   if result.1 != .success && !expectedAbsent(result.1){s.complete=false;s.flags.append("attribute-provider-error")}
+  }
+  let enabled=readAX(e,kAXEnabledAttribute);row["enabled"]=(enabled.0 as?Bool) ?? false;row["enabledError"]=enabled.1.rawValue
+  if enabled.1 != .success && (!expectedAbsent(enabled.1) || role.0 as?String=="AXButton"){s.complete=false;s.flags.append("enabled-provider-error")}
+  var actions:CFArray?;let actionError=AXUIElementCopyActionNames(e,&actions);let names=(actions as?[String]) ?? [];row["actions"]=names.prefix(16).map{String($0.prefix(1024))};if names.contains(where:{$0.count>1024}){s.complete=false;s.flags.append("action-string-cap")};row["actionError"]=actionError.rawValue
+  if names.count>16{s.complete=false;s.flags.append("action-count-cap")};if actionError != .success && !expectedAbsent(actionError){s.complete=false;s.flags.append("action-provider-error")}
+  let children=readAX(e,kAXChildrenAttribute);row["childrenError"]=children.1.rawValue;var descendants:[AXUIElement]=[]
+  if children.1 == .success{if let values=children.0 as?[AXUIElement]{descendants=values}else{s.complete=false;s.flags.append("children-type-error")}}
+  else if !expectedAbsent(children.1){s.complete=false;s.flags.append("children-provider-error")}
+  if !descendants.isEmpty && path.count>=32{s.complete=false;s.flags.append("depth-cap");descendants=[]};if descendants.count>256{s.complete=false;s.flags.append("child-count-cap");descendants=Array(descendants.prefix(256))}
+  row["childCount"]=descendants.count
+  let count=(try? JSONSerialization.data(withJSONObject:row).count) ?? 524289
+  if s.bytes+count>480000{s.complete=false;s.flags.append("byte-cap");break};s.bytes+=count;s.rows.append(row);s.nodes.append(e)
+  queue.append(contentsOf:descendants.enumerated().map{($0.element,path+[$0.offset])})
+ }
+ s.rootRows.append(["elapsedSeconds":Date().timeIntervalSince(began),"queuedNodesRemaining":queue.count]);if !queue.isEmpty{s.complete=false};return s
+}
+func saveAX(_ snapshot:AXControlSnapshot,_ name:String)throws{
+ let value:[String:Any]=["scope":"unique nonminimized own FBones AXWindow from exact app AXWindows; complete relevant owned subtree","complete":snapshot.complete,"flags":Array(Set(snapshot.flags)).sorted(),"rootWindows":snapshot.rootRows,"rows":snapshot.rows,"nodeCap":1024,"depthCap":32,"stringCharCap":1024,"byteCap":524288,"loopSeconds":15]
+ let data=try JSONSerialization.data(withJSONObject:value,options:[.sortedKeys]);guard data.count<=524288 else{throw NSError(domain:"AX diagnostic byte cap",code:30)};try data.write(to:reports.appendingPathComponent(name),options:.withoutOverwriting)
+}
+func nativeRendererReady()->Bool{guard let url=nativeLogURL,let handle=try? FileHandle(forReadingFrom:url)else{return false};defer{try? handle.close()};let data=(try? handle.read(upToCount:65536)) ?? Data();return String(decoding:data,as:UTF8.self).contains("FBones UI ready; renderer=webgl")}
+func noStartupOrUnsupported(_ value:String)->Bool{let text=value.replacingOccurrences(of:"\\s+",with:" ",options:.regularExpression);return !text.contains("The viewport could not start.") && !text.contains("Opening workspace") && !text.contains("Automatic updates are unavailable for this copy.")}
+func panelCurrentVersion(_ value:String)->Bool{return value.range(of:"Current\\s+version:\\s*0\\.9\\.5\\b",options:.regularExpression) != nil}
+func controlVersion(_ value:String)->Bool{return value.range(of:"\\b0\\.9\\.5\\b",options:.regularExpression) != nil}
+
 func closeOwn()->Bool{guard (try? verifyNativeKernel()) != nil,let app=owned else{return false};guard app.bundleURL?.standardizedFileURL==bundleURL.standardizedFileURL && !app.isTerminated else{return false};guard app.terminate()else{return false};let end=Date(timeIntervalSinceNow:20);while (!app.isTerminated || child?.isRunning == true) && Date()<end{pump(0.2)};return app.isTerminated && child?.isRunning == false}
 do{
  guard ProcessInfo.processInfo.environment["GITHUB_ACTIONS"]=="true",ProcessInfo.processInfo.environment["RUNNER_ENVIRONMENT"]=="github-hosted"else{throw NSError(domain:"Ephemeral hosted Mac only",code:1)}
@@ -91,20 +151,27 @@ do{
  while Date()<windowEnd && !visible{let windows=CGWindowListCopyWindowInfo([.optionOnScreenOnly,.excludeDesktopElements],kCGNullWindowID)as?[[String:Any]] ?? [];visible=windows.contains{($0[kCGWindowOwnerPID as String]as?Int)==Int(app.processIdentifier) && ($0[kCGWindowLayer as String]as?Int)==0};if !visible{pump(0.2)}}
  proof["visibleOwnedWindow"]=visible;guard visible else{throw NSError(domain:"No visible owned native Aqua window",code:6)}
  guard AXIsProcessTrusted()else{throw NSError(domain:"AX permission unavailable; no prompt or TCC workaround attempted",code:7)}
- let root=AXUIElementCreateApplication(app.processIdentifier);var before:[(AXUIElement,[String])]=[];let readyEnd=Date(timeIntervalSinceNow:30)
- repeat{before=inventory(root);if before.contains(where:{$0.1.contains(where:{$0.contains("0.9.5")})}) && before.contains(where:{$0.1.contains("Updates")}){break};pump(0.2)}while Date()<readyEnd
- guard !before.contains(where:{$0.1.contains(where:{$0.contains("The viewport could not start.")})})else{throw NSError(domain:"Native viewport reports startup failure",code:13)}
- guard before.contains(where:{(attribute($0.0,kAXRoleAttribute)as?String)=="AXWebArea"}) && before.contains(where:{$0.1.contains("Viewport")})else{throw NSError(domain:"Native WKWebView viewport unavailable",code:12)}
- let buttons=before.filter{(attribute($0.0,kAXRoleAttribute)as?String)==kAXButtonRole && $0.1.contains("Updates")}
- guard buttons.count==1,before.contains(where:{$0.1.contains(where:{$0.contains("0.9.5")})})else{throw NSError(domain:"Native frontend/version/unique Updates AX button unavailable",code:8)}
- let wasPanel=before.contains{$0.1.contains(where:{$0.contains("Current version: 0.9.5")})}
- _ = try verifyNativeKernel()
- guard AXUIElementPerformAction(buttons[0].0,kAXPressAction as CFString) == .success else{throw NSError(domain:"Scoped Updates AXPress failed",code:9)}
- var afterPanel=wasPanel;let toggleEnd=Date(timeIntervalSinceNow:10)
- repeat{afterPanel=inventory(root).contains{$0.1.contains(where:{$0.contains("Current version: 0.9.5")})};if afterPanel != wasPanel{break};pump(0.2)}while Date()<toggleEnd
- guard !inventory(root).contains(where:{$0.1.contains(where:{$0.contains("Automatic updates are unavailable for this copy.")})})else{throw NSError(domain:"Installed stock updater is unsupported",code:14)}
- guard afterPanel != wasPanel else{throw NSError(domain:"One Updates toggle had no observed panel transition",code:10)}
- proof["frontend"]=["version":"0.9.5","provider":"native-WKWebView-AX","oneUpdatesToggle":true,"panelBefore":wasPanel,"panelAfter":afterPanel]
- proof["normalClose"]=closeOwn();proof["exitCode"]=child?.isRunning == false ? child?.terminationStatus : nil;guard proof["normalClose"]as?Bool==true,child?.terminationStatus == 0 else{throw NSError(domain:"Own native normal close unobserved; no force",code:11)};proof["passed"]=true;writeProof();exit(0)
+ let root=AXUIElementCreateApplication(app.processIdentifier);var before=AXControlSnapshot();let readyEnd=Date(timeIntervalSinceNow:30)
+ repeat{before=inventoryControls(root,app.processIdentifier);if before.complete && controlVersion(before.visibleText) && before.updates.count==1 && nativeRendererReady(){break};pump(0.2)}while Date()<readyEnd
+ try saveAX(before,"ax-before.json")
+ let webArea=before.rows.contains{$0["role"]as?String=="AXWebArea"};let viewport=before.texts.contains("Viewport")
+ proof["viewportRoleClassification"]=["webAreaObserved":webArea,"viewportLabelObserved":viewport,"relevantTreeComplete":before.complete,"absenceMeans":before.complete ? "not observed in this qualified native tree" : "unknown due to incomplete tree"]
+ proof["viewportAccessibilityShapeVerified"]=before.complete && webArea && viewport
+ proof["rendererReady"]=["observed":nativeRendererReady(),"source":"actual stock native frontend_ready stdout from this launch","pixelParityClaimed":false]
+ guard before.complete,nativeRendererReady(),controlVersion(before.visibleText),noStartupOrUnsupported(before.visibleText),before.updates.count==1,let ownWindow=before.window else{throw NSError(domain:"Complete owned AX updater controls/version/native renderer evidence unqualified; inventory retained",code:31)}
+ let index=before.updates[0];let button=before.nodes[index];let owner=axOwner(button);let enabled=readAX(button,kAXEnabledAttribute);var actions:CFArray?;let actionStatus=AXUIElementCopyActionNames(button,&actions)
+ guard owner.1 == .success,owner.0==app.processIdentifier,enabled.0 as?Bool==true,actionStatus == .success,((actions as?[String]) ?? []).contains("AXPress"),text(button).contains(where:{updatesNameVariant($0) != nil})else{throw NSError(domain:"Selected own enabled AX Updates/Press changed",code:32)}
+ proof["selectedUpdates"]=["before":before.rows[index],"actionLabels":text(button),"actionVariants":text(button).compactMap{updatesNameVariant($0)}]
+ var cursor:AXUIElement?=button;var rooted=false
+ for _ in 0..<64{guard let current=cursor else{break};if CFEqual(current,ownWindow){rooted=true;break};let parent=readAX(current,kAXParentAttribute);if parent.1 != .success{cursor=nil}else if let value=parent.0,CFGetTypeID(value)==AXUIElementGetTypeID(){cursor=(value as! AXUIElement)}else{cursor=nil}}
+ guard rooted else{throw NSError(domain:"AX Updates left qualified own native window",code:33)}
+ _ = try verifyNativeKernel();let wasPanel=panelCurrentVersion(before.visibleText);proof["oneAXPressAttempted"]=true
+ guard AXUIElementPerformAction(button,kAXPressAction as CFString) == .success else{throw NSError(domain:"Scoped Updates AXPress failed",code:9)};proof["oneAXPressReturned"]=true
+ var after=AXControlSnapshot();var afterPanel=wasPanel;let toggleEnd=Date(timeIntervalSinceNow:15)
+ repeat{after=inventoryControls(root,app.processIdentifier);afterPanel=panelCurrentVersion(after.visibleText);if after.complete && afterPanel != wasPanel && controlVersion(after.visibleText) && noStartupOrUnsupported(after.visibleText){break};pump(0.2)}while Date()<toggleEnd
+ try saveAX(after,"ax-after.json")
+ guard after.complete,afterPanel != wasPanel,controlVersion(after.visibleText),noStartupOrUnsupported(after.visibleText)else{throw NSError(domain:"One actual AX Updates press had no supported current-version panel transition",code:10)}
+ proof["updaterControl"]=["version":"0.9.5","provider":"owned native AppKit/WKWebView AX","oneScopedPress":true,"panelBefore":wasPanel,"panelAfter":afterPanel,"actualPanelTransition":true]
+ proof["normalClose"]=closeOwn();proof["exitCode"]=child?.isRunning == false ? child?.terminationStatus : nil;guard proof["normalClose"]as?Bool==true,child?.terminationStatus == 0 else{throw NSError(domain:"Own native normal close unobserved; no force",code:11)};proof["updaterControlCapabilityPassed"]=true;proof["status"]="UPDATER_CONTROL_CAPABILITY_PASS";writeProof();exit(0)
 }catch{proof["error"]=String(describing:error);if owned != nil && proof["normalClose"]as?Bool != true{proof["normalClose"]=closeOwn()};writeProof();exit(2)}
 extension ProcessInfo{var machineArchitecture:String{var system=utsname();uname(&system);return withUnsafePointer(to:&system.machine){$0.withMemoryRebound(to:CChar.self,capacity:1){String(cString:$0)}}}}

@@ -1,0 +1,52 @@
+name: Stock Debian installed 0.9.5 to 0.9.6 upgrade
+on:
+  push:
+    branches: [work/native-install-upgrade-0.9.6]
+    paths:
+      - '.github/workflows/native-linux-debian-upgrade.yml'
+      - 'scripts/native-debian-upgrade/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  upgrade:
+    name: Real Debian updater and separate installed Open session
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Select fresh own runner root
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']) / ('fbones-debian-upgrade-' + os.environ['GITHUB_RUN_ID'] + '-' + os.environ['GITHUB_RUN_ATTEMPT'])
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write('RUN_ROOT=' + str(root) + '\n')
+      - name: Install unchanged ordinary GTK control providers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-0 libgtk-3-0 webkit2gtk-driver xvfb x11-utils dbus-x11 libgl1-mesa-dri python3-gi gir1.2-atspi-2.0 at-spi2-core libatk-adaptor
+      - name: Verify stock old package and independently measure target package member
+        env:
+          FBONES_METADATA_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/native-debian-upgrade/assets.py linux-deb --root "$RUN_ROOT"
+          python scripts/native-debian-upgrade/prepare-target.py "$RUN_ROOT"
+      - name: One real stock update with guarded project persistence
+        run: |
+          dpkg-query -W -f='${Package} ${Version}\n' libgtk-3-0 libwebkit2gtk-4.1-0 webkit2gtk-driver libatspi2.0-0 gir1.2-atspi-2.0 python3-gi libatk-adaptor > "$RUN_ROOT/reports/provider-packages.txt"
+          xvfb-run --auto-servernum --server-args='-screen 0 1440x900x24' dbus-run-session -- /usr/bin/python3 scripts/native-debian-upgrade/run.py "$RUN_ROOT"
+      - name: Preserve bounded source/data/control/lifecycle evidence and failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-debian-upgrade
+          path: ${{ env.RUN_ROOT }}/reports/
+          retention-days: 7
+          if-no-files-found: warn

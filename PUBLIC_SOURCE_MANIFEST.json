@@ -114,8 +114,13 @@
     },
     {
       "path": ".github/workflows/native-install-upgrade.yml",
-      "bytes": 2304,
-      "sha256": "f7a4e25507fcd8d577e67d5f61e9dfdd7064e2c536079e1a82691beccf2fb14d"
+      "bytes": 2240,
+      "sha256": "6afa822307f199ed8f02d7d477a2ff39a89ecad33fe2c951cd4d87346e992a61"
+    },
+    {
+      "path": ".github/workflows/native-linux-debian-upgrade.yml",
+      "bytes": 2384,
+      "sha256": "809f3068b0b940355ce66a2a9759b8d92420b7b2de876e12bbdbe639ef597389"
     },
     {
       "path": ".github/workflows/native-linux-picker.yml",
@@ -2094,13 +2099,18 @@
     },
     {
       "path": "scripts/native-acceptance/mac.swift",
-      "bytes": 16257,
-      "sha256": "374e06ed66d550c88673a8e47450e7c1126e2988cfec0edcb6d1d44dad034cb7"
+      "bytes": 25108,
+      "sha256": "b96ee66d7be42caff72b2d833f3d464d2a82e6fac14473ed15cbd135957dec2d"
+    },
+    {
+      "path": "scripts/native-acceptance/native-updater-uia.cs",
+      "bytes": 7095,
+      "sha256": "121a3e17684839c9a7b72ef2288d56fa144faf9f08d8e93de1e153db798754a6"
     },
     {
       "path": "scripts/native-acceptance/nul-gui-launch.cs",
-      "bytes": 5311,
-      "sha256": "55289d4709dd52249adfc053debf09f97a31737f356bca0e32ada6c6ecc8384b"
+      "bytes": 6201,
+      "sha256": "c51bcd7509678c33d73958def2cf942d2d319677fec8ec6e208b75a8d8fcbac9"
     },
     {
       "path": "scripts/native-acceptance/own-process-identity.c",
@@ -2119,8 +2129,68 @@
     },
     {
       "path": "scripts/native-acceptance/windows.ps1",
-      "bytes": 17274,
-      "sha256": "8dff34c6fbcb4647b4fad8533ccf4c90a640a0b7cf31b3b2463162bf75a9e054"
+      "bytes": 18321,
+      "sha256": "b167e3a8e7d0dcf214307a408b9b41754ebbb0057713d9a8c9b44fcb1c1fb640"
+    },
+    {
+      "path": "scripts/native-debian-upgrade/assets.json",
+      "bytes": 4025,
+      "sha256": "d749af846f064141c976a304ad9d52f09eca8e9205177642fcf90f81ffb9c0ce"
+    },
+    {
+      "path": "scripts/native-debian-upgrade/assets.py",
+      "bytes": 3919,
+      "sha256": "d5a0700c7b00e1a1074644b66c767498b1c2d2dfe1cfa2da278c36e2ce314b81"
+    },
+    {
+      "path": "scripts/native-debian-upgrade/lifecycle.py",
+      "bytes": 6323,
+      "sha256": "3fabe158c93ce3e7ee0fdca4813577e7c7ebc26928d43cd929d1a8a167ba81b6"
+    },
+    {
+      "path": "scripts/native-debian-upgrade/native-launch.py",
+      "bytes": 2514,
+      "sha256": "08aba1f382f86eef2ed9cdc59e29d92fb642f0fd41ebc5e54e35ab2ccb83c1bb"
+    },
+    {
+      "path": "scripts/native-debian-upgrade/native_access.py",
+      "bytes": 17723,
+      "sha256": "024f9e2954315708dac657ebe247c3de8eaf3a95b4e17bcb83726984ced20213"
+    },
+    {
+      "path": "scripts/native-debian-upgrade/own-minimal-checkpoint.py",
+      "bytes": 5057,
+      "sha256": "d823a5f32f013bd4c17adb13fe44b8babde452356205268ab3a35c5d38a3d6da"
+    },
+    {
+      "path": "scripts/native-debian-upgrade/parse-project.py",
+      "bytes": 5391,
+      "sha256": "59f49f8a6b09d01aaf02a55f26caad923368c6d41a9357ca44ebf56c66f85284"
+    },
+    {
+      "path": "scripts/native-debian-upgrade/prepare-target.py",
+      "bytes": 4035,
+      "sha256": "f79adceb4e33039cdabe7e7dd8acac39800fb610f6d1bb12ff3abf2b5ee241ee"
+    },
+    {
+      "path": "scripts/native-debian-upgrade/run.py",
+      "bytes": 15356,
+      "sha256": "b91dc0029731c27c02329a9b93ed304a866385c8607cc4153643d96472eb3b68"
+    },
+    {
+      "path": "scripts/native-debian-upgrade/selftest.py",
+      "bytes": 2439,
+      "sha256": "e199e2d0efa930a3fff7ba9117a53a9949bc72f3360ce75c028d8a740a941290"
+    },
+    {
+      "path": "scripts/native-debian-upgrade/session.py",
+      "bytes": 10399,
+      "sha256": "676959b66eb5fd9c1a303dbce63a90b3d52f35e6989696dae27a051d9659d54d"
+    },
+    {
+      "path": "scripts/native-debian-upgrade/target.json",
+      "bytes": 1278,
+      "sha256": "def359f62816f8cef34e6246b1c419eaa67c8953f478af8724a2f6c2cf950f45"
     },
     {
       "path": "scripts/native-lifecycle/probe.py",
@@ -2159,8 +2229,8 @@
     },
     {
       "path": "scripts/prepare-public-release.py",
-      "bytes": 7992,
-      "sha256": "1fc4e81bc8f746f8a3fd9466c236f24edf498313c077e21d963eaffc08a45711"
+      "bytes": 8061,
+      "sha256": "fce6ab4699f8bcecfd65948648701a4fc76ac8aba256588189d0c813019766da"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -3043,6 +3113,16 @@
       "sha256": "bfea35c12634f320d2be6e4d574c8498cf18b25d775b7fc95552cd218efa26ad"
     },
     {
+      "path": "docs/research/NATIVE-LINUX-DEBIAN-STAGE2-DATA-GATE-2026-11-09.md",
+      "bytes": 8933,
+      "sha256": "0eff399991928fa0c5e0fb3fc7ce557b610b19422bca51362d93225f91a9e0d6"
+    },
+    {
+      "path": "docs/research/NATIVE-LINUX-DEBIAN-STAGE2-UI-GATE-2026-11-09.md",
+      "bytes": 7352,
+      "sha256": "f48461240c60d0fb038663c6900082beff1bc2fd27e209100f24a2c9f5e75afe"
+    },
+    {
       "path": "docs/research/NATIVE-LINUX-PICKER-UI-GATE-2026-11-09.md",
       "bytes": 2872,
       "sha256": "b5430cc12ffe9edbcd04d221af5e48d48a0d5f411cc7ff9cf6238cd64c4e86d9"
@@ -3076,6 +3156,16 @@
       "path": "docs/research/NATIVE-WINDOWS-MACOS-CAPABILITY-V4-UI-GATE-2026-11-09.md",
       "bytes": 2556,
       "sha256": "8b389ff95d0a2bf6936e12419fe5df53fee339f1bedc8480c9c53589310b3086"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-MACOS-CAPABILITY-V5-UI-GATE-2026-11-09.md",
+      "bytes": 3140,
+      "sha256": "d8ffee26617b40160366ff1886b6573005a5205379d8376ce7f84ee5789207ff"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-MACOS-UPDATER-PROVIDER-V5-DATA-GATE-2026-11-09.md",
+      "bytes": 8202,
+      "sha256": "a115d5b363edd1633539f0c8872382ebcebc4c36896a6977246ad84a5ae02491"
     },
     {
       "path": "docs/research/PHYSICS-BATCH-AUTHORING-POLICY.md",
