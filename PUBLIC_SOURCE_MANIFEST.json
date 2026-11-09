@@ -113,6 +113,11 @@
       "sha256": "4525df39b509faede4c6e9832b5c2199906f79d10407beea4e4f518801e5a59a"
     },
     {
+      "path": ".github/workflows/native-linux-picker.yml",
+      "bytes": 2187,
+      "sha256": "3057b07ce1b703d7d54799bd4c86287579304d5ceead38bb7d4ec965f1b877b9"
+    },
+    {
       "path": "src/App.vue",
       "bytes": 42696,
       "sha256": "54a7e8bc5ebfdd22e76305479e3ae481216e81a96855871012d14129c25ec0e0"
@@ -2103,6 +2108,31 @@
       "sha256": "40aa06f190a9df280e11563f8598c07be01893b8d91e88ef7009a628a5e6232f"
     },
     {
+      "path": "scripts/native-picker/assets.json",
+      "bytes": 4025,
+      "sha256": "d749af846f064141c976a304ad9d52f09eca8e9205177642fcf90f81ffb9c0ce"
+    },
+    {
+      "path": "scripts/native-picker/assets.py",
+      "bytes": 3919,
+      "sha256": "d5a0700c7b00e1a1074644b66c767498b1c2d2dfe1cfa2da278c36e2ce314b81"
+    },
+    {
+      "path": "scripts/native-picker/gtk_picker.py",
+      "bytes": 10702,
+      "sha256": "d79d9374977517c98649d3a96f32534e246b11589215c39f3db56b0015881ed3"
+    },
+    {
+      "path": "scripts/native-picker/linux-launch.py",
+      "bytes": 2303,
+      "sha256": "6107417fcbc9669e37f169ed239802201ed06f307ab35fa35331acb10935b620"
+    },
+    {
+      "path": "scripts/native-picker/linux.py",
+      "bytes": 14111,
+      "sha256": "a377c2f770e46a8d1b5633113c3cca0032a8b8cf08d480cfe8572ad00007660a"
+    },
+    {
       "path": "scripts/prepare-installer-release.py",
       "bytes": 13878,
       "sha256": "f60c96a09e52eb0503f3dde86633727e90379f77a34d3d5372b2e4eaebf9b83b"
@@ -2973,6 +3003,11 @@
       "sha256": "0fd95469944db9729f3209cc3cc652f56f451816b5ab3281b98b9f9d456a1e3c"
     },
     {
+      "path": "docs/research/NATIVE-INSTALL-UPGRADE-STAGE2-UI-PLAN-2026-11-09.md",
+      "bytes": 7005,
+      "sha256": "035e8f3019108349256bce535ee581da7ba1580c5c79ca5dcbe4450521c55853"
+    },
+    {
       "path": "docs/research/NATIVE-INSTALL-UPGRADE-UI-GATE-2026-11-09.md",
       "bytes": 5696,
       "sha256": "280c02a813a99059d6a7a2bd3795f21760afb230e6de190ab5f34772e3b2cc39"
@@ -2986,6 +3021,11 @@
       "path": "docs/research/NATIVE-INSTALLED-UPGRADE-DATA-GATE-2026-11-09.md",
       "bytes": 4408,
       "sha256": "bfea35c12634f320d2be6e4d574c8498cf18b25d775b7fc95552cd218efa26ad"
+    },
+    {
+      "path": "docs/research/NATIVE-LINUX-PICKER-UI-GATE-2026-11-09.md",
+      "bytes": 2872,
+      "sha256": "b5430cc12ffe9edbcd04d221af5e48d48a0d5f411cc7ff9cf6238cd64c4e86d9"
     },
     {
       "path": "docs/research/NATIVE-NEXT-PICKER-AND-LAUNCH-DATA-GATE-2026-11-09.md",

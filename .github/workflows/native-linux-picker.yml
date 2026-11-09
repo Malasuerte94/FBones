@@ -1,0 +1,50 @@
+name: Linux native Save picker feasibility
+on:
+  push:
+    branches: [work/native-install-upgrade-0.9.6]
+    paths:
+      - '.github/workflows/native-linux-picker.yml'
+      - 'scripts/native-picker/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  picker:
+    name: Native GTK Save picker Debian
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Select a fresh private runner root
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']) / ('fbones-picker-' + os.environ['GITHUB_RUN_ID'] + '-' + os.environ['GITHUB_RUN_ATTEMPT'])
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write('RUN_ROOT=' + str(root) + '\n')
+      - name: Install ordinary native GTK and accessibility providers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-0 libgtk-3-0 webkit2gtk-driver xvfb x11-utils dbus-x11 libgl1-mesa-dri python3-gi gir1.2-atspi-2.0 at-spi2-core libatk-adaptor
+      - name: Fetch the exact stock Debian package
+        env:
+          FBONES_METADATA_TOKEN: ${{ github.token }}
+        run: python scripts/native-picker/assets.py linux-deb --root "$RUN_ROOT"
+      - name: One ordinary New project and native Save
+        run: |
+          dpkg-query -W -f='${Package} ${Version}\n' libgtk-3-0 libwebkit2gtk-4.1-0 webkit2gtk-driver libatspi2.0-0 gir1.2-atspi-2.0 python3-gi libatk-adaptor > "$RUN_ROOT/reports/provider-packages.txt"
+          xvfb-run --auto-servernum --server-args='-screen 0 1440x900x24' dbus-run-session -- /usr/bin/python3 scripts/native-picker/linux.py "$RUN_ROOT" linux-deb
+      - name: Preserve own Save evidence for independent DATA decoding
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-linux-picker-debian
+          path: ${{ env.RUN_ROOT }}/reports/
+          retention-days: 7
+          if-no-files-found: warn
