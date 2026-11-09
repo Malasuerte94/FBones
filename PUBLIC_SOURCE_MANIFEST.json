@@ -114,8 +114,8 @@
     },
     {
       "path": ".github/workflows/native-install-upgrade.yml",
-      "bytes": 1996,
-      "sha256": "59b083131bf0fe3da3e22dd298682061feadeea8e6b51c24d99a7fefdbcc312d"
+      "bytes": 1989,
+      "sha256": "333100522d3b2ad0f4a3c7d2d37ca1401f85e8a24d5a0fdd083cbf13857123b8"
     },
     {
       "path": ".github/workflows/native-linux-debian-upgrade.yml",
@@ -2084,18 +2084,18 @@
     },
     {
       "path": "scripts/native-acceptance/compile-legacy.ps1",
-      "bytes": 3933,
-      "sha256": "a8401d565af7c21a86b8c6a3206925accf4344cee31aedba6ae8602c41cc49fb"
+      "bytes": 3944,
+      "sha256": "421f73f0abb8da62f93982815a5218fa2fb7b6cfc3f3b296fc938f9fc68c3f0c"
     },
     {
       "path": "scripts/native-acceptance/legacy-metadata.cpp",
-      "bytes": 11334,
-      "sha256": "a22d797e7ebab3e15374b1eeb3560d63bf1235607202cce299d8788d9f794437"
+      "bytes": 16526,
+      "sha256": "41c725e4287be4bdfd6ac6ed36e7f125a71b985b9e87a45e97d5ef380ae5a2ee"
     },
     {
       "path": "scripts/native-acceptance/legacy-metadata.cs",
-      "bytes": 2669,
-      "sha256": "5ad0008f889faeaa60c76cb540c4787f13d30d08cf99bb91ff637f000076ddf6"
+      "bytes": 3226,
+      "sha256": "661d066843c30bc6749440f692a826a5717be4ab16a89535fe8a2241dae7ef53"
     },
     {
       "path": "scripts/native-acceptance/linux-launch.py",
@@ -2144,8 +2144,8 @@
     },
     {
       "path": "scripts/native-acceptance/windows.ps1",
-      "bytes": 21860,
-      "sha256": "302c0ca6f58f506ea99d53947efa2ab2a28ef7af30d2b8ef664acee90c57fc39"
+      "bytes": 26071,
+      "sha256": "11a3aecfa3bc0610a5be11fe8b994de45d8802750c9068503187675d74fd8d5f"
     },
     {
       "path": "scripts/native-debian-upgrade/assets.json",
@@ -3236,6 +3236,16 @@
       "path": "docs/research/NATIVE-WINDOWS-MACOS-UPDATER-PROVIDER-V5-DATA-GATE-2026-11-09.md",
       "bytes": 8202,
       "sha256": "a115d5b363edd1633539f0c8872382ebcebc4c36896a6977246ad84a5ae02491"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-READY-PANEL-PRESS-V8-DATA-ADDENDUM-2026-11-09.md",
+      "bytes": 2259,
+      "sha256": "a824ee3ebc24a5c5822e9d8569ce33fa50abb8912a68348fcbb3e891c58f0627"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-READY-PANEL-PRESS-V8-UI-ADDENDUM-2026-11-09.md",
+      "bytes": 1797,
+      "sha256": "a5e43a908ef2823d2606580bfc801d90e9faeff092aadd6ce08ac0480a89bfe0"
     },
     {
       "path": "docs/research/PHYSICS-BATCH-AUTHORING-POLICY.md",

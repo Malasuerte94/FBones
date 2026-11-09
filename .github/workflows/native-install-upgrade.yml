@@ -1,4 +1,4 @@
-name: Windows SDK Legacy metadata v7
+name: Windows ONE SDK Legacy Press v8
 on:
   push:
     branches: [work/native-install-upgrade-0.9.6]
@@ -40,7 +40,7 @@ jobs:
         env:
           FBONES_METADATA_TOKEN: ${{ github.token }}
         run: python scripts/native-acceptance/assets.py '${{ matrix.route }}' --root "$RUN_ROOT"
-      - name: Stock Windows installation and same-button SDK Legacy metadata only
+      - name: Stock Windows ONE measured SDK Press and actual panel proof
         if: runner.os == 'Windows'
         shell: cmd
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\native-acceptance\windows.ps1 -Root "%RUN_ROOT%"

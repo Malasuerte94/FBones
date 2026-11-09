@@ -55,7 +55,7 @@ using System;using System.Runtime.InteropServices;public static class OwnNativeW
  [DllImport("user32.dll",SetLastError=true)]public static extern bool PostMessage(IntPtr h,uint msg,IntPtr w,IntPtr l);
 }
 '@
-$proof=[ordered]@{passed=$false;route='windows-nsis';stage='legacy-metadata-only-v7';updaterControlCapabilityPassed=$false;viewportAccessibilityShapeVerified='unknown';previousCombinedViewportGatePassed=$false;upgradeAttempted=$false;normalClose=$false;legacyMetadataCapabilityPassed=$false;metadataOnly=$true;actionAttempted=$false;currentStage='stock-nsis-install'};$app=$null;$native=$null;$created=[long]0;$closeRequested=$false
+$proof=[ordered]@{passed=$false;route='windows-nsis';stage='one-sdk-legacy-press-v8';updaterControlCapabilityPassed=$false;viewportAccessibilityShapeVerified='unknown';previousCombinedViewportGatePassed=$false;upgradeAttempted=$false;normalClose=$false;legacyMetadataCapabilityPassed=$false;metadataOnly=$true;actionAttempted=$false;currentStage='stock-nsis-install'};$app=$null;$native=$null;$created=[long]0;$closeRequested=$false
 try{
  $proof.currentStage='local-sdk-compiler-and-COM-probe'; & (Join-Path $PSScriptRoot 'compile-legacy.ps1') -Root $rootPath
  $compiler=Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $rootPath 'reports\legacy-compiler.json')|ConvertFrom-Json
@@ -125,8 +125,9 @@ try{
    if([string]::IsNullOrEmpty($doc.Name) -and [string]::IsNullOrEmpty($doc.Value) -and $descendants.Count -eq 0){$emptyDocs++}
   }
   $withinDeadline=$observation.ElapsedMilliseconds -lt $observationBudget
-  $qualified=$withinDeadline -and $before.Complete -and $hasVersion -and !$startupError -and !$loading -and !$unsupported -and $updateRows.Count -eq 1
-  [void]$attempts.Add([ordered]@{attempt=$attempt;elapsedMilliseconds=$observation.ElapsedMilliseconds;captureMilliseconds=$before.ElapsedMilliseconds;captureBudgetMilliseconds=$before.MaxMilliseconds;complete=$before.Complete;rows=$before.OriginalRowCount;versionObserved=$hasVersion;metadataButtonCount=$updateRows.Count;invokeAvailableCount=@($updateRows|Where-Object{$_.InvokeAvailable}).Count;emptyRootWebAreaDocuments=$emptyDocs;startupError=$startupError;loading=$loading;unsupported=$unsupported;withinDeadline=$withinDeadline;qualified=$qualified})
+  $readyRows=@($updateRows|Where-Object{$_.NameVariant -eq 'ready-0.9.6'});$readyPanel=Own-PanelPresent $before
+  $qualified=$withinDeadline -and $before.Complete -and $hasVersion -and !$startupError -and !$loading -and !$unsupported -and $updateRows.Count -eq 1 -and $readyRows.Count -eq 1 -and $readyPanel
+  [void]$attempts.Add([ordered]@{attempt=$attempt;elapsedMilliseconds=$observation.ElapsedMilliseconds;captureMilliseconds=$before.ElapsedMilliseconds;captureBudgetMilliseconds=$before.MaxMilliseconds;complete=$before.Complete;rows=$before.OriginalRowCount;versionObserved=$hasVersion;metadataButtonCount=$updateRows.Count;readyCaptionCount=$readyRows.Count;currentPanelPresent=$readyPanel;invokeAvailableCount=@($updateRows|Where-Object{$_.InvokeAvailable}).Count;emptyRootWebAreaDocuments=$emptyDocs;startupError=$startupError;loading=$loading;unsupported=$unsupported;withinDeadline=$withinDeadline;qualified=$qualified})
   $proof.uiaInitialization=[ordered]@{maximumSnapshots=$maximumSnapshots;budgetMilliseconds=$observationBudget;elapsedMilliseconds=$observation.ElapsedMilliseconds;hardApiCancellation=$false;attempts=$attempts}
   Write-OwnUiaJson ('uia-attempt-'+$attempt.ToString('00')+'.json') ($attempts[$attempts.Count-1])
   if(!$before.Complete){throw 'UIA inventory incomplete/foreign/errored; no action'}
@@ -136,7 +137,12 @@ try{
  }
  if($null -ne $before){Write-OwnUiaInventory 'uia-before.json' $before}
  if($null -eq $selected){throw 'Bounded native UIA initialization did not qualify unchanged version/unique Updates contract; no action'}
- $proof.currentStage='read-same-owned-button-Legacy-metadata';Assert-OwnNativeIdentity;$currentProvider=Get-OwnUiaProviders
+ $proof.currentStage='refresh-qualified-Ready-open-panel';Assert-OwnNativeIdentity;$currentProvider=Get-OwnUiaProviders
+ $freshBefore=[OwnUpdaterUia]::Capture($window.ToInt64(),[int]$native.ProcessId,[int[]]$currentProvider.allowedPids);Write-OwnUiaInventory 'uia-ready-refresh.json' $freshBefore
+ if(!$freshBefore.Complete){throw 'Ready refresh inventory incomplete; no action'}
+ $freshText=Own-VisibleText $freshBefore;$freshSelected=[OwnUpdaterUia]::UniqueUpdatesMetadata($freshBefore)
+ if($freshSelected.NameVariant -ne 'ready-0.9.6' -or !(Own-PanelPresent $freshBefore) -or $freshSelected.ProcessId -ne $selected.ProcessId -or ($freshSelected.RuntimeId -join ',') -cne ($selected.RuntimeId -join ',') -or $freshText -notmatch '0\.9\.5\b' -or $freshText.Contains('The viewport could not start.') -or $freshText.Contains('Opening workspace') -or $freshText.Contains('Automatic updates are unavailable for this copy.')){throw 'Current Ready/open-panel/runtime/provider contract changed; no action'}
+ $before=$freshBefore;$selected=$freshSelected;$proof.currentStage='read-same-owned-Ready-button-Legacy-metadata'
  if($observation.ElapsedMilliseconds -ge $observationBudget){throw 'UIA observation deadline expired before metadata query'}
  $proof.selectedUpdates=[ordered]@{name=$selected.Name;variant=$selected.NameVariant;runtimeId=$selected.RuntimeId;providerPid=$selected.ProcessId;invokeAvailable=$selected.InvokeAvailable}
  Write-OwnUiaJson 'legacy-selected.json' $proof.selectedUpdates
@@ -144,7 +150,23 @@ try{
  $metadata=$raw|ConvertFrom-Json;Write-OwnUiaJson 'legacy-metadata.json' $metadata;Assert-OwnNativeIdentity
  $proof.legacyNameVariants=[ordered]@{before=[OwnUpdaterUia]::UpdatesNameVariant($metadata.beforeName);current=[OwnUpdaterUia]::UpdatesNameVariant($metadata.currentName)}
  $proof.legacyMetadata=$metadata;$proof.metadataOnly=$true;$proof.actionAttempted=$false
- if(!$proof.legacyNameVariants.before -or !$proof.legacyNameVariants.current -or $metadata.beforeName -ne $selected.Name -or !$metadata.metadataOnly -or $metadata.actionAttempted -or !$metadata.metadataReadComplete){throw 'SDK Legacy metadata unavailable/errored/incomplete; retained negative, no action'}
+ if($proof.legacyNameVariants.before -ne 'ready-0.9.6' -or $proof.legacyNameVariants.current -ne 'ready-0.9.6' -or $metadata.beforeName -ne $selected.Name -or !$metadata.metadataOnly -or $metadata.actionAttempted -or !$metadata.metadataReadComplete){throw 'SDK Legacy metadata unavailable/errored/incomplete; retained negative, no action'}
+ if($metadata.defaultAction -cne 'Press' -or $metadata.legacyRole -ne 43 -or $metadata.defaultActionHresult -ne 0 -or $metadata.roleHresult -ne 0 -or $metadata.stateHresult -ne 0){throw 'Observed Press metadata is not freshly qualified; no action'}
+ $beforePanel=Own-PanelPresent $before;if(!$beforePanel){throw 'Known Current0.9.5 panel must be open before one Press'};Assert-OwnNativeIdentity;$currentProvider=Get-OwnUiaProviders
+ $proof.currentStage='one-SDK-DoDefaultAction';$proof.pressEntryAttempted=$true;$proof.metadataOnly=$false;$proof.actionAttempted=$null
+ Write-OwnUiaJson 'legacy-press-intent.json' ([ordered]@{maximumPresses=1;noFallback=$true;processId=$native.ProcessId;creationFileTime=$created;window=$window.ToInt64();selected=$proof.selectedUpdates;freshMetadata=$metadata;beforePanel=$beforePanel})
+ $pressRaw=[OwnLegacyMetadata]::Press($native.Process,$window,[uint32]$native.ProcessId,[uint64]$created,$image,[int[]]$selected.RuntimeId,[int[]]$currentProvider.allowedPids,[int]$selected.ProcessId,$metadata.currentName)
+ $press=$pressRaw|ConvertFrom-Json;Write-OwnUiaJson 'legacy-press-result.json' $press;$proof.sdkPress=$press;$proof.actionAttempted=$press.actionAttempted;Assert-OwnNativeIdentity
+ if($press.metadataOnly -or !$press.metadataReadComplete -or !$press.actionAttempted -or !$press.actionReturned -or $press.actionHresult -lt 0 -or !$press.PSObject.Properties['actionHresult'] -or !([OwnUpdaterUia]::UpdatesNameVariant($press.actionCurrentName))){throw 'One SDK DoDefaultAction unavailable/failed; no repeat or fallback'}
+ $after=$null;$changed=$false;$afterPanel=$beforePanel;$transitionDeadline=[DateTime]::UtcNow.AddSeconds(15)
+ do{
+  Assert-OwnNativeIdentity;$currentProvider=Get-OwnUiaProviders;$after=[OwnUpdaterUia]::Capture($window.ToInt64(),[int]$native.ProcessId,[int[]]$currentProvider.allowedPids)
+  if($after.Complete){$text=Own-VisibleText $after;$afterPanel=Own-PanelPresent $after;$changed=($beforePanel -and !$afterPanel -and $text -match '0\.9\.5\b' -and !$text.Contains('The viewport could not start.') -and !$text.Contains('Opening workspace') -and !$text.Contains('Automatic updates are unavailable for this copy.'))}
+  if($changed){break};if(!$after.Complete){break};Start-Sleep -Milliseconds 200
+ }while([DateTime]::UtcNow -lt $transitionDeadline)
+ Write-OwnUiaInventory 'uia-after-press.json' $after
+ $proof.updaterControl=[ordered]@{provider='typed SDK LegacyIAccessible DoDefaultAction';onePressAttempted=$press.actionAttempted;actionHresult=$press.actionHresult;beforePanel=$beforePanel;afterPanel=$afterPanel;actualPanelTransition=$changed;currentVersionQualifiedSide=if($beforePanel){'before'}elseif($afterPanel){'after'}else{'none'};version='0.9.5';afterComplete=$after.Complete}
+ if(!$changed -or !$after.Complete){throw 'One SDK Press did not prove supported current0.9.5 panel transition; no retry'}
  $proof.currentStage='normal-owned-close'
  $app.Refresh();$nowCreated=[long]0
  if($app.HasExited -or ![NativeOwnGui]::GetProcessTimes($native.Process,[ref]$nowCreated,[ref]$exited,[ref]$kernel,[ref]$user) -or $nowCreated -ne $created -or (Get-FileHash -LiteralPath $image -Algorithm SHA256).Hash.ToLowerInvariant() -ne $receipt.executableSha256){throw 'Own window changed before normal close'}
@@ -154,7 +176,7 @@ try{
  if(![OwnNativeWindow]::PostMessage($window,0x10,[IntPtr]::Zero,[IntPtr]::Zero)){throw 'Owned WM_CLOSE failed'}
  if([NativeOwnGui]::WaitForSingleObject($native.Process,20000) -ne 0){throw 'Owned native app did not close normally; no force'}
  $exit=[uint32]0;if(![NativeOwnGui]::GetExitCodeProcess($native.Process,[ref]$exit) -or $exit -ne 0){throw 'Owned app terminal exit unavailable/nonzero'}
- $proof.normalClose=$true;$proof.exitCode=$exit;$proof.legacyMetadataCapabilityPassed=$true;$proof.status='LEGACY_METADATA_CAPABILITY_PASS';$proof.currentStage='legacy-metadata-only-passed'
+ $proof.normalClose=$true;$proof.exitCode=$exit;$proof.legacyMetadataCapabilityPassed=$true;$proof.updaterControlCapabilityPassed=$true;$proof.status='UPDATER_CONTROL_CAPABILITY_PASS';$proof.currentStage='one-SDK-Press-control-passed'
 }catch{
  $proof.error=$_.Exception.Message
  $cleanup=[ordered]@{attempted=$false;normalClose=$false;noForce=$true}
@@ -178,10 +200,10 @@ try{
  $proof.failureCleanup=$cleanup
  throw
 }finally{
- try{[OwnLegacyMetadata]::Unload()}catch{$proof.sdkUnloadError=$_.Exception.Message;$proof.legacyMetadataCapabilityPassed=$false;$proof.status='LEGACY_MODULE_UNLOAD_FAILED'}
+ try{[OwnLegacyMetadata]::Unload()}catch{$proof.sdkUnloadError=$_.Exception.Message;$proof.legacyMetadataCapabilityPassed=$false;$proof.updaterControlCapabilityPassed=$false;$proof.status='LEGACY_MODULE_UNLOAD_FAILED'}
  if($native){[NativeOwnGui]::CloseHandle($native.Process)|Out-Null}
  if($nativeLogPath -and (Test-Path -LiteralPath $nativeLogPath)){$bytes=[byte[]](Read-OwnNativeBytes);[IO.File]::WriteAllBytes((Join-Path $rootPath 'reports\native-prefix.log'),$bytes);$size=(Get-Item -LiteralPath $nativeLogPath).Length;$proof.diagnosticLog=[ordered]@{spoolBytesObserved=$size;retainedPrefixBytes=$bytes.Length;retainedPrefixCap=65536;rawSpoolHardByteCap=$false}}
  Write-OwnUiaJson 'capability.json' $proof
 }
 
-if(!$proof.legacyMetadataCapabilityPassed){exit 2}
+if(!$proof.updaterControlCapabilityPassed){exit 2}
