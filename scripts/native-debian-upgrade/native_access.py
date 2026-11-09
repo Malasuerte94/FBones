@@ -1,4 +1,4 @@
-"""Qualified native Save/Open and separate read-only own-successor observation."""
+"""Qualified Save/Open, native read-only views and ONE explicit successor Updates action."""
 import json,os,re,subprocess,time
 from pathlib import Path
 
@@ -164,7 +164,11 @@ def read_passive_text(node,row,budget):
   result['textReadComplete']=False;result['textReadError']=(type(error).__name__+': '+str(error))[:512]
  return result
 
-def _successor_attempt(run,baseline,expected_sha):
+def native_version_matches(rows,current_version_only=False):
+ pattern=r'\ACurrent\s+version:\s*0\.9\.6\Z'if current_version_only else r'(?:Version\s*|Current version:\s*)0\.9\.6\b'
+ return[{'path':r['path'],'exporterPid':r['exporterPid'],'source':source,'value':r[source]}for r in rows if r['showing']and r['visible']for source in['name','nativeText']if r[source]is not None and re.search(pattern,r[source].strip()if current_version_only else r[source])]
+
+def _successor_attempt(run,baseline,expected_sha,captured=None,current_version_only=False):
  """No accessible action; only main-window subtree and verified exporters."""
  from lifecycle import process,same,tree
  import gi,hashlib
@@ -189,17 +193,75 @@ def _successor_attempt(run,baseline,expected_sha):
   if node.get_process_id()==baseline['pid']and node.get_role_name()=='frame'and name.endswith('FBones')and state.contains(a.StateType.SHOWING)and state.contains(a.StateType.VISIBLE):windows.append(node)
  require(len(windows)<=1,'Successor main accessible frame ambiguous')
  if not windows:return{'versionVerified':False,'readiness':'own frame not yet showing','main':baseline,'nodes':[],'exporters':[],'startupErrorVisible':False}
+ if captured is not None:captured.update(frame=windows[0],nodes={})
  queue=[(windows[0],[])];rows=[];exporters={};end=time.monotonic()+15;text_budget={'characters':0}
  while queue:
   require(len(rows)<4096 and time.monotonic()<end,'Successor accessibility inventory cap');node,p=queue.pop(0);pid=node.get_process_id()
   if pid not in allowed:
    born=tree(baseline['pid']);require(pid in born and int(born[pid]['startTicks'])>=int(baseline['startTicks']),'Accessibility exporter outside verified successor tree');allowed[pid]=born[pid]
   live=process(pid);require(live['startTicks']==allowed[pid]['startTicks']and live['executablePath']==allowed[pid]['executablePath'],'Accessibility exporter identity changed');exporters[pid]=live
-  role=node.get_role_name();name=''if role in PROTECTED_TEXT_ROLES else(node.get_name()or'');require(len(name)<=512,'Native accessible label cap');state=node.get_state_set();row={'path':p,'exporterPid':pid,'role':role,'name':name,'showing':state.contains(a.StateType.SHOWING),'visible':state.contains(a.StateType.VISIBLE),'editable':state.contains(a.StateType.EDITABLE)};row.update(read_passive_text(node,row,text_budget));rows.append(row)
+  role=node.get_role_name();name=''if role in PROTECTED_TEXT_ROLES else(node.get_name()or'');require(len(name)<=512,'Native accessible label cap');state=node.get_state_set();row={'path':p,'exporterPid':pid,'role':role,'name':name,'showing':state.contains(a.StateType.SHOWING),'visible':state.contains(a.StateType.VISIBLE),'editable':state.contains(a.StateType.EDITABLE),'enabled':state.contains(a.StateType.ENABLED),'sensitive':state.contains(a.StateType.SENSITIVE)};row.update(read_passive_text(node,row,text_budget));rows.append(row)
+  if captured is not None:captured['nodes'][tuple(p)]=node
   count=node.get_child_count();require(0<=count<=512 and len(p)<=32,'Native accessibility child/depth cap');queue.extend((node.get_child_at_index(i),p+[i])for i in range(count))
- text_complete=all(r['textReadComplete']for r in rows);text=' '.join(value for r in rows if r['showing']and r['visible']for value in[r['name'],r['nativeText']]if value is not None);matches=[{'path':r['path'],'exporterPid':r['exporterPid'],'source':source,'value':r[source]}for r in rows if r['showing']and r['visible']for source in['name','nativeText']if r[source]is not None and re.search(r'(?:Version\s*|Current version:\s*)0\.9\.6\b',r[source])];version=text_complete and bool(matches);error='The viewport could not start.'in text or'Opening workspace…'in text
+ text_complete=all(r['textReadComplete']for r in rows);text=' '.join(value for r in rows if r['showing']and r['visible']for value in[r['name'],r['nativeText']]if value is not None);matches=native_version_matches(rows,current_version_only);version=text_complete and bool(matches);error='The viewport could not start.'in text or'Opening workspace…'in text
  proof={'versionVerified':version,'version':'0.9.6'if version else None,'versionMatches':matches,'startupErrorVisible':error,'main':baseline,'exporters':list(exporters.values()),'nodes':rows,'readOnly':True,'accessibleActions':0,'nativeTextReadsComplete':text_complete,'nativeTextCharacters':text_budget['characters'],'nativeTextNodeCharacterCap':8192,'nativeTextAggregateCharacterCap':65536,'nativeTextCapHit':any(r['textCapHit']for r in rows),'nativeTextReadErrors':sum(not r['textReadComplete']for r in rows)}
  require(same(process(baseline['pid'],True),baseline),'Successor identity changed after native view');return proof
+
+def updates_rows(rows):
+ return[r for r in rows if r['role']=='push button'and r['name']=='Updates'and r['showing']and r['visible']and r['enabled']and r['sensitive']and not r['editable']]
+
+def updates_action_metadata(node):
+ row={'complete':False,'actionInterfaceAvailable':None,'actionCount':None,'actionNames':[],'apiError':None};action=None
+ try:
+  import gi
+  gi.require_version('Atspi','2.0')
+  from gi.repository import Atspi as a
+  state=node.get_state_set();name=node.get_name()or'';row.update(exporterPid=node.get_process_id(),role=node.get_role_name(),name=name[:512],nameTruncated=len(name)>512,showing=state.contains(a.StateType.SHOWING),visible=state.contains(a.StateType.VISIBLE),enabled=state.contains(a.StateType.ENABLED),sensitive=state.contains(a.StateType.SENSITIVE),editable=state.contains(a.StateType.EDITABLE));require(len(name)<=512,'Updates caption cap')
+  action=node.get_action_iface();row['actionInterfaceAvailable']=action is not None
+  if action is not None:
+   count=action.get_n_actions();row['actionCount']=count;require(type(count)is int and 0<=count<=8,'Updates action count cap')
+   for i in range(count):
+    value=action.get_action_name(i);require(isinstance(value,str)and len(value)<=512,'Updates action name cap');row['actionNames'].append(value)
+  row['complete']=True
+ except Exception as error:row['apiError']=(type(error).__name__+': '+str(error))[:512]
+ return row,action
+
+def qualified_updates_action(row):
+ return row.get('complete')is True and len(updates_rows([row]))==1 and row.get('actionInterfaceAvailable')is True and row.get('actionCount')==1 and row.get('actionNames')==['click']
+
+def native_successor_current_version(run,baseline,expected_sha,expected_window):
+ """ONE newly authorized native Updates click, then actual CURRENT version."""
+ from lifecycle import process,same,tree
+ from session import main_window
+ root=Path(run);reports=root/'reports';end=time.monotonic()+20;attempts=0;before=None;captured={}
+ def output(name,value):
+  data=json.dumps(value,indent=2,ensure_ascii=True).encode();require(len(data)<=2*1024*1024,'Native Updates receipt cap')
+  with(reports/name).open('xb')as f:f.write(data+b'\n')
+ def bound():
+  require(same(process(baseline['pid'],True),baseline),'Automatic native changed before Updates action');window=main_window(baseline['pid']);require(window and window['window']==expected_window and' * — FBones'not in window['title'],'Automatic native main window changed or became dirty');return window
+ while time.monotonic()<end:
+  attempts+=1;captured={};before=_successor_attempt(run,baseline,expected_sha,captured,current_version_only=True);before['readOnlyAttempts']=attempts;raw=json.dumps(before,indent=2,ensure_ascii=True).encode();require(len(raw)<=2*1024*1024,'Before native Updates inventory cap');(reports/'automatic-updates-before-progress.json').write_bytes(raw+b'\n')
+  require(not before['startupErrorVisible']and before.get('nativeTextReadsComplete',True),'Incomplete/error native Updates before scope')
+  candidates=updates_rows(before['nodes']);require(len(candidates)<=1,'Ambiguous native Updates before action')
+  if candidates:break
+  time.sleep(.2)
+ require(before is not None,'No native Updates before observation');output('automatic-updates-before.json',before);require(len(candidates)==1 and not before['versionVerified'],'Unique closed native Updates panel required before one discovery press');selected=candidates[0];node=captured['nodes'][tuple(selected['path'])];metadata,action=updates_action_metadata(node);output('automatic-updates-action-capability.json',metadata);require(qualified_updates_action(metadata),'Actual native Updates sole click[0] unavailable')
+ # A second complete traversal rebinds the retained object/path to the same live frame.
+ bound();fresh_nodes={};fresh=_successor_attempt(run,baseline,expected_sha,fresh_nodes,current_version_only=True);output('automatic-updates-pre-action.json',fresh);now=updates_rows(fresh['nodes']);require(fresh.get('nativeTextReadsComplete')is True and not fresh['startupErrorVisible']and not fresh['versionVerified']and len(now)==1 and now[0]['path']==selected['path']and now[0]['exporterPid']==selected['exporterPid'],'Native Updates scope/shape changed');require(fresh_nodes['frame']==captured['frame']and fresh_nodes['nodes'][tuple(selected['path'])]==node,'Retained native Updates object/frame/path changed')
+ exporter=next(r for r in fresh['exporters']if r['pid']==selected['exporterPid']);current=process(exporter['pid']);descendants=tree(baseline['pid']);require((exporter['pid']==baseline['pid']or exporter['pid']in descendants)and current['startTicks']==exporter['startTicks']and current['executablePath']==exporter['executablePath'],'Updates exporter left current own descendant tree');current_metadata,action=updates_action_metadata(node);output('automatic-updates-action-recheck.json',current_metadata);require(qualified_updates_action(current_metadata)and current_metadata['exporterPid']==exporter['pid'],'Native Updates current object/action changed');bound()
+ intent={'oneNativeUpdatesClick':True,'main':baseline,'window':expected_window,'selected':selected,'exporter':exporter,'actionMetadata':current_metadata,'actionIndex':0,'readOnly':False,'maximumActions':1};output('automatic-updates-click-intent.json',intent)
+ action_result={'attempted':True,'returned':None,'apiError':None,'repeatOrFallback':False}
+ try:action_result['returned']=action.do_action(0)
+ except Exception as error:action_result['apiError']=(type(error).__name__+': '+str(error))[:512]
+ finally:output('automatic-updates-click-result.json',action_result)
+ require(action_result['apiError']is None and action_result['returned']is True,'One native Updates click did not return success; no retry')
+ end=time.monotonic()+20;after=None;after_attempts=0
+ while time.monotonic()<end:
+  after_attempts+=1;bound();after=_successor_attempt(run,baseline,expected_sha,current_version_only=True);after['readOnlyAttempts']=after_attempts;data=json.dumps(after,indent=2,ensure_ascii=True).encode();require(len(data)<=2*1024*1024,'After native Updates inventory cap');(reports/'automatic-updates-after-progress.json').write_bytes(data+b'\n')
+  if after['startupErrorVisible']or after['versionVerified']or after.get('nativeTextReadsComplete')is False:break
+  time.sleep(.2)
+ require(after is not None,'No native Updates after inventory');output('automatic-updates-after.json',after);require(after.get('nativeTextReadsComplete')is True and after['versionVerified']and not after['startupErrorVisible'],'Actual native CURRENT version0.9.6 unproved after one Updates click');bound()
+ return{'versionVerified':True,'version':'0.9.6','requiredLabel':'Current version: 0.9.6','readOnly':False,'nativeUpdatesClickAttempts':1,'clickReturned':True,'readOnlyBeforeAttempts':attempts,'readOnlyAfterAttempts':after_attempts,'versionMatches':after['versionMatches'],'exporterPids':sorted(r['pid']for r in after['exporters']),'nodeCount':len(after['nodes'])}
 
 def readonly_successor_version(run,baseline,expected_sha):
  end=time.monotonic()+20;attempts=0;last=None

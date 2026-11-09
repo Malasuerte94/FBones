@@ -1,4 +1,4 @@
-name: Windows bounded native provider v6
+name: Windows SDK Legacy metadata v7
 on:
   push:
     branches: [work/native-install-upgrade-0.9.6]
@@ -40,7 +40,7 @@ jobs:
         env:
           FBONES_METADATA_TOKEN: ${{ github.token }}
         run: python scripts/native-acceptance/assets.py '${{ matrix.route }}' --root "$RUN_ROOT"
-      - name: Real Windows NSIS installation and native WebView2 control
+      - name: Stock Windows installation and same-button SDK Legacy metadata only
         if: runner.os == 'Windows'
         shell: cmd
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\native-acceptance\windows.ps1 -Root "%RUN_ROOT%"

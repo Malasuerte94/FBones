@@ -114,8 +114,8 @@
     },
     {
       "path": ".github/workflows/native-install-upgrade.yml",
-      "bytes": 1991,
-      "sha256": "b7061517d79bf4b101947beb19dd25e3cd76b6cd2568999170848f0bf773e5cb"
+      "bytes": 1996,
+      "sha256": "59b083131bf0fe3da3e22dd298682061feadeea8e6b51c24d99a7fefdbcc312d"
     },
     {
       "path": ".github/workflows/native-linux-debian-upgrade.yml",
@@ -2083,6 +2083,21 @@
       "sha256": "d5a0700c7b00e1a1074644b66c767498b1c2d2dfe1cfa2da278c36e2ce314b81"
     },
     {
+      "path": "scripts/native-acceptance/compile-legacy.ps1",
+      "bytes": 3933,
+      "sha256": "a8401d565af7c21a86b8c6a3206925accf4344cee31aedba6ae8602c41cc49fb"
+    },
+    {
+      "path": "scripts/native-acceptance/legacy-metadata.cpp",
+      "bytes": 11334,
+      "sha256": "a22d797e7ebab3e15374b1eeb3560d63bf1235607202cce299d8788d9f794437"
+    },
+    {
+      "path": "scripts/native-acceptance/legacy-metadata.cs",
+      "bytes": 2669,
+      "sha256": "5ad0008f889faeaa60c76cb540c4787f13d30d08cf99bb91ff637f000076ddf6"
+    },
+    {
       "path": "scripts/native-acceptance/linux-launch.py",
       "bytes": 2303,
       "sha256": "6107417fcbc9669e37f169ed239802201ed06f307ab35fa35331acb10935b620"
@@ -2104,8 +2119,8 @@
     },
     {
       "path": "scripts/native-acceptance/native-updater-uia.cs",
-      "bytes": 7408,
-      "sha256": "010ed0b693e688401b21b96a32bd891c9135666dc74780c647cd58408651417a"
+      "bytes": 5824,
+      "sha256": "c0bb27ffe71bfded1f04191e93660d2b75ccbb9635e53d0e4db75ac84bea7607"
     },
     {
       "path": "scripts/native-acceptance/nul-gui-launch.cs",
@@ -2129,8 +2144,8 @@
     },
     {
       "path": "scripts/native-acceptance/windows.ps1",
-      "bytes": 21148,
-      "sha256": "82420d392416117a03a9fe70408f2b9d145ef125d424b5abeb4bc438ab84b558"
+      "bytes": 21860,
+      "sha256": "302c0ca6f58f506ea99d53947efa2ab2a28ef7af30d2b8ef664acee90c57fc39"
     },
     {
       "path": "scripts/native-debian-upgrade/assets.json",
@@ -2154,8 +2169,8 @@
     },
     {
       "path": "scripts/native-debian-upgrade/native_access.py",
-      "bytes": 20498,
-      "sha256": "57a9638034518746aa9f7796e6968b726646b4194b3fba3f2c02700233432052"
+      "bytes": 28002,
+      "sha256": "d2d68b1b9cb32d93429d5053b0fb0d6915b035a295d5a1936292ee4f07ce6aba"
     },
     {
       "path": "scripts/native-debian-upgrade/own-minimal-checkpoint.py",
@@ -2174,13 +2189,13 @@
     },
     {
       "path": "scripts/native-debian-upgrade/run.py",
-      "bytes": 15356,
-      "sha256": "b91dc0029731c27c02329a9b93ed304a866385c8607cc4153643d96472eb3b68"
+      "bytes": 15987,
+      "sha256": "6a1d2d3b9a0278cdc8fb72fe7a2c5b35868d0aa17a30ea9a0304ad4d3842d23b"
     },
     {
       "path": "scripts/native-debian-upgrade/selftest.py",
-      "bytes": 4379,
-      "sha256": "7de019c4a678b0d3055dcd6b2e716998bd1e5dd59983774ef54a951e1c20ef17"
+      "bytes": 5504,
+      "sha256": "9d2340b65036fa21a54f889f9a7bbda696de8edd31fb767cec400dfced735bd7"
     },
     {
       "path": "scripts/native-debian-upgrade/session.py",
@@ -2229,8 +2244,8 @@
     },
     {
       "path": "scripts/prepare-public-release.py",
-      "bytes": 8061,
-      "sha256": "fce6ab4699f8bcecfd65948648701a4fc76ac8aba256588189d0c813019766da"
+      "bytes": 8194,
+      "sha256": "e2afddbe78124cb9897744589d333095235bbc7d39cf96bbf92b2c00a0a92c5c"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -3113,6 +3128,21 @@
       "sha256": "bfea35c12634f320d2be6e4d574c8498cf18b25d775b7fc95552cd218efa26ad"
     },
     {
+      "path": "docs/research/NATIVE-LEGACY-METADATA-LABEL-DATA-ADDENDUM-2026-11-09.md",
+      "bytes": 1881,
+      "sha256": "ecd4b5a914ea98e30a7d110b902067c57c05fb82458ead7260df40f9fb0325ab"
+    },
+    {
+      "path": "docs/research/NATIVE-LINUX-DEBIAN-CURRENT-VERSION-ACTION-V4-DATA-GATE-2026-11-09.md",
+      "bytes": 4327,
+      "sha256": "29ee013eb3675e6a3db254d8bc40a28ec4329614dda5fccdfa83f2b74e8f4f30"
+    },
+    {
+      "path": "docs/research/NATIVE-LINUX-DEBIAN-CURRENT-VERSION-ACTION-V4-UI-GATE-2026-11-09.md",
+      "bytes": 3114,
+      "sha256": "93f26b269ded9f433e9ef6820b3e5fa788f91cb4ea5edcf2e0b84620125bae99"
+    },
+    {
       "path": "docs/research/NATIVE-LINUX-DEBIAN-STAGE2-DATA-GATE-2026-11-09.md",
       "bytes": 8933,
       "sha256": "0eff399991928fa0c5e0fb3fc7ce557b610b19422bca51362d93225f91a9e0d6"
@@ -3171,6 +3201,11 @@
       "path": "docs/research/NATIVE-WINDOWS-CAPABILITY-V6-UI-GATE-2026-11-09.md",
       "bytes": 1775,
       "sha256": "2f883aa20754e27784bc3cb47f281d1df3b7413ba719f085c1c072971a458875"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-LEGACY-METADATA-V7-UI-GATE-2026-11-09.md",
+      "bytes": 2926,
+      "sha256": "31bbe9f28914abe9821b3ef04fc249e2f2a374aa92aad5c151a69ef9e00ea434"
     },
     {
       "path": "docs/research/NATIVE-WINDOWS-MACOS-CAPABILITY-V3-UI-GATE-2026-11-09.md",

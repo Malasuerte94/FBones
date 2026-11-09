@@ -3,7 +3,7 @@ from pathlib import Path
 import hashlib,json,os,shutil,subprocess,sys,time
 from session import ControlSession,close_window,main_window,require,wait,write
 from lifecycle import SuccessorObserver,enable_subreaper,process,same,tree,wait_adopted_exit
-from native_access import NativePicker,readonly_successor_version
+from native_access import NativePicker,native_successor_current_version
 
 ROOT=Path(sys.argv[1]).resolve();BASE=Path(__file__).resolve().parent
 require(sys.platform=='linux'and os.environ.get('GITHUB_ACTIONS')=='true'and os.environ.get('RUNNER_ENVIRONMENT')=='github-hosted'and os.environ.get('RUNNER_OS')=='Linux','Dedicated hosted Linux only; no filesystem/process work elsewhere')
@@ -82,7 +82,7 @@ try:
  try:old.click('[data-testid=app-update-install]');report['cleanInstallActionReturned']=True
  except Exception as response_error:report['cleanInstallResponseError']=type(response_error).__name__+': '+str(response_error)[:2048]
  adopted=wait(observer.adopted,180);old_terminal=old.wait_terminal();observer.finish();report['automaticProvenance']=observer.receipt();report['oldRetainedTerminal']=old_terminal;live_native=[r for r in tree().values()if r['executablePath'].removesuffix(' (deleted)')=='/usr/bin/fbones'];require(len(live_native)==1 and live_native[0]['pid']==adopted['pid'],'Automatic native descendants became ambiguous');require(subprocess.check_output(['dpkg-query','-W','-f=${Version} ${Architecture}','f-bones'],text=True)=='0.9.6 amd64'and sha('/usr/bin/fbones')==target['nativeSha256'],'Actual installed0.9.6 Debian replacement unproved');auto_window=wait(lambda:main_window(adopted['pid']));require(' * — FBones'not in auto_window['title'],'Automatically launched app unexpectedly dirty')
- stage('read-only-automatic-0.9.6-native-version');native_version=readonly_successor_version(ROOT,adopted,target['nativeSha256']);require(same(process(adopted['pid'],True),adopted)and main_window(adopted['pid'])['window']==auto_window['window'],'Automatic native identity/window changed before close');close_window(auto_window['window']);auto_terminal=wait_adopted_exit(adopted);report['automaticSuccessor']={'native':adopted,'window':auto_window,'readOnlyVersion':native_version,'exactWaitTerminal':auto_terminal};require(sha(saved)==renamed_sha,'Upgrade changed own project bytes');stop_tool(old);report['automaticUpgradePassed']=True
+ stage('one-native-updates-click-current-0.9.6-version');require(sha(saved)==renamed_sha,'Own checkpoint changed before native Updates action');native_version=native_successor_current_version(ROOT,adopted,target['nativeSha256'],auto_window['window']);require(same(process(adopted['pid'],True),adopted)and main_window(adopted['pid'])['window']==auto_window['window'],'Automatic native identity/window changed before close');close_window(auto_window['window']);auto_terminal=wait_adopted_exit(adopted);report['automaticSuccessor']={'native':adopted,'window':auto_window,'nativeCurrentVersion':native_version,'exactWaitTerminal':auto_terminal};require(sha(saved)==renamed_sha,'Upgrade changed own project bytes');stop_tool(old);report['automaticUpgradePassed']=True
  stage('separate-fresh-installed-0.9.6-persistence-session');require(not any(r['executablePath'].removesuffix(' (deleted)')=='/usr/bin/fbones'for r in tree().values()),'Another FBones descendant remains; no fresh session');report['freshSessionExplicitlyAfterAutomaticNormalExit']=True;fresh=ControlSession(ROOT,'fresh-0.9.6-persistence',target['nativeSha256'],9516);fresh.click('header button[aria-label="Open project"]');picker=NativePicker(ROOT,fresh.native['pid'],fresh.native['startTicks'],fresh.window['window'],lambda p:process(p)['startTicks'],target['nativeSha256'],'Open','fresh-open');picker.discover();picker.submit_once(saved,renamed_sha)
  reopened=wait(lambda:project_clean(fresh,BONE));require(any(BONE in text for text in reopened['boneRows'])and sha(saved)==renamed_sha,'Fresh installed Open semantic/byte preservation failed');fresh.screenshot('installed-0.9.6-reopened.png');report['freshPersistenceSession']={'native':fresh.native,'dom':reopened,'savedBytesUnchanged':True,'notAutomaticRebind':True};report['freshRetainedTerminal']=fresh.normal_close();stop_tool(fresh);report['persistencePassed']=True;picker=None
  report['passed']=report['dirtyCancelPassed']and report['automaticUpgradePassed']and report['persistencePassed'];stage('passed-native-debian-upgrade-and-separate-open')
@@ -111,6 +111,11 @@ finally:
    try:s.retain_prefixes()
    except Exception as log_error:report.setdefault('logErrors',[]).append(str(log_error))
  report['rawSpoolHardByteCap']=False
+ if 'saved'in locals()and saved.is_file():
+  try:
+   require(0<saved.stat().st_size<=1024*1024,'Own checkpoint artifact size bound');report['finalOwnCheckpointSha256']=sha(saved)
+   if 'renamed_sha'in locals():report['renamedCheckpointBytesUnchanged']=report['finalOwnCheckpointSha256']==renamed_sha;require(report['renamedCheckpointBytesUnchanged'],'Own renamed checkpoint changed')
+  except Exception as checkpoint_error:report['finalCheckpointError']=str(checkpoint_error);report['passed']=False
  report['retainedSessionReceipts']=[]
  for phase in['old-0.9.5','fresh-0.9.6-persistence']:
   try:report['retainedSessionReceipts']+=retain_session_receipts(phase)

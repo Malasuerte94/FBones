@@ -21,6 +21,8 @@ SKIP_PARTS = {'gen', '__pycache__', 'node_modules', 'target', 'dist', '.git', '.
 OWN_TEXT_FILES = {'packages/runtime/LICENSE',
                   'scripts/native-acceptance/nul-gui-launch.cs',
                   'scripts/native-acceptance/native-updater-uia.cs',
+                  'scripts/native-acceptance/legacy-metadata.cpp',
+                  'scripts/native-acceptance/legacy-metadata.cs',
                   'scripts/native-acceptance/mac.swift',
                   'scripts/native-acceptance/own-process-identity.c',
                   'scripts/native-acceptance/own-process-identity.h'}

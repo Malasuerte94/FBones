@@ -12,6 +12,7 @@ Add-Type -Path (Join-Path $PSScriptRoot 'nul-gui-launch.cs')
 Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes,WindowsBase
 $uiaReferences=@([System.Diagnostics.Stopwatch].Assembly.Location,[System.Linq.Enumerable].Assembly.Location,[System.Windows.Automation.AutomationElement].Assembly.Location,[System.Windows.Automation.AutomationElementIdentifiers].Assembly.Location,[System.Windows.DependencyObject].Assembly.Location)|Sort-Object -Unique
 Add-Type -Path (Join-Path $PSScriptRoot 'native-updater-uia.cs') -ReferencedAssemblies $uiaReferences
+Add-Type -Path (Join-Path $PSScriptRoot 'legacy-metadata.cs')
 function Write-OwnUiaJson([string]$Name,$Value){
  $path=Join-Path $rootPath ('reports\'+$Name);$json=$Value|ConvertTo-Json -Depth 20;$bytes=[Text.Encoding]::UTF8.GetBytes($json)
  if($bytes.Length -gt 524288){throw 'Own diagnostic JSON exceeds512KiB'}
@@ -54,8 +55,14 @@ using System;using System.Runtime.InteropServices;public static class OwnNativeW
  [DllImport("user32.dll",SetLastError=true)]public static extern bool PostMessage(IntPtr h,uint msg,IntPtr w,IntPtr l);
 }
 '@
-$proof=[ordered]@{passed=$false;route='windows-nsis';stage='updater-control-capability-v6';updaterControlCapabilityPassed=$false;viewportAccessibilityShapeVerified='unknown';previousCombinedViewportGatePassed=$false;upgradeAttempted=$false;normalClose=$false;currentStage='stock-nsis-install'};$app=$null;$native=$null;$created=[long]0;$closeRequested=$false
+$proof=[ordered]@{passed=$false;route='windows-nsis';stage='legacy-metadata-only-v7';updaterControlCapabilityPassed=$false;viewportAccessibilityShapeVerified='unknown';previousCombinedViewportGatePassed=$false;upgradeAttempted=$false;normalClose=$false;legacyMetadataCapabilityPassed=$false;metadataOnly=$true;actionAttempted=$false;currentStage='stock-nsis-install'};$app=$null;$native=$null;$created=[long]0;$closeRequested=$false
 try{
+ $proof.currentStage='local-sdk-compiler-and-COM-probe'; & (Join-Path $PSScriptRoot 'compile-legacy.ps1') -Root $rootPath
+ $compiler=Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $rootPath 'reports\legacy-compiler.json')|ConvertFrom-Json
+ if((Get-FileHash -LiteralPath $compiler.dll -Algorithm SHA256).Hash.ToLowerInvariant() -ne $compiler.dllSha256){throw 'Compiled SDK DLL changed'}
+ [OwnLegacyMetadata]::Load($compiler.dll);$probe=[OwnLegacyMetadata]::Probe()|ConvertFrom-Json;Write-OwnUiaJson 'legacy-local-probe.json' $probe
+ if(!$probe.localComReady -or $probe.targetQueried){throw 'Ordinary local SDK COM initialization/create failed; no stock metadata query'}
+
  $installer=Join-Path $rootPath $receipt.asset.name
  if((Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant() -ne $receipt.asset.sha256){throw 'Installer hash changed'}
  $installDir=Join-Path $rootPath 'installed';if(Test-Path -LiteralPath $installDir){throw 'Install path must be new'}
@@ -111,7 +118,7 @@ try{
   $remaining=$observationBudget-[int]$observation.ElapsedMilliseconds;if($remaining -lt 1){break}
   $before=[OwnUpdaterUia]::CaptureBudget($window.ToInt64(),[int]$native.ProcessId,[int[]]$provider.allowedPids,[int][Math]::Min(15000,$remaining));Write-OwnUiaInventory ('uia-before-'+$attempt.ToString('00')+'.json') $before
   $beforeText=Own-VisibleText $before;$hasVersion=$beforeText -match '0\.9\.5\b';$startupError=$beforeText.Contains('The viewport could not start.');$loading=$beforeText.Contains('Opening workspace');$unsupported=$beforeText.Contains('Automatic updates are unavailable for this copy.')
-  $updateRows=@($before.Rows|Where-Object{$_.ControlType -eq 'ControlType.Button' -and $null -ne $_.NameVariant -and $_.Enabled -and !$_.Offscreen -and $_.OwnerAllowed -and $_.InvokeAvailable})
+  $updateRows=@($before.Rows|Where-Object{$_.ControlType -eq 'ControlType.Button' -and $null -ne $_.NameVariant -and $_.Enabled -and !$_.Offscreen -and $_.OwnerAllowed})
   $emptyDocs=0
   foreach($doc in @($before.Rows|Where-Object{$_.ControlType -eq 'ControlType.Document' -and $_.AutomationId -eq 'RootWebArea'})){
    $prefix=($doc.Path -join '.')+'.';$descendants=@($before.Rows|Where-Object{($_.Path -join '.').StartsWith($prefix,[StringComparison]::Ordinal)})
@@ -119,28 +126,25 @@ try{
   }
   $withinDeadline=$observation.ElapsedMilliseconds -lt $observationBudget
   $qualified=$withinDeadline -and $before.Complete -and $hasVersion -and !$startupError -and !$loading -and !$unsupported -and $updateRows.Count -eq 1
-  [void]$attempts.Add([ordered]@{attempt=$attempt;elapsedMilliseconds=$observation.ElapsedMilliseconds;captureMilliseconds=$before.ElapsedMilliseconds;captureBudgetMilliseconds=$before.MaxMilliseconds;complete=$before.Complete;rows=$before.OriginalRowCount;versionObserved=$hasVersion;qualifiedUpdatesCount=$updateRows.Count;emptyRootWebAreaDocuments=$emptyDocs;startupError=$startupError;loading=$loading;unsupported=$unsupported;withinDeadline=$withinDeadline;qualified=$qualified})
+  [void]$attempts.Add([ordered]@{attempt=$attempt;elapsedMilliseconds=$observation.ElapsedMilliseconds;captureMilliseconds=$before.ElapsedMilliseconds;captureBudgetMilliseconds=$before.MaxMilliseconds;complete=$before.Complete;rows=$before.OriginalRowCount;versionObserved=$hasVersion;metadataButtonCount=$updateRows.Count;invokeAvailableCount=@($updateRows|Where-Object{$_.InvokeAvailable}).Count;emptyRootWebAreaDocuments=$emptyDocs;startupError=$startupError;loading=$loading;unsupported=$unsupported;withinDeadline=$withinDeadline;qualified=$qualified})
   $proof.uiaInitialization=[ordered]@{maximumSnapshots=$maximumSnapshots;budgetMilliseconds=$observationBudget;elapsedMilliseconds=$observation.ElapsedMilliseconds;hardApiCancellation=$false;attempts=$attempts}
   Write-OwnUiaJson ('uia-attempt-'+$attempt.ToString('00')+'.json') ($attempts[$attempts.Count-1])
   if(!$before.Complete){throw 'UIA inventory incomplete/foreign/errored; no action'}
   if($startupError -or $unsupported){throw 'Native startup/updater-support evidence unqualified; no action'}
-  if($qualified){$selected=[OwnUpdaterUia]::UniqueUpdates($before);break}
+  if($qualified){$selected=[OwnUpdaterUia]::UniqueUpdatesMetadata($before);break}
   $remaining=$observationBudget-[int]$observation.ElapsedMilliseconds;if($attempt -lt $maximumSnapshots -and $remaining -gt 0){Start-Sleep -Milliseconds ([int][Math]::Min(250,$remaining))}
  }
  if($null -ne $before){Write-OwnUiaInventory 'uia-before.json' $before}
  if($null -eq $selected){throw 'Bounded native UIA initialization did not qualify unchanged version/unique Updates contract; no action'}
- $beforePanel=Own-PanelPresent $before
- Assert-OwnNativeIdentity;$currentProvider=Get-OwnUiaProviders;if($observation.ElapsedMilliseconds -ge $observationBudget){throw 'UIA observation deadline expired before action; no Invoke'};$proof.currentStage='one-native-updates-invoke';$proof.invokeAttempted=$true
- try{[OwnUpdaterUia]::InvokeOnce($before,$selected,[int]$native.ProcessId,[int[]]$currentProvider.allowedPids)}finally{$proof.selectedUpdates=[ordered]@{beforeName=$selected.Name;beforeVariant=$selected.NameVariant;actionName=$selected.ActionName;actionVariant=$selected.ActionNameVariant;runtimeId=$selected.RuntimeId}}
- $proof.invokeReturned=$true;$after=$null;$changed=$false;$transitionDeadline=[DateTime]::UtcNow.AddSeconds(15)
- do{
-  Assert-OwnNativeIdentity;$after=[OwnUpdaterUia]::Capture($window.ToInt64(),[int]$native.ProcessId,[int[]]$currentProvider.allowedPids)
-  if($after.Complete){$text=Own-VisibleText $after;$afterPanel=Own-PanelPresent $after;$changed=($afterPanel -ne $beforePanel -and $text -match '0\.9\.5\b' -and !$text.Contains('The viewport could not start.') -and !$text.Contains('Opening workspace') -and !$text.Contains('Automatic updates are unavailable for this copy.'))}
-  if($changed){break};Start-Sleep -Milliseconds 200
- }while([DateTime]::UtcNow -lt $transitionDeadline)
- Write-OwnUiaInventory 'uia-after.json' $after
- $proof.updaterControl=[ordered]@{provider='owned native UIAutomationClient InvokePattern';beforePanel=$beforePanel;afterPanel=if($after.Complete){Own-PanelPresent $after}else{$null};actualPanelTransition=$changed;oneInvokeAttempt=$true;afterComplete=$after.Complete;version='0.9.5'}
- if(!$changed -or !$after.Complete){throw 'One scoped Updates Invoke did not prove actual supported current-version panel transition'}
+ $proof.currentStage='read-same-owned-button-Legacy-metadata';Assert-OwnNativeIdentity;$currentProvider=Get-OwnUiaProviders
+ if($observation.ElapsedMilliseconds -ge $observationBudget){throw 'UIA observation deadline expired before metadata query'}
+ $proof.selectedUpdates=[ordered]@{name=$selected.Name;variant=$selected.NameVariant;runtimeId=$selected.RuntimeId;providerPid=$selected.ProcessId;invokeAvailable=$selected.InvokeAvailable}
+ Write-OwnUiaJson 'legacy-selected.json' $proof.selectedUpdates
+ $raw=[OwnLegacyMetadata]::Read($native.Process,$window,[uint32]$native.ProcessId,[uint64]$created,$image,[int[]]$selected.RuntimeId,[int[]]$currentProvider.allowedPids,[int]$selected.ProcessId,$selected.Name)
+ $metadata=$raw|ConvertFrom-Json;Write-OwnUiaJson 'legacy-metadata.json' $metadata;Assert-OwnNativeIdentity
+ $proof.legacyNameVariants=[ordered]@{before=[OwnUpdaterUia]::UpdatesNameVariant($metadata.beforeName);current=[OwnUpdaterUia]::UpdatesNameVariant($metadata.currentName)}
+ $proof.legacyMetadata=$metadata;$proof.metadataOnly=$true;$proof.actionAttempted=$false
+ if(!$proof.legacyNameVariants.before -or !$proof.legacyNameVariants.current -or $metadata.beforeName -ne $selected.Name -or !$metadata.metadataOnly -or $metadata.actionAttempted -or !$metadata.metadataReadComplete){throw 'SDK Legacy metadata unavailable/errored/incomplete; retained negative, no action'}
  $proof.currentStage='normal-owned-close'
  $app.Refresh();$nowCreated=[long]0
  if($app.HasExited -or ![NativeOwnGui]::GetProcessTimes($native.Process,[ref]$nowCreated,[ref]$exited,[ref]$kernel,[ref]$user) -or $nowCreated -ne $created -or (Get-FileHash -LiteralPath $image -Algorithm SHA256).Hash.ToLowerInvariant() -ne $receipt.executableSha256){throw 'Own window changed before normal close'}
@@ -150,7 +154,7 @@ try{
  if(![OwnNativeWindow]::PostMessage($window,0x10,[IntPtr]::Zero,[IntPtr]::Zero)){throw 'Owned WM_CLOSE failed'}
  if([NativeOwnGui]::WaitForSingleObject($native.Process,20000) -ne 0){throw 'Owned native app did not close normally; no force'}
  $exit=[uint32]0;if(![NativeOwnGui]::GetExitCodeProcess($native.Process,[ref]$exit) -or $exit -ne 0){throw 'Owned app terminal exit unavailable/nonzero'}
- $proof.normalClose=$true;$proof.exitCode=$exit;$proof.updaterControlCapabilityPassed=$true;$proof.status='UPDATER_CONTROL_CAPABILITY_PASS';$proof.currentStage='updater-control-passed'
+ $proof.normalClose=$true;$proof.exitCode=$exit;$proof.legacyMetadataCapabilityPassed=$true;$proof.status='LEGACY_METADATA_CAPABILITY_PASS';$proof.currentStage='legacy-metadata-only-passed'
 }catch{
  $proof.error=$_.Exception.Message
  $cleanup=[ordered]@{attempted=$false;normalClose=$false;noForce=$true}
@@ -174,7 +178,10 @@ try{
  $proof.failureCleanup=$cleanup
  throw
 }finally{
+ try{[OwnLegacyMetadata]::Unload()}catch{$proof.sdkUnloadError=$_.Exception.Message;$proof.legacyMetadataCapabilityPassed=$false;$proof.status='LEGACY_MODULE_UNLOAD_FAILED'}
  if($native){[NativeOwnGui]::CloseHandle($native.Process)|Out-Null}
  if($nativeLogPath -and (Test-Path -LiteralPath $nativeLogPath)){$bytes=[byte[]](Read-OwnNativeBytes);[IO.File]::WriteAllBytes((Join-Path $rootPath 'reports\native-prefix.log'),$bytes);$size=(Get-Item -LiteralPath $nativeLogPath).Length;$proof.diagnosticLog=[ordered]@{spoolBytesObserved=$size;retainedPrefixBytes=$bytes.Length;retainedPrefixCap=65536;rawSpoolHardByteCap=$false}}
  Write-OwnUiaJson 'capability.json' $proof
 }
+
+if(!$proof.legacyMetadataCapabilityPassed){exit 2}

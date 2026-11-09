@@ -63,18 +63,9 @@ public static class OwnUpdaterUia {
   output.ElapsedMilliseconds=watch.Elapsed.TotalMilliseconds;return output;
  }
  public static string VisibleText(OwnUiaInventory inventory){var text=new System.Text.StringBuilder();foreach(var row in inventory.Rows)if(row.OwnerAllowed&&!row.Offscreen){text.AppendLine(row.Name??"");text.AppendLine(row.Value??"");}return text.ToString();}
- public static OwnUiaRow UniqueUpdates(OwnUiaInventory inventory){
-  if(!inventory.Complete)throw new Exception("Incomplete/errored/foreign UIA scope cannot prove uniqueness or error absence");
-  var found=new List<OwnUiaRow>();foreach(var row in inventory.Rows)if(row.ControlType=="ControlType.Button"&&UpdatesNameVariant(row.Name)!=null&&row.Enabled&&!row.Offscreen&&row.OwnerAllowed&&row.InvokeAvailable)found.Add(row);
-  if(found.Count!=1)throw new Exception("Unique enabled visible owned Updates InvokePattern unavailable");return found[0];
- }
- public static void InvokeOnce(OwnUiaInventory inventory,OwnUiaRow selected,int expectedPid,int[] allowedPids){
-  if(!inventory.Complete)throw new Exception("Complete before inventory required");var freshRoot=AutomationElement.FromHandle(new IntPtr(inventory.RootHandle));var rootInfo=freshRoot.Current;
-  if(rootInfo.ProcessId!=expectedPid||rootInfo.NativeWindowHandle!=inventory.RootHandle||!Automation.Compare(freshRoot,inventory.Root))throw new Exception("UIA root changed before scoped action");
-  var c=selected.Element.Current;selected.ActionName=c.Name;selected.ActionNameVariant=UpdatesNameVariant(c.Name);if(selected.ActionNameVariant==null||c.ControlType!=ControlType.Button||!c.IsEnabled||c.IsOffscreen||!Allowed(c.ProcessId,allowedPids))throw new Exception("Selected Updates owner/control changed");
-  var cursor=selected.Element;bool rooted=false;for(int depth=0;depth<64&&cursor!=null;depth++){if(Automation.Compare(cursor,freshRoot)){rooted=true;break;}cursor=TreeWalker.RawViewWalker.GetParent(cursor);}
-  if(!rooted)throw new Exception("Selected element left retained own native root");
-  var now=selected.Element.GetRuntimeId();if(now.Length!=selected.RuntimeId.Length)throw new Exception("UIA runtime identity changed");for(int i=0;i<now.Length;i++)if(now[i]!=selected.RuntimeId[i])throw new Exception("UIA runtime identity changed");
-  object pattern;if(!selected.Element.TryGetCurrentPattern(InvokePattern.Pattern,out pattern))throw new Exception("InvokePattern disappeared");((InvokePattern)pattern).Invoke();
+ public static OwnUiaRow UniqueUpdatesMetadata(OwnUiaInventory inventory){
+  if(!inventory.Complete)throw new Exception("Complete own scope required for metadata selection");
+  var rows=new List<OwnUiaRow>();foreach(var row in inventory.Rows)if(row.ControlType=="ControlType.Button"&&UpdatesNameVariant(row.Name)!=null&&row.Enabled&&!row.Offscreen&&row.OwnerAllowed)rows.Add(row);
+  if(rows.Count!=1)throw new Exception("Unique qualified owned Updates metadata button unavailable");return rows[0];
  }
 }
