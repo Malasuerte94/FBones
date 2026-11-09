@@ -1,5 +1,11 @@
 param([Parameter(Mandatory=$true)][string]$Root)
 $ErrorActionPreference='Stop'
+function Format-OwnNetTcpErrors($Records){
+ $items=@($Records|Where-Object {$null -ne $_});$first=@();$last=@()
+ foreach($item in @($items|Select-Object -First 4)){$message=[string]$item.Exception.Message;$first+=@([ordered]@{id=[string]$item.FullyQualifiedErrorId;category=[string]$item.CategoryInfo.Category;message=$message.Substring(0,[Math]::Min(1024,$message.Length))})}
+ foreach($item in @($items|Select-Object -Last 4)){$message=[string]$item.Exception.Message;$last+=@([ordered]@{id=[string]$item.FullyQualifiedErrorId;category=[string]$item.CategoryInfo.Category;message=$message.Substring(0,[Math]::Min(1024,$message.Length))})}
+ return [ordered]@{totalCount=$items.Count;first=$first;last=$last;maximumEach=4;messageCharCap=1024}
+}
 if($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or $env:RUNNER_OS -ne 'Windows'){throw 'Ephemeral hosted Windows job only'}
 $rootPath=[IO.Path]::GetFullPath($Root);$tempPath=[IO.Path]::GetFullPath($env:RUNNER_TEMP).TrimEnd('\')+'\'
 if(!$rootPath.StartsWith($tempPath,[StringComparison]::OrdinalIgnoreCase) -or !(Test-Path -LiteralPath (Join-Path $rootPath 'reports\stock-package.json'))){throw 'Verified private runner root required'}
@@ -34,7 +40,8 @@ try{
  if($registry.DisplayVersion -ne '0.9.5' -or $installedSha -ne $receipt.executableSha256){throw 'Installed version/executable identity differs'}
  $proof.installation=[ordered]@{stockNsisExecuted=$true;registryVersion=$registry.DisplayVersion;executableSha256=$receipt.executableSha256}
  $proof.currentStage='launch-owned-native-gui'
- $port=9331;if(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue){throw 'Dedicated CDP port occupied before launch'}
+ $port=9331;$preflightNetErrors=@();$preflightListeners=@(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue -ErrorVariable +preflightNetErrors);$proof.netTcpPreflightErrors=Format-OwnNetTcpErrors $preflightNetErrors
+ if($preflightListeners.Count -gt 0){throw 'Dedicated CDP port occupied before launch'}
  $env:WEBVIEW2_USER_DATA_FOLDER=Join-Path $rootPath 'webview-profile';$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="--remote-debugging-port=$port"
  $native=[NativeOwnGui]::Start($image,$installDir);$app=Get-Process -Id $native.ProcessId
  $created=[long]0;$exited=[long]0;$kernel=[long]0;$user=[long]0
@@ -63,8 +70,49 @@ try{
  if(!$ready){throw 'Native full window identity/visibility readiness did not pass before deadline; see observed tuple'}
  $proof.native=[ordered]@{processId=$native.ProcessId;creationFileTime=$created;window=$window.ToInt64();visible=$true;sha256=$receipt.executableSha256;stdio='NUL-handle-allowlist'}
  $proof.currentStage='bind-native-cdp-listener'
- $connection=$null;for($i=0;$i -lt 100;$i++){$connection=Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue;if($connection){break};Start-Sleep -Milliseconds 200}
+ $connection=$null;$connectionErrors=@();for($i=0;$i -lt 100;$i++){$connection=Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue -ErrorVariable +connectionErrors;if($connection){break};Start-Sleep -Milliseconds 200}
+ $rows=@();foreach($row in @($connection)){if($null -ne $row){$rows+=@([ordered]@{localAddress=$row.LocalAddress;localPort=$row.LocalPort;owningProcess=$row.OwningProcess;state=[string]$row.State;creationTime=[string]$row.CreationTime})}}
+ $descendants=@();$queue=@([uint32]$native.ProcessId);$visited=@{};$observedChildren=0
+ while($queue.Count -gt 0 -and $observedChildren -lt 64){
+  $parent=[uint32]$queue[0];$queue=@($queue|Select-Object -Skip 1)
+  if($visited.ContainsKey([string]$parent)){continue};$visited[[string]$parent]=$true
+  foreach($childRow in @(Get-CimInstance Win32_Process -Filter "ParentProcessId=$parent")){
+   $observedChildren++;if($observedChildren -gt 64){break};$queue+=@([uint32]$childRow.ProcessId)
+   $line=[string]$childRow.CommandLine;$childCreated=$null;$childPath=$null;$startValid=$false
+   try{$liveChild=Get-Process -Id $childRow.ProcessId;$childCreated=$liveChild.StartTime.ToUniversalTime().ToFileTimeUtc();$childPath=$liveChild.MainModule.FileName;$startValid=($childCreated -ge $created)}catch{}
+   $descendants+=@([ordered]@{processId=$childRow.ProcessId;parentProcessId=$childRow.ParentProcessId;name=$childRow.Name;creationFileTime=$childCreated;creationNotBeforeOwnApp=$startValid;actualImage=$childPath;commandLine=$line.Substring(0,[Math]::Min(4096,$line.Length));commandLineOriginalChars=$line.Length;profileMentioned=($line.IndexOf($env:WEBVIEW2_USER_DATA_FOLDER,[StringComparison]::OrdinalIgnoreCase) -ge 0);debugPortMentioned=$line.Contains(('--remote-debugging-port='+$port))})
+  }
+ }
+ $owners=@($rows|ForEach-Object {$_.owningProcess}|Sort-Object -Unique);$ownedWebviewIds=@($descendants|Where-Object {$_.name -eq 'msedgewebview2.exe' -and $_.creationNotBeforeOwnApp -eq $true}|ForEach-Object {$_.processId})
+ $allOwned=($owners.Count -gt 0);foreach($owner in $owners){if($owner -notin $ownedWebviewIds){$allOwned=$false}}
+ $profileOwners=@();$allProfiles=$allOwned
+ foreach($owner in $owners){
+  $cursorId=[uint32]$owner;$profileBound=$false;$ownerSeen=@{}
+  while($cursorId -ne $native.ProcessId -and !$ownerSeen.ContainsKey([string]$cursorId)){
+   $ownerSeen[[string]$cursorId]=$true;$matches=@($descendants|Where-Object {$_.processId -eq $cursorId})
+   if($matches.Count -ne 1 -or !$matches[0].creationNotBeforeOwnApp){break}
+   if($matches[0].profileMentioned){$profileBound=$true};$cursorId=[uint32]$matches[0].parentProcessId
+  }
+  if($cursorId -ne $native.ProcessId){$profileBound=$false};if(!$profileBound){$allProfiles=$false}
+  $profileOwners+=@([ordered]@{ownerPid=$owner;privateProfileInOwnerOrVerifiedAncestor=$profileBound})
+ }
+ $proof.cdpDiagnostics=[ordered]@{netTcpConnectionErrors=(Format-OwnNetTcpErrors $connectionErrors);listenerRows=$rows;rowCount=$rows.Count;distinctOwners=$owners;ownDescendants=$descendants;childCap=64;allListenerOwnersAreCreatedWebviewDescendants=$allOwned;privateProfileAssociation=$profileOwners;allListenerOwnersPrivateProfileAssociated=$allProfiles;expectedProfile=$env:WEBVIEW2_USER_DATA_FOLDER;expectedBrowserArguments=$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS;http=@()}
+ if($allOwned -and $allProfiles){
+  foreach($endpoint in @('json/version','json/list')){
+   $http=[ordered]@{endpoint=$endpoint;attempted=$true;maximumBytes=65536;timeoutMs=3000};$response=$null;$stream=$null
+   try{
+    $request=[Net.WebRequest]::CreateHttp(('http://127.0.0.1:'+ $port +'/'+$endpoint));$request.Timeout=3000;$request.ReadWriteTimeout=3000;$request.AllowAutoRedirect=$false
+    $response=$request.GetResponse();$http.status=[int]$response.StatusCode;$stream=$response.GetResponseStream();$memory=New-Object IO.MemoryStream;$buffer=New-Object byte[] 4096
+    while($memory.Length -le 65536){$take=[int][Math]::Min($buffer.Length,65537-$memory.Length);$n=$stream.Read($buffer,0,$take);if($n -eq 0){break};$memory.Write($buffer,0,$n)}
+    $body=$memory.ToArray();$memory.Dispose();$http.bytes=$body.Length;$http.truncated=($body.Length -gt 65536)
+    if($body.Length -le 65536){$text=[Text.Encoding]::UTF8.GetString($body);$http.body=$text;try{$http.json=$text|ConvertFrom-Json}catch{$http.jsonError=$_.Exception.Message}}
+   }catch{$http.error=$_.Exception.Message}finally{if($stream){$stream.Dispose()};if($response){$response.Dispose()}}
+   $proof.cdpDiagnostics.http+=@($http)
+  }
+ }else{$proof.cdpDiagnostics.httpSkipped='Own WebView listener/private profile association unproved; no loopback request'}
+ # Diagnostic metadata does not change the existing one-row acceptance predicate.
  if(!$connection -or @($connection).Count -ne 1){throw 'Missing/ambiguous native CDP listener'}
+ if(!$allOwned -or !$allProfiles){throw 'Native CDP owner/private-profile association unproved; no HTTP/control'}
  $listener=Get-CimInstance Win32_Process -Filter "ProcessId=$($connection.OwningProcess)";$cursor=$listener;$seen=@{}
  while($cursor -and $cursor.ProcessId -ne $native.ProcessId){if($seen.ContainsKey([string]$cursor.ProcessId)){throw 'CDP ancestry cycle'};$seen[[string]$cursor.ProcessId]=$true;$cursor=Get-CimInstance Win32_Process -Filter "ProcessId=$($cursor.ParentProcessId)"}
  if(!$listener -or $listener.Name -ne 'msedgewebview2.exe' -or !$cursor){throw 'CDP listener is not a descendant of our created native app'}

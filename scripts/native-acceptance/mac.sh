@@ -22,5 +22,7 @@ ditto "$root/mount/FBones.app" "$root/Applications/FBones.app"
 hdiutil detach "$root/mount" > "$root/reports/dmg-detach.txt"
 trap - EXIT
 expected=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["executableSha256"])' "$root/reports/stock-package.json")
-swiftc -swift-version 5 "$script_dir/mac.swift" -o "$root/mac-capability"
+xcrun --show-sdk-version > "$root/reports/sdk-version.txt"
+clang -std=gnu11 -Wall -Wextra -Werror -c "$script_dir/own-process-identity.c" -o "$root/own-process-identity.o"
+swiftc -swift-version 5 -import-objc-header "$script_dir/own-process-identity.h" "$script_dir/mac.swift" "$root/own-process-identity.o" -lproc -o "$root/mac-capability"
 "$root/mac-capability" "$root/Applications/FBones.app" "$root/reports" "$expected"

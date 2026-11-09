@@ -9,6 +9,45 @@ let bundleURL=URL(fileURLWithPath:arguments[1]), reports=URL(fileURLWithPath:arg
 var proof:[String:Any] = ["passed":false,"route":"mac-dmg","stage":"capability-only","upgradeAttempted":false,"normalClose":false]
 var owned:NSRunningApplication?
 var child:Process?
+
+struct KernelIdentity:Equatable {
+ var pid:Int32;var startSeconds:UInt64;var startMicroseconds:UInt64;var device:UInt64;var inode:UInt64;var path:String
+ var json:[String:Any]{return ["pid":pid,"startSeconds":startSeconds,"startMicroseconds":startMicroseconds,"device":device,"inode":inode,"actualPath":path]}
+}
+var nativeKernelBaseline:KernelIdentity?
+var providerProved=false
+func sameKernel(_ a:KernelIdentity,_ b:KernelIdentity)->Bool{return a.pid==b.pid && a.startSeconds==b.startSeconds && a.startMicroseconds==b.startMicroseconds && a.device==b.device && a.inode==b.inode}
+func readKernel(_ process:Process,_ expectedURL:URL)throws->KernelIdentity{
+ guard process.isRunning else{throw NSError(domain:"Retained created process is not live for kernel query",code:20)}
+ var info=OwnProcessIdentity();let ok=expectedURL.path.withCString{OwnReadProcessIdentity(process.processIdentifier,$0,&info)}
+ let path=withUnsafeBytes(of:info.actualPath){String(decoding:$0.prefix{$0 != 0},as:UTF8.self)}
+ proof["lastKernelQuery"]=["requestedPid":info.requestedPid,"observedPid":info.observedPid,"infoBytes":info.infoBytes,"infoError":info.infoError,"pathBytes":info.pathBytes,"pathError":info.pathError,"infoValid":info.infoValid,"pathValid":info.pathValid,"sameFile":info.sameFile,"fileIdentityValid":info.fileIdentityValid,"expectedDevice":info.expectedDevice,"expectedInode":info.expectedInode,"actualDevice":info.actualDevice,"actualInode":info.actualInode,"actualPath":path,"startSeconds":info.startSeconds,"startMicroseconds":info.startMicroseconds]
+ guard ok==1,process.isRunning,info.requestedPid==process.processIdentifier,info.observedPid==process.processIdentifier else{throw NSError(domain:"Actual SDK kernel PID/start/path/file identity failed",code:21)}
+ return KernelIdentity(pid:info.observedPid,startSeconds:info.startSeconds,startMicroseconds:info.startMicroseconds,device:info.actualDevice,inode:info.actualInode,path:path)
+}
+func verifyNativeKernel()throws->KernelIdentity{
+ guard providerProved,let process=child,let exe=process.executableURL,let baseline=nativeKernelBaseline else{throw NSError(domain:"Proven provider and retained stock child baseline required",code:22)}
+ let current=try readKernel(process,exe);guard sameKernel(baseline,current)else{throw NSError(domain:"Stock child's actual kernel start/file identity changed",code:23)}
+ let image=try Data(contentsOf:URL(fileURLWithPath:current.path));guard image.count<=32*1024*1024,SHA256.hash(data:image).map({String(format:"%02x",$0)}).joined()==expected else{throw NSError(domain:"Actual SDK-reported stock image hash changed",code:24)}
+ return current
+}
+func proveKernelProvider()throws{
+ let fixture=Process();fixture.executableURL=URL(fileURLWithPath:"/bin/sleep");fixture.arguments=["2"];fixture.standardInput=FileHandle.nullDevice;fixture.standardOutput=FileHandle.nullDevice;fixture.standardError=FileHandle.nullDevice
+ var receipt:[String:Any]=["passed":false,"scope":"One own data-free created sleep2 child, no app/UI/debugger/target-memory access"]
+ do{
+  try fixture.run();receipt["createdPid"]=fixture.processIdentifier
+  let first=try readKernel(fixture,fixture.executableURL!);pump(0.02);let second=try readKernel(fixture,fixture.executableURL!);receipt["first"]=first.json;receipt["second"]=second.json
+  guard sameKernel(first,second)else{throw NSError(domain:"Own SDK identity fixture tuple unstable",code:25)}
+  let end=Date(timeIntervalSinceNow:5);while fixture.isRunning && Date()<end{pump(0.1)}
+  guard !fixture.isRunning,fixture.terminationReason == .exit,fixture.terminationStatus==0 else{throw NSError(domain:"Own SDK identity fixture normal exit0 unobserved; no force",code:26)}
+  receipt["terminalObserved"]=true;receipt["exitCode"]=fixture.terminationStatus;receipt["terminationReasonRaw"]=fixture.terminationReason.rawValue;receipt["passed"]=true
+  let data=try JSONSerialization.data(withJSONObject:receipt,options:[.prettyPrinted,.sortedKeys]);try data.write(to:reports.appendingPathComponent("kernel-provider-proof.json"),options:.withoutOverwriting);providerProved=true;proof["kernelProviderProvedBeforeApp"]=true
+ }catch{
+  receipt["error"]=String(describing:error);receipt["lastKernelQuery"]=proof["lastKernelQuery"];let end=Date(timeIntervalSinceNow:5);while fixture.isRunning && Date()<end{pump(0.1)};receipt["isRunning"]=fixture.isRunning;if !fixture.isRunning{receipt["exitCode"]=fixture.terminationStatus;receipt["terminationReasonRaw"]=fixture.terminationReason.rawValue}
+  if let data=try? JSONSerialization.data(withJSONObject:receipt,options:[.prettyPrinted,.sortedKeys]){try? data.write(to:reports.appendingPathComponent("kernel-provider-proof.json"),options:.withoutOverwriting)};throw error
+ }
+}
+
 var nativeLog:FileHandle?
 var nativeLogURL:URL?
 var launchSamples:[[String:Any]]=[]
@@ -33,21 +72,21 @@ func pump(_ seconds:Double){RunLoop.current.run(until:Date(timeIntervalSinceNow:
 func attribute(_ e:AXUIElement,_ name:String)->CFTypeRef? {var v:CFTypeRef?;if AXUIElementCopyAttributeValue(e,name as CFString,&v) != .success{return nil};return v}
 func text(_ e:AXUIElement)->[String]{return [kAXTitleAttribute,kAXValueAttribute,kAXDescriptionAttribute].compactMap{attribute(e,$0) as? String}.filter{!$0.isEmpty}}
 func inventory(_ root:AXUIElement)->[(AXUIElement,[String])]{var queue=[root],out:[(AXUIElement,[String])]=[];let end=Date(timeIntervalSinceNow:5);var i=0;while i<queue.count && i<4096 && Date()<end{let e=queue[i];i+=1;out.append((e,text(e)));if let children=attribute(e,kAXChildrenAttribute)as?[AXUIElement]{queue.append(contentsOf:children.prefix(4096-queue.count))}};return out}
-func closeOwn()->Bool{guard let app=owned else{return false};guard app.bundleURL?.standardizedFileURL==bundleURL.standardizedFileURL && !app.isTerminated else{return false};guard app.terminate()else{return false};let end=Date(timeIntervalSinceNow:20);while (!app.isTerminated || child?.isRunning == true) && Date()<end{pump(0.2)};return app.isTerminated && child?.isRunning == false}
+func closeOwn()->Bool{guard (try? verifyNativeKernel()) != nil,let app=owned else{return false};guard app.bundleURL?.standardizedFileURL==bundleURL.standardizedFileURL && !app.isTerminated else{return false};guard app.terminate()else{return false};let end=Date(timeIntervalSinceNow:20);while (!app.isTerminated || child?.isRunning == true) && Date()<end{pump(0.2)};return app.isTerminated && child?.isRunning == false}
 do{
  guard ProcessInfo.processInfo.environment["GITHUB_ACTIONS"]=="true",ProcessInfo.processInfo.environment["RUNNER_ENVIRONMENT"]=="github-hosted"else{throw NSError(domain:"Ephemeral hosted Mac only",code:1)}
  guard let session=CGSessionCopyCurrentDictionary()as?[String:Any],session[kCGSessionOnConsoleKey as String]as?Bool==true else{throw NSError(domain:"No actual Aqua console session",code:2)}
- proof["aquaSession"]=true;proof["axTrusted"]=AXIsProcessTrusted()
+ proof["aquaSession"]=true;proof["axTrusted"]=AXIsProcessTrusted();try proveKernelProvider()
  guard let bundle=Bundle(url:bundleURL),bundle.bundleIdentifier=="studio.fbones.editor",bundle.infoDictionary?["CFBundleShortVersionString"]as?String=="0.9.5",let exe=bundle.executableURL else{throw NSError(domain:"Installed stock bundle/version invalid",code:3)}
  let actual=SHA256.hash(data:try Data(contentsOf:exe)).map{String(format:"%02x",$0)}.joined();guard actual==expected else{throw NSError(domain:"Installed native executable digest mismatch",code:4)}
  proof["installation"]=["stockDmgCopied":true,"version":"0.9.5","executableSha256":actual,"architecture":ProcessInfo.processInfo.machineArchitecture]
  let process=Process();process.executableURL=exe;process.currentDirectoryURL=bundleURL.deletingLastPathComponent();process.standardInput=FileHandle.nullDevice
  let logURL=reports.deletingLastPathComponent().appendingPathComponent("mac-native-spool.log");guard !FileManager.default.fileExists(atPath:logURL.path),FileManager.default.createFile(atPath:logURL.path,contents:nil)else{throw NSError(domain:"Fresh own native log required",code:15)};nativeLogURL=logURL;let logHandle=try FileHandle(forWritingTo:logURL);nativeLog=logHandle;process.standardOutput=logHandle;process.standardError=logHandle
- proof["processRunRequestedUtc"]=ISO8601DateFormatter().string(from:Date());try process.run();child=process;proof["processRunReturnedUtc"]=ISO8601DateFormatter().string(from:Date());proof["createdPid"]=process.processIdentifier;proof["spawnTimeIsOSLaunchDate"]=false;retainLaunchObservation(process)
- let launchEnd=Date(timeIntervalSinceNow:30);while owned==nil && process.isRunning && Date()<launchEnd{retainLaunchObservation(process);if let candidate=NSRunningApplication(processIdentifier:process.processIdentifier),candidate.bundleURL?.standardizedFileURL==bundleURL.standardizedFileURL,candidate.launchDate != nil{owned=candidate};if owned==nil{pump(0.1)}}
+ proof["processRunRequestedUtc"]=ISO8601DateFormatter().string(from:Date());try process.run();child=process;proof["processRunReturnedUtc"]=ISO8601DateFormatter().string(from:Date());proof["createdPid"]=process.processIdentifier;proof["spawnTimeIsOSLaunchDate"]=false;retainLaunchObservation(process);nativeKernelBaseline=try readKernel(process,exe);proof["nativeKernelBaseline"]=nativeKernelBaseline!.json;_ = try verifyNativeKernel()
+ let launchEnd=Date(timeIntervalSinceNow:30);while owned==nil && process.isRunning && Date()<launchEnd{retainLaunchObservation(process);if let candidate=NSRunningApplication(processIdentifier:process.processIdentifier),candidate.bundleURL?.standardizedFileURL==bundleURL.standardizedFileURL,candidate.bundleIdentifier=="studio.fbones.editor",candidate.executableURL?.standardizedFileURL==exe.standardizedFileURL,(try? verifyNativeKernel()) != nil{owned=candidate};if owned==nil{pump(0.1)}}
  retainLaunchObservation(process)
- guard let app=owned,app.bundleURL?.standardizedFileURL==bundleURL.standardizedFileURL,!app.isTerminated,let start=app.launchDate else{throw NSError(domain:"Owned native app launch unavailable",code:5)}
- proof["native"]=["pid":app.processIdentifier,"launchDate":ISO8601DateFormatter().string(from:start),"bundleId":app.bundleIdentifier ?? ""]
+ guard let app=owned,app.bundleURL?.standardizedFileURL==bundleURL.standardizedFileURL,!app.isTerminated,(try? verifyNativeKernel()) != nil else{throw NSError(domain:"Owned native app launch unavailable",code:5)}
+ proof["native"]=["pid":app.processIdentifier,"launchDate":app.launchDate.map{ISO8601DateFormatter().string(from:$0)} ?? "missing","kernelStart":nativeKernelBaseline!.json,"bundleId":app.bundleIdentifier ?? ""]
  var visible=false;let windowEnd=Date(timeIntervalSinceNow:30)
  while Date()<windowEnd && !visible{let windows=CGWindowListCopyWindowInfo([.optionOnScreenOnly,.excludeDesktopElements],kCGNullWindowID)as?[[String:Any]] ?? [];visible=windows.contains{($0[kCGWindowOwnerPID as String]as?Int)==Int(app.processIdentifier) && ($0[kCGWindowLayer as String]as?Int)==0};if !visible{pump(0.2)}}
  proof["visibleOwnedWindow"]=visible;guard visible else{throw NSError(domain:"No visible owned native Aqua window",code:6)}
@@ -59,6 +98,7 @@ do{
  let buttons=before.filter{(attribute($0.0,kAXRoleAttribute)as?String)==kAXButtonRole && $0.1.contains("Updates")}
  guard buttons.count==1,before.contains(where:{$0.1.contains(where:{$0.contains("0.9.5")})})else{throw NSError(domain:"Native frontend/version/unique Updates AX button unavailable",code:8)}
  let wasPanel=before.contains{$0.1.contains(where:{$0.contains("Current version: 0.9.5")})}
+ _ = try verifyNativeKernel()
  guard AXUIElementPerformAction(buttons[0].0,kAXPressAction as CFString) == .success else{throw NSError(domain:"Scoped Updates AXPress failed",code:9)}
  var afterPanel=wasPanel;let toggleEnd=Date(timeIntervalSinceNow:10)
  repeat{afterPanel=inventory(root).contains{$0.1.contains(where:{$0.contains("Current version: 0.9.5")})};if afterPanel != wasPanel{break};pump(0.2)}while Date()<toggleEnd

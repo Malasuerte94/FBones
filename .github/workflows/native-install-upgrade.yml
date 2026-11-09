@@ -1,4 +1,4 @@
-name: Native Windows/macOS capability v3
+name: Native Windows/macOS capability v4
 on:
   push:
     branches: [work/native-install-upgrade-0.9.6]

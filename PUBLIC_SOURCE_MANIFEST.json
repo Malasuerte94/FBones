@@ -115,7 +115,7 @@
     {
       "path": ".github/workflows/native-install-upgrade.yml",
       "bytes": 2304,
-      "sha256": "4525df39b509faede4c6e9832b5c2199906f79d10407beea4e4f518801e5a59a"
+      "sha256": "f7a4e25507fcd8d577e67d5f61e9dfdd7064e2c536079e1a82691beccf2fb14d"
     },
     {
       "path": ".github/workflows/native-linux-picker.yml",
@@ -2089,18 +2089,28 @@
     },
     {
       "path": "scripts/native-acceptance/mac.sh",
-      "bytes": 1400,
-      "sha256": "293c1118e53b8365207927e8ecab5a378b03a758ab3a18973aa0e4cb03a9d68a"
+      "bytes": 1667,
+      "sha256": "6b9fb858ae46f1f218d1acfa7d9f0eb71387893065bed8a456d227c6babb866b"
     },
     {
       "path": "scripts/native-acceptance/mac.swift",
-      "bytes": 11104,
-      "sha256": "b6d8e0c29909ec0ce4db9ac6b7f687792297c601f5c04080f0b8e24fbef25d31"
+      "bytes": 16257,
+      "sha256": "374e06ed66d550c88673a8e47450e7c1126e2988cfec0edcb6d1d44dad034cb7"
     },
     {
       "path": "scripts/native-acceptance/nul-gui-launch.cs",
       "bytes": 5311,
       "sha256": "55289d4709dd52249adfc053debf09f97a31737f356bca0e32ada6c6ecc8384b"
+    },
+    {
+      "path": "scripts/native-acceptance/own-process-identity.c",
+      "bytes": 1918,
+      "sha256": "1972ebd78b06c493e2c0e2828f3b32556b1b00052b406f198b00163892d1b0b1"
+    },
+    {
+      "path": "scripts/native-acceptance/own-process-identity.h",
+      "bytes": 767,
+      "sha256": "64ca55a26b2fce5fdc6d60948c57050e6ecfc52e7aa52950cc4b2feac7e348ed"
     },
     {
       "path": "scripts/native-acceptance/windows-cdp.mjs",
@@ -2109,8 +2119,8 @@
     },
     {
       "path": "scripts/native-acceptance/windows.ps1",
-      "bytes": 11695,
-      "sha256": "40aa06f190a9df280e11563f8598c07be01893b8d91e88ef7009a628a5e6232f"
+      "bytes": 17274,
+      "sha256": "8dff34c6fbcb4647b4fad8533ccf4c90a640a0b7cf31b3b2463162bf75a9e054"
     },
     {
       "path": "scripts/native-lifecycle/probe.py",
@@ -2149,8 +2159,8 @@
     },
     {
       "path": "scripts/prepare-public-release.py",
-      "bytes": 7852,
-      "sha256": "0aef6179c3df4ebe6d4bf7f5ed68f9b24cc7545cf17ace8e8ca6bcebeee654be"
+      "bytes": 7992,
+      "sha256": "1fc4e81bc8f746f8a3fd9466c236f24edf498313c077e21d963eaffc08a45711"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -3048,6 +3058,11 @@
       "sha256": "508e916e03384a06ebd2e4b6002f04f3ba7dbcf7139326e655503d710f1d40a1"
     },
     {
+      "path": "docs/research/NATIVE-MAC-PROCESS-IDENTITY-AND-WINDOWS-CDP-DATA-GATE-2026-11-09.md",
+      "bytes": 4581,
+      "sha256": "c4aabd8e7ee736414b3ef0c8d961a681c8be2a89d98ce18a45ba2f35e2146213"
+    },
+    {
       "path": "docs/research/NATIVE-NEXT-PICKER-AND-LAUNCH-DATA-GATE-2026-11-09.md",
       "bytes": 5841,
       "sha256": "efee44ba4f18c6ec654610afa8b9343e31b46a96302031dfa583177e6728f250"
@@ -3056,6 +3071,11 @@
       "path": "docs/research/NATIVE-WINDOWS-MACOS-CAPABILITY-V3-UI-GATE-2026-11-09.md",
       "bytes": 2198,
       "sha256": "aecb705bced05c6bd72c49938b13d03687e65e1b28118924d8f7ad2e70906603"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-MACOS-CAPABILITY-V4-UI-GATE-2026-11-09.md",
+      "bytes": 2556,
+      "sha256": "8b389ff95d0a2bf6936e12419fe5df53fee339f1bedc8480c9c53589310b3086"
     },
     {
       "path": "docs/research/PHYSICS-BATCH-AUTHORING-POLICY.md",
