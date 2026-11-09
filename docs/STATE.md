@@ -9,9 +9,10 @@ this pass fixes established behavior rather than expanding timeline/runtime scop
 Current Physics research uses three subagents for DATA, UI/ownership and tooling;
 root integrates and alone operates Windows/reference processes. Actual capacity
 is four agents total, despite the latest request for ten. No global settings
-changed. The accepted0.9.5 delivery is retained. The user now authorizes push and release
-of the accumulated stabilization. Release metadata/visible label move to0.9.6
-for the updater; no new solver, clock or numeric-bound change is introduced.
+changed. The accepted0.9.5 delivery is retained. Release0.9.6 is published. Latest steering now explicitly requests all three
+remaining tracks: Physics phase, remaining Transform Match fidelity and actual
+native installation/0.9.5→0.9.6 upgrades. No new solver, clock or numeric-bound
+change is introduced without discriminating exact-version evidence.
 
 ## Current release publication
 
@@ -27,13 +28,15 @@ runtime archive equality covers 32 files. No original/private
 assets are included. The [release notes](releases/v0.9.6-beta.1.md) retain the
 verification scope and limits.
 
-This documentation-only follow-up on main uses [skip ci]; it does not move the
-release tag, rebuild or replace published archives. Prior local Windows QA
-belongs to the retained 0.9.5 image 54e27667, never relabeled as 0.9.6. Native OS
-installation and actual 0.9.5 → 0.9.6 installed upgrades remain unobserved; Physics
+The current follow-up branch contains QA tools and aggregate findings; it does
+not move the release tag, rebuild or replace published archives. Prior local Windows QA
+belongs to the retained 0.9.5 image 54e27667, never relabeled as 0.9.6. Debian installed0.9.5→0.9.6 acceptance now passes42679060912, including the
+automatic successor and separate native Open/persistence session. Other native
+upgrade profiles remain open. Physics
 moving-parent phase, World shear precision and full compatibility remain open.
 The next product work remains unanswered F307/F308 fidelity; installed-update
-acceptance stays separately WAITING. Fresh ownership/source guards still apply.
+acceptance is now ACTIVE on disposable hosted native VMs. Fresh ownership/source
+guards still apply.
 
 ## New exact4.3.26 observations
 
@@ -104,7 +107,7 @@ extended mixes; extended authored values remain exact/editable/savable. Hidden
 lanes and dedicated-view identity are tested. Animate accessibility descriptions
 reference visible Setup reasons only.
 
-Current checks:443JavaScript pass/oneexistingPhysics skip,343desktopnative/
+Retained product integration checks:443JavaScript pass/oneexistingPhysics skip,343desktopnative/
 2existingignored,102legacy/1existingignored,16defaultformat/103Sceneformat,
 strictClippy/check/rustfmt, finalwebbuild and realRusthost pass. Runtime16package/
 24nativeexport samples pass. Focused21/21UI passes, including exact saved Match
@@ -173,121 +176,79 @@ macOS or installed-app upgrade. Existing protected user53988/image94293013 and
 all other personal/mascot/editor windows remain untouched. The old immutable
 image/manifest are preserved.
 
-## Current Physics research: own-memory capability proved
+## Current F307 reference limits
 
-Latest user asks to finish Physics and requests10agents. Actual hard capacity
-is4total, so root coordinates3 parallel DATA/UI/tooling workers. No settings
-were changed to evade that limit. Existing37static/990dynamic original checks
-remain accepted; moving-parent/export phase is still unresolved at unchanged
-3.35184/2.24952step and1.26276ramp residuals. Product solver/clock/bounds are
-unchanged. New DATA algebra reuses308old60/new90 samples: half/full inertia
-outputs are linearly dependent (max.0625residual), and conditional lag inversion
-is ambiguous in173samples. No unique hidden clock follows; zero-delta Update
-cannot supply the finite-limit80-unit correction. No old grid/oracle was rerun.
+The accepted37static/990dynamic original observations remain unchanged.
+Moving-parent/export residuals remain3.35184/2.24952step and1.26276ramp. No solver,
+clock, numeric-bound or fitted phase change is justified. The missing datum is
+actual parentX at Physics entry plus reset/update/Pose/delta/remainder and output
+emission around13/60 versus the90Hz event. Existing grids/PNG oracles were not
+repeated; earlier JVMTI/VMStruct/hardware-breakpoint negatives remain valid.
 
-A materially new passive own-console route now succeeds. V1's image guard
-stopped before any reads; V2 directly proved actualUNC versus requestedW: are
-the same file and read512MiB without errors but exhausted its byte budget, so
-its classfile negative was partial. V3 requested-Xmx64m, measured128MiB via
-standard JNI and refused its strict64MiB prerequisite before own-class loading.
-The reviewed final V4 keeps that request and accepts only the actually observed
-reported128MiB configuration; no heap-flag/value search or original flags.
+[Own passive-memory V4](research/PHYSICS-OWN-MEMORY-CAPABILITY-RESULT-2026-11-09.md)
+proved two exact1764B naturally retained own class copies, complete421,531,648B/
+419region collection in266ms with zero read errors, requested64/reported128MiB,
+normal hold/Destroy/child/controller0. Static framing38groups/all1764truncation
+cuts and13 Windows ABI vectors pass. This is not editor class/method recovery.
 
-V4 created only our own no-agent JNI toy: child65484/startFILETIME
-134386869766486254 and controller53500/start2026-11-09T08:36:16.5438334Z both
-exit0 after hold/Destroy0. Complete collected readable-region coverage is
-421,531,648bytes/419regions in266ms, zero partial/failed reads. Two MEM_PRIVATE
-copies match all1764bytes of the known own class exactly; independent strict
-full parsing and pinned javap pass. Three prefix candidates are distinct: one
-full mismatch and two exact captures; no overlap-duplicate explanation is used.
-This proves natural own classfile-copy retention in requested64/reported128MiB
-runtime only, not a live VM definition, original editor recovery or method order.
-All consumed source/tool/gate pins and failures remain frozen under the private
-physics-phase-sprint-2026-11-09 run. Original/user-window operations are zero.
+[ONE original seed scan](research/PHYSICS-ORIGINAL-SEED-METADATA-RESULT-2026-11-09.md)
+is consumed:0seeds,76generated-class metadata/13unique, partial452MB of1.346GB/
+76read errors. Normal own original close0/source93pins pass, but strict15002ms
+versus15000ms remains FAILED. No absence/provenance/caller claim or rerun.
 
-The [own capability result](research/PHYSICS-OWN-MEMORY-CAPABILITY-RESULT-2026-11-09.md)
-owns the versioned failures/positive and evidence limits. The generic static
-prefix framer now passes38groups/all1764truncation cuts; six exact slices also
-pass the frozen independent parser/javap. The controller-local Windows DLL/C#
-bridge passes13actual own-file vectors, exact metadata comparison and executable
-file-identity W:/UNC/same/different controls. No original process is involved.
+[Own file metadata](research/PHYSICS-OWN-FILE-METADATA-RESULT-2026-11-09.md)
+retains name-only negative; [attribute-only duplicate](research/PHYSICS-PSS-DUPLICATE-OWN-FILE-GATE-2026-11-09.md)
+proves one exact own DISK/path/fileID/localclose/normal0 in15ms. Resource-utility
+audit then STOPPED the proposed original PSS lane: no identified previously
+uninventoried class/archive resource would change inspection. No original PSS
+scenario is justified. Static launcher field decode supplies only String[] args;
+its package remains known non-ZIP, with compression/encryption unknown.
 
-[One original-owned metadata scenario](research/PHYSICS-ORIGINAL-SEED-METADATA-PLAN-2026-11-09.md)
-is fully implemented and independently source/ownership/manifest reviewed.
-Its manifest6b5ba5b2d9967e3c281c616f7569b8c50a7ba9f917d704bd2e84c82c8a513417
-binds93relative pins, two checked Linux compiler pins, the Windows ABI proof and
-an unchanged722-byte accepted own Physics fixture plus its own images. It seeks
-only exact Editor/EditorErrors classfile copies, at most512MiB/15seconds,
-4MiB metadata and two1MiB bodies. No Play/Match/export/Save/heap flags/injection.
+[New metadata-only own debugger result](research/PHYSICS-OWN-DEBUG-TRANSPORT-RESULT-2026-11-09.md)
+also STOPPED: strict initial-break predicate fails (actual ntdllRVA125245 versus
+export126ae0), controller7. All seven unchanged V4 host markers/main/20sHold/
+Destroy0/debug+retained child0 nevertheless occur in22,047ms/49events/13,833B,
+no second chance/force/timeout. No address fit, retry, DefineClass followup,
+original operation or product change. Final offline audit identifies no next
+provider with an expected useful caller datum. Keep F307 ACTIVE and the fidelity
+gap open; independent native installation/Match work continues.
 
-**Original seed scenario is now CONSUMED.** After the user closed the personal
-instance, fresh isolation showed no original; the one reviewed own4.3.26 run
-completed with retained-handle normal close/exit0 and unchanged source/manifest.
-[Result](research/PHYSICS-ORIGINAL-SEED-METADATA-RESULT-2026-11-09.md):0seeds,
-76structural metadata records/13unique generated classes;452,218,889unique bytes
-covered versus1,346,592,768queried,76partial/failed reads. No Editor absence,
-class provenance, method body or Physics caller observation is established.
-Strict postcheck remains FAILED15002ms versus15000ms; no tolerance was changed.
-Independent ownership/raw-accounting/lifecycle checks pass. Never rerun this
-consumed scenario or recover old process identities. Protected user ledgers,
-including .local/physics-2026-11-09-user-process.json, remain immutable historical
-protection evidence; fresh current absence is always required.
+## Current additional F308 observations
 
-The own-only PSS known-file provider is now consumed:46entries, exact reported
-file handle172 once, but name length0. Capture/walk/free/lifecycle succeed;
-controller exits7 on the failed name assertion, child closes normally/exit0.
-Type length10 has unknown content in that first receipt. No original was used.
-[Own metadata result](research/PHYSICS-OWN-FILE-METADATA-RESULT-2026-11-09.md)
-retains all pins, bounded negative and exact46-byte temporary cleanup.
+[Active Local-source/World-target Properties](research/TRANSFORM-MATCH-ACTIVE-LOCAL-WORLD-PROPERTIES-RESULT-2026-11-09.md)
+plus [UI](research/TRANSFORM-MATCH-ACTIVE-LOCAL-WORLD-PROPERTIES-UI-RESULT-2026-11-09.md)
+now independently classify first-target/all-except-selected:60741ccb790B→
+d785a510912B. One Match+Save,32bonebits/full driver/six global offsets/unrelated
+fields/order preserved,24driver cells remainnull/24selected materialize. Frozen
+accepted-space-separability matches48bits; independent f64/f32 formula vectors
+remain31/48 and27/48 exact. Own58404/start15:09:12.8253090Z closes normally with
+retained0. One premature capture failed closed/noinput and remains recorded.
 
-The distinct [attribute-only duplicate gate](research/PHYSICS-PSS-DUPLICATE-OWN-FILE-GATE-2026-11-09.md)
-has now passed one actual Windows own-only run and independent DATA/pin checks.
-ONE access128/options0/noninherit duplicate of reported+enumerated handle172
-returns DISK1, exact132-unit NT path and same volume/file ID, then closes locally.
-Raw PSS type is directly observed as File+UTF16NUL; snapshot name remains absent.
-Elapsed15ms; controller51100/child60400 normalexit0, temporary46bytes removed.
-Manifestba0c968b/rootfreezeba8d68ff and all15tool/14relative/threeexternal pins
-match. This is an own metadata capability, not an original class/Physics datum.
-A future original candidate-selection scenario remains separate. Only a new,
-previously uninventoried class/archive path under approved roots would change
-source inspection; known package/JAR/JVM/fixture paths stop the route.
+Cached0.9.5 Session first opens original607inspection-only and stops before any
+edit/3requests/EOF0. Fresh editable own423recipe, typed-equal to607, then passes
+oneProperties/oneUndoRedo/SaveCloseOpen/15requests/EOF0. Raw846B690290e6 equals
+all48 DTO bits;31/48 original bits exact, max1.52587890625e-5 under unchanged
+0.0005. Native source/format preservation passes. Original607editability, new
+build/current0.9.6GUI or fresh original CLI acceptance are not claimed.
 
-The separate new active Local/World Offset observation and native verification
-are complete. The unchanged cached real Rust Session passes15request/response
-pairs: None/currentepoch-revision Match once, oneUndoRedo, authored preservation,
-SaveCloseOpen and normalEOFexit0. Five actual native fields match original bits;
-shear differs0.00006866455078125/9ULPs under unchanged0.0005. Cached binary0e694ce7
-has the retained83dependency/81historical+twoexplicitcurrent-generated pin chain;
-this is file-level provenance, not embedded source attestation or new GTK/UI QA.
-Independent raw parsing verifies the newly native-encoded750-byte sourcee3ea3e74.
+[New active World-source/Local-target Offset](research/TRANSFORM-MATCH-ACTIVE-WORLD-LOCAL-OFFSET-RESULT-2026-11-09.md)
+uses direct independently encoded own9a9ac5ee740B, one flag from accepted14743c0e,
+no canonical Save. One Offset+Save produces1a334dc5805B and uniquely classifies
+selected-excluded/firstTarget across18frozen lanes at unchanged0.0005.32bone bits/
+modeled graph/48nulls preserved; UUID/type tags/group/source-state metadata also
+normalize during Match+Save, with no invented causal split or all-raw-fields
+unchanged claim. Own81388/start16:25:29.6255571Z/HWND8266414 closes normally with
+retained0 at16:35:07.7144178Z. This consumed action is never repeated.
 
-ONE fresh original4.3.26 CLI then accepts that independently encoded copy, own
-85256/start2026-11-09T11:02:58.2249315Z normalexit0 at11:03:04.4619582Z,
-version+Complete/streams complete/source+copy unchanged. Its1237-byte runtimeJSON
-matches79numeric/reference fields (41explicit/38known omitted defaults), maximum
-4.638671867951416e-6 under unchanged5.1e-6. Five sparse unmapped driver Mixes stay
-unrepresented; raw48nulls/FPS are not JSON claims. No Match/rendered-pose parity
-follows from loader acceptance. The new aggregate checkpoint records all receipts.
-No product source, solver, clock or bound changed, and no build was needed.
-
-Offline exact-loader inspection resolves Editor.main lookup as a fallback
-following a Throwable during field registration; actual branch execution and
-primary registration details remain unknown. The ordinary two-argument
-URLClassLoader searches its parent first, so a URL alone does not prove Editor's
-actual byte source. These are static/documented constraints, not observed calls.
-Future recovered references should guide one narrow method question, never a
-blanket decompile. Earlier bundled-Linux/JVMTI/VMStruct/class-buffer/CLI-trace
-negatives remain valid; no unchanged failed route or accepted PNG batch reran.
-
-Normal local availability is also observed on the retained0.9.5 image54e27667:
-new85172/start2026-11-09T11:39:53.7157359Z/HWND2951442 is visible with the expected
-version UI and no debugging port. It is handed to the user; protect
-.local/release-0.9.6-user-process.json and its transport companion. No project
-input or existing user window operation occurred. This is not new0.9.6 installer
-QA. The native startup receipt passes, while the capture launch transport remains
-pending on inherited GUI streams; preserve that user window/transport and never
-claim a terminal result or force cleanup. Future normal launchers require native
-NUL handles. The consumed one-shot helper is not retried or overwritten.
+[Cached native comparison](research/TRANSFORM-MATCH-ACTIVE-WORLD-LOCAL-OFFSET-NATIVE-RESULT-2026-11-09.md)
+passes15requests/oneUndoRedo/SaveCloseOpen/EOF0 on the supported own9a9 input;
+rawcc1cfa29 equals all6DTO bits, source/driver/unrelated fields/48nulls preserved.
+4/6 original bits exact; Y7.62939453125e-6 and shear0.00045013427734375 remain
+within unchanged0.0005. Both cached cases reuse0e694ce7 binary/file-level83dep
+chain:78historical source and2preparation-only resources unchanged,3strictly
+version-only TOML/JSON differences0.9.5→0.9.6. No embedded/new-build attestation.
+No arithmetic formula or tolerance changed. Broader Properties/World suffix/
+additive/Physics/manual behavior and exact precision remain open.
 
 ## Previously accepted delivery and profile boundaries
 
@@ -307,8 +268,8 @@ before any own process operation.
 The current runtime remains independent MIT0.1.0-beta.1, published40,803-byte/
 32file archive SHA5f8e171bff34384e7219e8adfe345ea49e92632962bf1965b95b644d49954544.
 Game JSON export is separate from binary .fbones; mixing/directbinary/npm/full
-parity are open. Native installed-app upgrade awaits an actually higher app
-version; unsignedWindows/ad-hocmacOS/notarization/nativeMac acceptance remain.
+parity are open. Debian installed0.9.5→0.9.6 upgrade/persistence now passes;
+Windows/macOS/AppImage upgrade profiles and publisher signing/notarization remain.
 
 Real-source profile remains4editable/4guarded plus editable mascot125bones/
 24slots/22PNGs/2clips/79constraints, all223769source payload bytes independently
@@ -318,59 +279,149 @@ B/E reversing curves, nondefault inheritance, F capacity/curves and G Path/other
 records stay guarded. Full canonical equality and unknown-record preservation
 remain mandatory; no source gets admitted by deleting unsupported data.
 
-## Cleanup and next reproducible action
+New independent active World/Local **Properties** also completes one original
+observation: direct9a9a740B→42912aff926B, own83396/start17:20:49.1774414Z/
+HWND5770712, one lower Properties Match plus one Save, dirty→clean and retained
+normalexit0 at17:24:51. Original findings use new DATA/UI companions; no previous
+Offset/canonical batch repeated. Frozen22lane/.0005 classifier uniquely selects
+selected-excluded/first target; FromX−55.2231216431..−54.2230987549→To70..71.
+All48 endpoint/runtime relations are internally bit-exact;32authoredbone bits,
+driver/offsets/order and nullable transition preserve modeled semantics. Fixed
+f64 model27/48exact/max4.57763671875e−5; accepted-Properties separability44/48/
+max2.288818359375e−5. World arithmetic/span precision stays open, no formula fit.
+Independent raw/lifecycle audit records raw metadata normalization during
+Match+Save without isolating its cause.
+ONE cached real Session case now passes15JSONL/None epoch/oneUndoRedo/SaveCloseOpen/
+EOF0/empty stderr:27/48exact/max4.57763671875e−5 under unchanged.0005. Saved
+65f213fc has all48raw f32bits equal itsDTO and modeled authoring/driver/offset/
+nullable state preserved; original0ad remains immutable. This reuses the pinned
+0.9.5binary/83depchain, not a fresh0.9.6/nativeGUI/encoding-compatibility claim.
+[Original](research/TRANSFORM-MATCH-ACTIVE-WORLD-LOCAL-PROPERTIES-RESULT-2026-11-09.md),
+[UI](research/TRANSFORM-MATCH-ACTIVE-WORLD-LOCAL-PROPERTIES-UI-RESULT-2026-11-09.md)
+and [native companion](research/TRANSFORM-MATCH-ACTIVE-WORLD-LOCAL-PROPERTIES-NATIVE-RESULT-2026-11-09.md) retain the bounds. DATAfreezec429815f/toolingdd429620/
+classifier8a6f25b3 and actual raw stages remain private.
 
-Selected54e27667 and its prior normal-startup/user-ownership receipts remain
-unchanged; protect .local/stabilization-user-process.json and every other user
-ledger. The earlier research portion needed no duplicate normal app. The release session
-opened the retained0.9.5 image once and handed it to the user, as recorded above;
-preserve its window and pending launch transport.
-Prior delivery cleanup/failure/source-restoration evidence remains in the linked
-stabilization checkpoint; it is not a new current test or disk measurement.
+New independent World/World branches also complete from own741B64451233, both
+Localflagsfalse, same4bones/2constraints/X50/orderedtargets; no oldcanonicalSave.
+[Offset](research/TRANSFORM-MATCH-ACTIVE-WORLD-WORLD-OFFSET-RESULT-2026-11-09.md):
+oneupperMatch+Save→804B60f82258, own27984/start18:12:45.9881611Z closes with retained0
+at18:28:49.8953982Z. Frozen22model classifier honestly UNCLASSIFIED37b6c254 because
+its predictions omitted the **already implemented** inverse-source world-point
+branch. Separate retrospective source-backed check matches newXY exactly and
+oldzeroMixXY within8e−6; no product correction or refittedbound follows. Original
+6values preserve graph/32bits/driver/48nulls; Shear gap remains.0004806519.
+[Properties](research/TRANSFORM-MATCH-ACTIVE-WORLD-WORLD-PROPERTIES-RESULT-2026-11-09.md):
+independent one lowerMatch+Save→948Bdc1ae590, own21320/start18:32:48.7950865Z/
+HWND722486/retained0 at18:41:56.7736918Z. Frozen26models uniquely selected-excluded/
+firsttarget;48 internalendpoint/runtime relations exact, best predeclaredanchor
+44/48/max2.2888e−5; raw32bone/6offset/driver24null+primary24present preserved.
+Data2c417019/51pins and driver76e656ca/14+4 remain immutable. Both new cached
+comparisons now pass15requests/None epoch/oneUndoRedo/SaveCloseOpen/EOF0 with
+independent saved-raw==DTO preservation. Offset2/6exact/max0.00048828125,
+Properties11/48exact/max0.0000457763671875; bound0.0005 stays unchanged. Saved
+b8f522bc752B and6a7955b9869B reuse cached0.9.5/83dependency provenance; no fresh
+build/nativeGUI/exactparity claim. The [separate native companion](research/TRANSFORM-MATCH-ACTIVE-WORLD-WORLD-NATIVE-RESULT-2026-11-09.md)
+preserves original classifier limits and all immutable original documents.
 
-Current research cleanup removed15un-pinned C object/import-library files
-(259,857bytes), own Python bytecode40,144bytes, both own46-byte C:temporary files
-(92bytes), and the unused generated native-host audio2250bytes after verified
-normal host exit:302,343logicalbytes total. All cited sources/binaries/manifests,
-failed/positive observations and active test inputs/results remain exact.
-Nine obsolete FBones dependency-graph variants (~1.074GiB) remain retained because
-some process mappings cannot be read; never delete a mapped/uncertain executable.
-Debug deps~7.6GiB remain mixed/reusable; incremental is empty. No full Cargo clean,
-user-data deletion, large build or host physical recovery claim.
+The [Save-only precision experiment](research/TRANSFORM-MATCH-SAVE-ONLY-DATA-NEGATIVE-RESULT-2026-11-09.md)
+is **negative**, not a serialization observation. Root misread resized capture
+coordinates and posted156,14 to actual2560×1439: [Open Project appeared](research/TRANSFORM-MATCH-SAVE-ONLY-UI-NEGATIVE-RESULT-2026-11-09.md),
+not Save. Both853B65f213fc/mtime remain equal; no Save/no-op/normalization claim
+or arithmetic fit follows. ONE attempted input only, no dialog recovery/retry.
+Separate reviewed lifecycle cleanup used one main-owned WM_CLOSE, retaining
+62568/start18:59:38.2618215Z/exit0 at19:04:53.1066351Z and unchanged source/gate.
+The consumed terminal proves closure of that own experiment; a fresh process
+preflight remains mandatory for every future launch. Before a future fresh
+precision case, inspect original-resolution pixels and bind capture dimensions
+to intended control; retain the failed route and do not replay it unchanged.
 
-**Host-disk correction:** Ubuntu's registered VHDX is on G:, not C:. The actual
-host has only2.35GiB free; Linux's~825GiB and the earlier C:measurements do not
-prove VHDX host safety. VHDX224,135,217,152bytes is not sparse. Linux advertises
-mounted discard support, but no manual trim, shutdown, compaction or global
-setting change was performed, and no physical host recovery is claimed. Keep
-large builds/captures deferred; the prepared reference output is capped at6MiB.
+## Current native installation work
 
-The previous research read-only process check11:05:00UTC found an unowned Spine
-49192/start2026-11-09T11:03:49.8698784Z/HWND3213622 with an unsaved marker. It
-appeared after our CLI's terminal and was not operated. Preserve its protection
-ledger .local/physics-2026-11-09-second-user-process.json plus all earlier user
-ledgers. Do not input/save/close/attach/activate it or forward another test into
-it. This is a current original-only boundary, not a user pause of the full goal.
+Latest source-only QA branch is work/native-install-upgrade-0.9.6, with current
+Mac capability source b6bf253. Main1888c2a, release439062261/tagcfc60a4 and all
+published assets are unchanged. Root alone operates fresh hosted VMs; no
+personal-host installation. Reviewed QA sources are mirrored into this workspace;
+product Rust/Vue sources remain unchanged. [Capability findings](research/NATIVE-INSTALL-UPGRADE-CAPABILITY-RESULT-2026-11-09.md)
+preserve consumed failures and narrower accepted facets.
 
-Next reproducible action: read-only preparation of ONE bounded original current-
-open-resource question after the proven own metadata capability. Review generic
-File selection/privacy/live-handle reuse first; only a previously uninventoried
-class/archive resource under approved roots could justify targeted inspection.
-Known package/JAR/JVM/fixture paths would stop that route. Original execution must
-wait for actual absence of the protected49192 and fresh isolation; its old PID
-or any consumed receipt never authorizes process operations. No memory rescan,
-old oracle grid, accepted Match/canonical Save or new encoding export repeats.
-For future F308 work reuse the accepted60741ccb canonical; freeze a distinct
-unanswered action first. At the earlier research checkpoint G:free2,525,851,648bytes and Linux
-885,719,416,832bytes were measured; no physical reclamation is
-inferred. The selected54e27667 image remains exact; all255 source pins were exact before
-the current release-only0.9.6 metadata/visible-label changes.
-The release-session retained0.9.5 normal launch/protected transport is recorded
-above; current0.9.6 packaged native installation remains unverified.
+- Stock0.9.5 Linux Debian/AppImage native install/FUSE/GTKwindow/realwebview/
+  Updates/retained normal0 pass42645345499. Debian nativeSave plus independent
+  CRC64/typedfields pass42649490682; own subreaper passes42649610363.
+- [Debian v6](research/NATIVE-LINUX-DEBIAN-UPGRADE-AND-PERSISTENCE-V6-RESULT-2026-11-09.md) **all required facets pass**42679060912/b1c8549: realReady0.9.6,
+  pending-nameflush/dirtyCancelpreservation, independently parsed baseline and
+  renamed Save checkpoints, stock authorization/replacement, old3166/start12046
+  normal0. Automatic3442/start12922 is uniquely adopted by3135, matches fixed
+  d27601e1 target member and visible own window; ONE native Updates press exposes
+  exact CURRENT0.9.6, then actualwaitpid3442/status0. Immediate creator is not
+  claimed. Only AFTER automatic0, fresh installed3571/start13137 opens the SAME
+  saved own file through the native Files table: exact current basename/location/
+  size/hash and SDK same-row association, one selection with readback, then one
+  freshly enabled Open. Reopened nameUpgrade root/X37.5/clean/current0.9.6 and
+  unchanged saved bytes pass; fresh actual terminal0. No signals, IPC mutations,
+  source/key/marker override, manual replacement launch or W3C rebind. This
+  accepts Debian only, not AppImage or a broad original-format profile.
+- Windows NSIS0.9.5 actual install/member/kernel/window/rendererReady/normal0
+  already pass. CDP0listener route stopped. v7 actualSDK metadata discovers
+  fresh LegacyPress/role43/state1049088. v8 actual42679065767/b1c8549 executes ONE
+  typedSDKDoDefaultAction/S_OK0, but complete fresh15s UIA observation retains
+  the same Current0.9.5 panel. Exact normal0 follows; updaterControl=false and
+  upgradeAttempted=false remain negatives. No unchanged action/timing retry.
+- Mac arm64 stock0.9.5 v5 proves Aqua/AX/nativeReady, ONE AXPress/current0.9.5
+  panel transition and normal0, independently of the failed old Viewport-label
+  predicate. Exact Tauri2.12.5 .app restart uses open -n/LaunchServices. New [OWN SDK nonchild capability](research/NATIVE-MACOS-OWN-NONCHILD-EXIT-RESULT-2026-11-09.md)
+  passes42680160095/b6bf253: actualarm64/macOS26.7.2 SDK
+  compile, known own1198/start1794251211.687667 reparentedto1, actualwaitpid−1/
+  ECHILD10, successful kqueueNOTE_EXITSTATUS registration BEFORE onceACK, exact
+  SDK normalexit7 fromeventdata1792, controller1196normal0. C/image unchanged,
+  no signal/NOTE_TRACK/product/GUI/LS launch. This proves known-nonchild status
+  capability, not automatic successor discovery or actual FBones upgrade.
 
-Full Physics caller reset/update/Pose timing and moving-parent parity remain
-ACTIVE; broader Match World/additive/Physics/rounding/manual branches remain
-open. No new features/skins started. Accepted product evidence remains in the
-local/private `analysis/physics-match-stabilization-check.json`;
-current bounded research/hold/cleanup is in
-local/private `analysis/physics-memory-inspection-check.json`.
+GitHub Actions outage blocked42671547146 before jobs (including one retry).
+Primary status operational18:43UTC allowed reviewed dispatches; the new Mac
+workflow first returned unregistered/default-branch404 without execution. A
+reviewed workflow-only SHA run-name delta triggered its own branch-push job;
+source/protocol stayed unchanged. No billing/security/global-settings edits.
+Windows/macOS/AppImage actual installed upgrades, publisher signing/notarization,
+macOS Intel and physical OS-mouse routing remain unproved.
+
+## Cleanup, ownership and next reproducible action
+
+All34 user-process ledgers remain protected, including selected54e27667/user
+FBones85172/start11:39:53.7157359Z and its pending launch transport5405/Linux
+556534/556535/556847. Never close/reuse that transport or window. This pass changes
+only research/QA tools and documentation; no product source/build or duplicate
+normal availability launch. The prior0.9.5 handoff is not0.9.6 installer QA.
+
+User manually closed personal Spine; freshabsence15:09 and16:24 precedes each
+new own observation. Former87668/11:40:56.0253421Z and all earlier personal IDs
+are historical protection, never authority. Own58404,81388,83396,27984,21320 and62568 are terminal and
+consumed; fresh absence/identity/source guards apply to any later original.
+No personal project/window input/save/close/attach or global input occurred.
+
+Current own cleanup removes16,883,658logicalbytes: disposable NSIS member copy,
+own native-test audio/object/cache categories and a stale unpublished
+991B checker receipt. Source packages/extractors/scripts/final manifests/raw
+observations/failed diagnostics/saved native outputs remain. Nine uncertain old
+native variants(~1.074GiB) remain because mapped-process evidence is incomplete;
+debugdeps~7.6GiB mixed/reusable/incrementalempty. No fullcargo clean/user-data
+removal/physical recovery claim. No new localCargo/frontend build or large
+package download. Remote fixtures live only in ephemeral VMs.
+
+Latest actual host check19:10:21UTC: Ubuntu VHDX is on G:, free2,524,676,096B;
+VHDX224,135,217,152B nonsparse. Linux's~825GiB does not establish host safety.
+No manualtrim/shutdown/compaction/globalsettings changes. Keep large local
+builds/captures deferred; repeat both disk measurements at session end.
+
+Next reproducible work: preserve accepted Debian v6/known-nonchild evidence and
+prepare distinct paired-reference Windows/macOS/AppImage installed-upgrade
+scenarios. Windows SDKPress has no functional transition; a new discriminating
+provider/observation is required, not another unchanged click. F308 future
+Save-only precision needs diagnosed capture-coordinate correction in a fresh
+case, not a repeated Match or numeric fit. F307 has no identified next caller
+provider; the [installed Linux inventory](research/PHYSICS-LINUX-PROVIDER-INVENTORY-RESULT-2026-11-09.md)
+retains runtime2 negatives and runtime1 exact-editor binding UNKNOWN. No solver,
+clock or bounds change. Full fidelity remains ACTIVE, skins last, no new editor
+features. Prior product acceptance/cleanup are retained in ignored analysis
+checkpoints; current tools/raw receipts are under
+`.local/research/finish-three-2026-11-09/` and
+`.local/native-install-upgrade-2026-11-09/`.

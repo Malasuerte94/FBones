@@ -1,12 +1,18 @@
 # Transform Match: native implementation policy
 
-Current sampling correction (2026-10-30): both actions sample the ordered
-prefix. Exact active Local/Local observations prove48 Properties scalars and
-6 Offset scalars bit exact. See the
-[Properties result](TRANSFORM-MATCH-ACTIVE-PROPERTIES-SAMPLING.md) and
-[Offset result](TRANSFORM-MATCH-ACTIVE-OFFSET-SAMPLING.md). Prefix versus all
-except selected with suffix, other spaces/additive/Physics remain unmeasured.
-The paired [suffix source plan](TRANSFORM-MATCH-SUFFIX-SOURCE-PLAN.md) is next.
+Current sampling correction (2026-11-09): both actions evaluate the complete
+ordered constraint list and exclude only the selected Transform. Independent
+exact4.3.26 Local/Local [suffix Offset](TRANSFORM-MATCH-SUFFIX-OFFSET-RESULT-2026-11-08.md)
+and [suffix Properties](TRANSFORM-MATCH-SUFFIX-PROPERTIES-RESULT-2026-11-08.md)
+observations supersede the historical uniform prefix policy. All six Offset
+and48 Properties scalars are bit exact for those graphs.
+
+Active Local-source/World-target [Offset](TRANSFORM-MATCH-ACTIVE-LOCAL-WORLD-OFFSET-RESULT-2026-11-09.md)
+and [Properties](TRANSFORM-MATCH-ACTIVE-LOCAL-WORLD-PROPERTIES-RESULT-2026-11-09.md)
+now select first-target/selected-exclusion in their measured graph; without a
+suffix they cannot distinguish prefix from selected exclusion. World arithmetic
+residuals remain explicit. Other spaces, World suffix scheduling, additive and
+Physics sampling remain unmeasured; full compatibility is not claimed.
 
 2026-10-29, before production implementation. Paired reference gates are
 TRANSFORM-MATCH-AUTHORING-{DATA,UI}-HANDOFF.md and the independent behavior/math
@@ -21,10 +27,12 @@ A pure native operation receives the complete constraint and one coherent native
 Evaluation. It returns a staged constraint; it never mutates bones or history.
 The session integration validates document/revision/frozen epoch and retrieves
 applied-local and world values together. Local uses applied channels, World uses
-the precise native f64 matrix from that same evaluation. The caller evaluates the prefix from precise frozen authored channels and
-scratch cached Physics while retaining complete scene validation/layout. None
+the precise native f64 matrix from that same evaluation. The caller evaluates the complete ordered scene, skipping only the selected
+Transform, from precise frozen authored channels and a scratch copy of cached
+Physics. Complete validation/layout and Physics indices remain intact; scratch
+state and the evaluated pose never replace the cache or author bones. None
 stays None; other modes use Pose without advancing the clock. Applying that
-rule beyond the measured active Local/Local graphs is a uniform FBones policy.
+rule beyond the measured graphs is a uniform FBones policy.
 Keep this decision at the caller so stronger reference evidence can refine it
 without replacing the authoring algorithm. A historical beta changelog is a documentation lead,
 not exact4.3.26 proof and not an implementation dependency.
@@ -33,6 +41,10 @@ First stored ordered target is authoritative. No averaging/sorting or selection
 substitution. Offset changes six offsets only; Properties changes ordered runtime
 mapping values and mapped editor endpoints only. Other fields, nullability,
 flags, orders and all original values outside those mutation sets remain exact.
+Both UI and explicit-ID Match require all six Mix lanes finite within0..1 after
+pending-field flush. Extended authored values still roundtrip unchanged; the
+shared capability guard blocks matching and explains why. This bounded FBones
+capability policy does not establish an original extended-Mix numeric branch.
 
 ## Arithmetic
 

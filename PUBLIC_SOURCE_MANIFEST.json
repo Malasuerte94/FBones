@@ -2419,13 +2419,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 25133,
-      "sha256": "592e5e4bbba39daeb91e57858321b8a16bf65ddd02dcdc37b9628c0553d08f5d"
+      "bytes": 29338,
+      "sha256": "adfb3ca1c7a4b0e03475453f69ecf2322b2cc3e9d10f77feb083865d8bb20ed1"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 20331,
-      "sha256": "3941315f25a1be14819eeffce6c59e696dd6a6ec8f806ea259cb201c4c5be1d3"
+      "bytes": 20358,
+      "sha256": "a0fe05ee43314d520d1e93611e518f2f40e5df27ee1c7645673bb713e1f7a921"
     },
     {
       "path": "docs/TESTING.md",
@@ -3128,6 +3128,11 @@
       "sha256": "0fd95469944db9729f3209cc3cc652f56f451816b5ab3281b98b9f9d456a1e3c"
     },
     {
+      "path": "docs/research/NATIVE-INSTALL-UPGRADE-CAPABILITY-RESULT-2026-11-09.md",
+      "bytes": 11728,
+      "sha256": "e16957111e98c64a075a06b880ef2078167cc2033c057604570b3bbfa8f0ab80"
+    },
+    {
       "path": "docs/research/NATIVE-INSTALL-UPGRADE-STAGE2-UI-PLAN-2026-11-09.md",
       "bytes": 7005,
       "sha256": "035e8f3019108349256bce535ee581da7ba1580c5c79ca5dcbe4450521c55853"
@@ -3151,6 +3156,11 @@
       "path": "docs/research/NATIVE-LEGACY-METADATA-LABEL-DATA-ADDENDUM-2026-11-09.md",
       "bytes": 1881,
       "sha256": "ecd4b5a914ea98e30a7d110b902067c57c05fb82458ead7260df40f9fb0325ab"
+    },
+    {
+      "path": "docs/research/NATIVE-LINUX-DEBIAN-AUTOMATIC-UPGRADE-V5-RESULT-2026-11-09.md",
+      "bytes": 3253,
+      "sha256": "353bedf7290354986bdebbf68d8f325b2cd392435f65e9490341f9d62dde28b9"
     },
     {
       "path": "docs/research/NATIVE-LINUX-DEBIAN-CURRENT-VERSION-ACTION-V4-DATA-GATE-2026-11-09.md",
@@ -3193,9 +3203,19 @@
       "sha256": "353502ee9fab296011fc3c2830d3b7bd7d8345d40ac4d0b2f8ede2ca718ba667"
     },
     {
+      "path": "docs/research/NATIVE-LINUX-DEBIAN-UPGRADE-AND-PERSISTENCE-V6-RESULT-2026-11-09.md",
+      "bytes": 4193,
+      "sha256": "94d75dc1f9bc21f943139c0829aa6c9c363bcc5f07442e9948303823db4f6ef2"
+    },
+    {
       "path": "docs/research/NATIVE-LINUX-PICKER-UI-GATE-2026-11-09.md",
       "bytes": 2872,
       "sha256": "b5430cc12ffe9edbcd04d221af5e48d48a0d5f411cc7ff9cf6238cd64c4e86d9"
+    },
+    {
+      "path": "docs/research/NATIVE-LINUX-PICKER-UI-RESULT-2026-11-09.md",
+      "bytes": 3815,
+      "sha256": "4b552881126e90f125a51a53d467310a11dea3ba3761d27b7ef695183eeed064"
     },
     {
       "path": "docs/research/NATIVE-LINUX-SUBREAPER-DATA-GATE-2026-11-09.md",
@@ -3221,6 +3241,11 @@
       "path": "docs/research/NATIVE-MACOS-OWN-NONCHILD-EXIT-DATA-GATE-2026-11-09.md",
       "bytes": 3740,
       "sha256": "971fad8eab51de56dfaaffb688357779cf6f6d651efb66e6c843bc1a4d3914ba"
+    },
+    {
+      "path": "docs/research/NATIVE-MACOS-OWN-NONCHILD-EXIT-RESULT-2026-11-09.md",
+      "bytes": 2089,
+      "sha256": "4ab10798e61e42897f8042238d19eb2d7cdde93bf1fca13ed2462fdea0f5fdee"
     },
     {
       "path": "docs/research/NATIVE-MACOS-OWN-NONCHILD-EXIT-UI-GATE-2026-11-09.md",
@@ -3368,6 +3393,11 @@
       "sha256": "e239842861206658fc06746a62010a7bd83f22f1092162316560b01b522c6902"
     },
     {
+      "path": "docs/research/PHYSICS-LINUX-PROVIDER-INVENTORY-RESULT-2026-11-09.md",
+      "bytes": 1716,
+      "sha256": "77b3d48fd4ce265c5c04f91da4b276334c32812a0a478cd680ea93e0c514de3c"
+    },
+    {
       "path": "docs/research/PHYSICS-LIVE-SETUP-ACCEPTANCE.md",
       "bytes": 3613,
       "sha256": "8a69f93dc536737327da219a6ecbc9531960a27f103dc2d93e6e5daf29dff89b"
@@ -3436,6 +3466,21 @@
       "path": "docs/research/PHYSICS-ORIGINAL-SEED-METADATA-RESULT-2026-11-09.md",
       "bytes": 2821,
       "sha256": "1ca961b20b209c6cec223d7098ee1d09c81974906dc555e6af8472f805351f51"
+    },
+    {
+      "path": "docs/research/PHYSICS-OWN-DEBUG-TRANSPORT-DATA-GATE-2026-11-09.md",
+      "bytes": 4156,
+      "sha256": "26e24a3c62ae23258d9e71ad14bab358e2cba54417266e022de27a39c09a4be2"
+    },
+    {
+      "path": "docs/research/PHYSICS-OWN-DEBUG-TRANSPORT-RESULT-2026-11-09.md",
+      "bytes": 2890,
+      "sha256": "fb75c69ed9e71cef41632f1de83c530e87451008d68d714e025b09903aad1555"
+    },
+    {
+      "path": "docs/research/PHYSICS-OWN-DEBUG-TRANSPORT-UI-GATE-2026-11-09.md",
+      "bytes": 3043,
+      "sha256": "a8fdeb90a999d8291eb8e0272ead548b23c171dfa1ad92dafd22db385abbd990"
     },
     {
       "path": "docs/research/PHYSICS-OWN-FILE-METADATA-RESULT-2026-11-09.md",
@@ -3693,6 +3738,26 @@
       "sha256": "fd28b36a9a788d0e94412e5470469ae1dfc537be48294912f1baa28e6664520a"
     },
     {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-LOCAL-WORLD-PROPERTIES-DATA-PLAN-2026-11-09.md",
+      "bytes": 4233,
+      "sha256": "d251905b5e9ab670559342624205e16c266a8f3599a8cf6364a44e1a7a107887"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-LOCAL-WORLD-PROPERTIES-RESULT-2026-11-09.md",
+      "bytes": 5585,
+      "sha256": "78c82f549680fefc7c2f96636dbc98f8ee6647bcd520df0e44dd2b2177295ffc"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-LOCAL-WORLD-PROPERTIES-UI-PLAN-2026-11-09.md",
+      "bytes": 4463,
+      "sha256": "3a8c754021dd046fa843c0d3cac98b9a8922e4789a15052e74fb3117e108f636"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-LOCAL-WORLD-PROPERTIES-UI-RESULT-2026-11-09.md",
+      "bytes": 6034,
+      "sha256": "693af5bf667164e98bd0246539cad23dc77bca5f5a42fa6e7e78d090432965f3"
+    },
+    {
       "path": "docs/research/TRANSFORM-MATCH-ACTIVE-LOCAL-WORLD-UI-PLAN-2026-11-09.md",
       "bytes": 5321,
       "sha256": "11f5d3e48dc2ec598c3a8371c6e9b4afa280e513d20b37a29fd476cc574fa587"
@@ -3728,6 +3793,86 @@
       "sha256": "6639665d2e63c45bd5a05bbc93516788693763558a95d7895c6beec4c4179797"
     },
     {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-WORLD-LOCAL-DATA-PLAN-2026-11-09.md",
+      "bytes": 5080,
+      "sha256": "f95a85cf6d5a6ed05a20acb430374b9b0d99ff99571fd5b49f53fca092a97034"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-WORLD-LOCAL-OFFSET-NATIVE-RESULT-2026-11-09.md",
+      "bytes": 3497,
+      "sha256": "23ff74011f4f42e7c300ad4f63f5028f231c52400690db112049b5d456d518b8"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-WORLD-LOCAL-OFFSET-RESULT-2026-11-09.md",
+      "bytes": 5625,
+      "sha256": "ebc19ac8cfbff04933b2bb61058364b09c5ab20f5247e714cd3d9bf97466333e"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-WORLD-LOCAL-OFFSET-UI-RESULT-2026-11-09.md",
+      "bytes": 3765,
+      "sha256": "8b40bcef5466a8783e2541a0f25facaf52114da516305aa4d96a6cb6479d08bb"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-WORLD-LOCAL-PROPERTIES-DATA-PLAN-2026-11-09.md",
+      "bytes": 4891,
+      "sha256": "cf40aba0c6e44180e076535bf568bab131e4f2e6d337b5401d8f255b4ce39706"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-WORLD-LOCAL-PROPERTIES-NATIVE-RESULT-2026-11-09.md",
+      "bytes": 2932,
+      "sha256": "9a93ee378113b8b320e04fd033b75b5e946b37a476d49758ee8a92763f5b54fe"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-WORLD-LOCAL-PROPERTIES-RESULT-2026-11-09.md",
+      "bytes": 6099,
+      "sha256": "0adfd3c8874540fc2c94be066b6f4a57508377e82e5e7a57a678d906362882be"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-WORLD-LOCAL-PROPERTIES-UI-PLAN-2026-11-09.md",
+      "bytes": 4425,
+      "sha256": "300defbc4f73b62ab24cb63a1f1d732789ac6701512fe77a837392662a477c99"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-WORLD-LOCAL-PROPERTIES-UI-RESULT-2026-11-09.md",
+      "bytes": 4406,
+      "sha256": "4fc27c7a3313435e6a01ff7823f100845cefc16afd2a074d14a754265a927195"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-WORLD-LOCAL-UI-PLAN-2026-11-09.md",
+      "bytes": 4136,
+      "sha256": "3b83911b8f22d74346dcdbc0fbc0fbde11f34c4003d15a0f800c28315e7662e6"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-WORLD-WORLD-DATA-PLAN-2026-11-09.md",
+      "bytes": 3128,
+      "sha256": "1cd2abecef2f61fc7480e67389cf1cddebfe6edbc5ee238f94d27cb932cc5d39"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-WORLD-WORLD-NATIVE-RESULT-2026-11-09.md",
+      "bytes": 4043,
+      "sha256": "e0f0cb36cb202ffc3ee3ab4100a792164f920981065558c421d5c9aed43ce3df"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-WORLD-WORLD-OFFSET-RESULT-2026-11-09.md",
+      "bytes": 3723,
+      "sha256": "74513003a41f37aa235e9dab36e0560cb4805b0bd5d13f3eb6327b671ba49793"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-WORLD-WORLD-PROPERTIES-RESULT-2026-11-09.md",
+      "bytes": 3353,
+      "sha256": "10c564aec873f74d7a19b91b687a8fb116cceeeb01c3cd5b933efa2bdb1b9c5f"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-WORLD-WORLD-UI-PLAN-2026-11-09.md",
+      "bytes": 4136,
+      "sha256": "2f4ce32cc49e152ae6406f0d92cb65f8abc695891cf77cfca8b7ae8c90f49c0a"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-WORLD-WORLD-UI-RESULT-2026-11-09.md",
+      "bytes": 2866,
+      "sha256": "e352ed745a6fd042e9b3b1c0f5061812fe9101ff044fc81ce49c5aaf1dc097b1"
+    },
+    {
       "path": "docs/research/TRANSFORM-MATCH-AUTHORING-DATA-HANDOFF.md",
       "bytes": 8856,
       "sha256": "e7eb30e9a402650c8e01661c03d3a8ae925453afdd4880dd5f3b359f081ef0e5"
@@ -3749,8 +3894,8 @@
     },
     {
       "path": "docs/research/TRANSFORM-MATCH-IMPLEMENTATION-POLICY.md",
-      "bytes": 6189,
-      "sha256": "76cecd24526ee36f71f9c81938c166576c3e9058c5c78665f940e19a52c2fa89"
+      "bytes": 7104,
+      "sha256": "b5ea1b488b2e087e3b30ec86acd11dde52a403174c7fe896feca23214a62eadb"
     },
     {
       "path": "docs/research/TRANSFORM-MATCH-LOCAL-WORLD-DATA-PLAN.md",
@@ -3771,6 +3916,21 @@
       "path": "docs/research/TRANSFORM-MATCH-NEXT-UI-PLAN.md",
       "bytes": 9424,
       "sha256": "d2e3dc56954ee02deca11dbdf12f5e64a45e18fc186ebf4de362a6b4246acfca"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-SAVE-ONLY-DATA-NEGATIVE-RESULT-2026-11-09.md",
+      "bytes": 2478,
+      "sha256": "9ff6e18a67bc99e7579ab082b0be4b2579b78105ccaa07f64dc99c39bcbfaa3d"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-SAVE-ONLY-UI-NEGATIVE-RESULT-2026-11-09.md",
+      "bytes": 2417,
+      "sha256": "63e49251c99c20c21b2e189619cdfef4111b066c5ca5d46a54444b6ca7ade445"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-SAVE-ONLY-WRITE-EFFECT-DATA-ADDENDUM-2026-11-09.md",
+      "bytes": 1867,
+      "sha256": "8dc3b6f53084d4219548e6652295d1592ec23723efc0a9762552480f5faa5d08"
     },
     {
       "path": "docs/research/TRANSFORM-MATCH-STATIC-DATA-HANDOFF.md",
@@ -3816,6 +3976,16 @@
       "path": "docs/research/TRANSFORM-MATCH-UI-IMPLEMENTATION-HANDOFF.md",
       "bytes": 9902,
       "sha256": "08975a3d27817e3c6aceb657ab35ea21836fc63b7739f13323845ff49a6c240b"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-WORLD-LOCAL-SAVE-ONLY-PRECISION-DATA-HYPOTHESIS-2026-11-09.md",
+      "bytes": 3608,
+      "sha256": "e2588173c59c44368a8ece04dd350d5e447b53c1d5321240af21646c42474bcc"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-WORLD-LOCAL-SAVE-ONLY-PRECISION-UI-PLAN-2026-11-09.md",
+      "bytes": 3979,
+      "sha256": "d110a57874c5280f6758dc12bd11871d8e891f0f7f1c1dc30f8a5e2f9e0af344"
     },
     {
       "path": "docs/research/TRANSFORM-RANGE-AUTHORING-DATA-HANDOFF.md",
