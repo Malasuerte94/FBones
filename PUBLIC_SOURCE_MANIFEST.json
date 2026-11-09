@@ -108,6 +108,11 @@
       "sha256": "68120cc83bd5462ba7957ce03ac0abfe24f0816e2620b485af2fa99f90048007"
     },
     {
+      "path": ".github/workflows/native-descendant-lifecycle.yml",
+      "bytes": 998,
+      "sha256": "24bbe43bf506851a6651317249a99fa19eec32c7d26b5c2a83ca143894ff22d4"
+    },
+    {
       "path": ".github/workflows/native-install-upgrade.yml",
       "bytes": 2304,
       "sha256": "4525df39b509faede4c6e9832b5c2199906f79d10407beea4e4f518801e5a59a"
@@ -2108,6 +2113,11 @@
       "sha256": "40aa06f190a9df280e11563f8598c07be01893b8d91e88ef7009a628a5e6232f"
     },
     {
+      "path": "scripts/native-lifecycle/probe.py",
+      "bytes": 9037,
+      "sha256": "c69f6502d7af73b12e5a59ec2f88549e9ac4127a6bdbc193256dbd52d2ffaade"
+    },
+    {
       "path": "scripts/native-picker/assets.json",
       "bytes": 4025,
       "sha256": "d749af846f064141c976a304ad9d52f09eca8e9205177642fcf90f81ffb9c0ce"
@@ -3026,6 +3036,16 @@
       "path": "docs/research/NATIVE-LINUX-PICKER-UI-GATE-2026-11-09.md",
       "bytes": 2872,
       "sha256": "b5430cc12ffe9edbcd04d221af5e48d48a0d5f411cc7ff9cf6238cd64c4e86d9"
+    },
+    {
+      "path": "docs/research/NATIVE-LINUX-SUBREAPER-DATA-GATE-2026-11-09.md",
+      "bytes": 3146,
+      "sha256": "f168c84802a6a2e9ef38a502e764147b1bac36c0b6f4e9df7da1b3d602251c61"
+    },
+    {
+      "path": "docs/research/NATIVE-LINUX-SUBREAPER-OWN-UI-GATE-2026-11-09.md",
+      "bytes": 1492,
+      "sha256": "508e916e03384a06ebd2e4b6002f04f3ba7dbcf7139326e655503d710f1d40a1"
     },
     {
       "path": "docs/research/NATIVE-NEXT-PICKER-AND-LAUNCH-DATA-GATE-2026-11-09.md",

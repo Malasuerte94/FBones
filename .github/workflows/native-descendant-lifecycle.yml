@@ -1,0 +1,30 @@
+name: Own Linux descendant lifecycle
+on:
+  push:
+    branches: [work/native-install-upgrade-0.9.6]
+    paths:
+      - '.github/workflows/native-descendant-lifecycle.yml'
+      - 'scripts/native-lifecycle/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  own-lifecycle:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 3
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: One data-free owned descendant and exact terminal status
+        run: python -I scripts/native-lifecycle/probe.py controller "$RUNNER_TEMP/fbones-own-lifecycle-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: own-descendant-lifecycle
+          path: ${{ runner.temp }}/fbones-own-lifecycle-${{ github.run_id }}-${{ github.run_attempt }}/
+          retention-days: 7
+          if-no-files-found: warn
