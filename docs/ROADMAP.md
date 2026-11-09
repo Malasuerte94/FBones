@@ -1,6 +1,6 @@
 # Implementation status and roadmap
 
-This is the public overview for the **0.9.4 beta**. FBones is an offline desktop
+This is the public overview for the **0.9.6 release candidate**. FBones is an offline desktop
 2D skeletal animation editor under active development. The implemented workflows
 below cover tested profiles; they do not establish full Spine compatibility.
 
@@ -12,7 +12,7 @@ below cover tested profiles; they do not establish full Spine compatibility.
 | Bones and hierarchy | Create, select, rename and reparent; Translate, Rotate, Scale, Shear, Pose and Length tools; group transforms and viewport gizmos. |
 | Images and slots | Folder-backed PNG library, multiple alternative attachments per slot, nullable active attachment, draw order, colors and supported blend modes. |
 | Meshes and weights | Vertex/edge editing, alpha-contour tracing, triangulation, multi-bone bindings, numeric/direct/brush weight editing and weighted clipping. |
-| Constraints | Supported IK and Transform authoring, ordered evaluation, and default-live Setup Physics that remains separate from saved Setup data. |
+| Constraints | Supported IK and Transform authoring, verified Offset/Properties Match fixes, shared editing, ordered evaluation and default-live Setup Physics separate from saved Setup data. |
 | Animation editing | Named clips, stored FPS, Rotate/Translate/Scale/Shear plus split Translate/Scale X/Y, manual and Auto Key, mixed key selection/marquee, move/delete/copy/paste and native history. |
 | Timeline and curves | Dopesheet, Graph, linear/stepped/Bezier interpolation, editable tangents, frame scrubbing, playback, ranges and looping. |
 | Attachment animation | Region/Mesh/Clipping/none activation, combined light RGBA and linear two-color keys, Draw Order, weighted Mesh/Clipping deformation and numbered Region/Mesh sequences. |
@@ -36,7 +36,9 @@ Animate. Structural edits stay in Setup.
 - Simulated animation preview is bounded to **120 seconds**. Longer animation
   data remains valid; Simulate Off provides static evaluation beyond that bound.
 - Physics and some Transform Match behavior have explicit FBones policies and
-  unresolved fidelity gaps. These must stay visible as the project develops.
+  unresolved fidelity gaps. Moving-parent/export Physics phase and general World
+  Match angular rounding remain open; the latest observations do not establish
+  full numerical parity.
 - The independent runtime/export preview covers its declared FBones profile.
   Animation mixing, direct binary-project loading, texture atlases and full
   Spine numerical/feature compatibility are not established. The archive can be
@@ -48,19 +50,21 @@ Animate. Structural edits stay in Setup.
 
 ## Next milestones
 
-1. **Complete animation coverage.** Expand global Physics targets/reset-all,
+1. **Finish and stabilize existing Physics and Transform Match.** Preserve live
+   Setup, explicit Simulate Off, scratch preview state, pending-field handling,
+   Undo/Redo and binary Save/Close/Open. Resolve unanswered original numerical
+   questions with discriminating evidence; preserve the existing Animate work
+   before adding features. Earlier deferrals are superseded.
+2. **Complete animation coverage.** Expand global Physics targets/reset-all,
    separate RGB and alpha timelines and broader two-color interpolation, advanced timing and Graph tools,
    animation mixing and onion skin. Preserve native history, save/reopen and
    the existing supported profiles throughout.
-2. **Improve the contributor and beta experience.** Keep installation steps,
+3. **Improve the contributor and beta experience.** Keep installation steps,
    examples, screenshots, reproducible bug reports and native platform checks
    easy to follow from a clean checkout. Publish desktop packages, versioned
    source and the runtime archive through gated beta releases, with direct
    platform/runtime download links. Native installation validation, signing/
    notarization and installed-app updates remain separate milestones.
-3. **Broaden constraints and numerical coverage.** Extend remaining constraint
-   families and document measured behavior. The deferred original Physics and
-   Transform Match investigations resume only when needed or reprioritized.
 4. **Publish a fuller compatibility matrix.** Expand supported binary profiles
    only after bounded parsing, independent encoding and original-editor
    acceptance have been demonstrated for each profile.
@@ -69,31 +73,34 @@ Animate. Structural edits stay in Setup.
    profile fidelity without depending on proprietary runtime code.
 6. **Add further tools.** Build on the shared project model, viewport and history
    after the core editor and compatibility coverage are ready.
+7. **Expand skin editing last.** Preserve unsupported skin data through the
+   existing inspection policy while the core editor is completed.
 
 There are no promised dates for these milestones. A feature appearing in a
 screenshot or an inspector is not evidence that its full behavior or persistence
 is implemented.
 
-## Evidence at the 0.9.4 checkpoint
+## Current stabilization evidence
 
-The current recorded implementation checkpoint reports 114 passing Ubuntu
-Chromium/real-Rust UI cases, 418 passing JavaScript checks with one existing
-Physics skip, and 326 native plus 95 legacy-profile passing checks with existing
-ignored cases kept distinct. Runtime checks add 16 package tests and 24 native-export
-samples, plus shipped-Pixi WebGL pixel/topology/texture-ownership coverage.
-These are recorded results, not a claim of a fresh run on every checkout or OS.
+Before the 0.9.6 version bump, the stabilization checkpoint reports 123 passing
+Ubuntu Chromium/real-Rust UI cases, 443 JavaScript checks with one existing
+Physics skip, and 343 native plus 102 legacy-profile passing checks. Two native
+and one legacy ignored cases remain distinct. Format suites report 16 default
+and 103 Scene cases; runtime checks add 16 package tests and 24 native-export
+samples. These are recorded local results, not completed CI for the new tag or
+a fresh run on every checkout or OS.
 
-Current own Windows QA covers signed X/Y preview/release continuity, Undo/Redo,
-non-authoring playback, native Open/SaveAs and native runtime folder export. The
-final normal Windows frontend was opened; the final numeric-presentation change
-has browser coverage rather than a second final-image native numeric gesture.
-Named component benchmarks improve constraint CPU work by roughly 4× and
-all-bone timeline custom-renderer CPU by 13.55×; whole-app FPS is not inferred.
+Six targeted Windows QA groups on the 0.9.5 working build cover both Match
+actions, Undo/Redo, native Open/SaveAs/Close/Open, pending extended mixes and
+invalid-draft cancellation. They do not establish native installation or an
+installed-app upgrade for the new 0.9.6 candidate. Existing Animate and runtime
+checks retain their scopes; browser success does not prove macOS GUI behavior.
 
-Earlier Windows groups and the original 4.3.26 acceptance of a UI-authored
-Physics/deformation file retain their separate bounded scope (13 keys and 72
-represented scalars). No new original observation was made for this update,
-and those samples do not establish original solver, audio or gesture parity.
+Independent exact4.3.26 observations now cover both active Local/Local suffix
+Match actions and one active Local-source/World-target Offset action. Own newly
+encoded binary examples were also accepted by the original loader/exporter.
+These samples validate their specific graphs and preservation boundaries;
+Physics phase, World shear precision and full project compatibility remain open.
 
 The [current checkpoint](STATE.md), [detailed tasks](TASKS.md),
 [animation scope](tasks/F105-animation.md) and [format notes](FORMAT-4.3.26.md)

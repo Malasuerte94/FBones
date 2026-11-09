@@ -69,10 +69,38 @@ test('@native Match flushes a valid field, blocks an invalid draft, and native S
  const output=info.outputPath('transform-match-comparison');await mkdir(output,{recursive:true});await copyFile(saved.path!,join(output,'accepted-ui.fbones'));await writeFile(join(output,'authored.json'),JSON.stringify({before,afterProperties,finalMatched,saved,reopened},null,2));await select(page,f.id);await offsets(inspector(page,f.id));await page.screenshot({path:join(output,'transform-match-actions.png')});
 });
 
+test('@native a pending extended Mix commits once without Match work, remains savable, and explicitly normalized Mix restores Match',async({page,native})=>{
+ const f=await fixture(native,true,true);await openNativeEditor(page);await select(page,f.id);const panel=inspector(page,f.id),before=(await native.snapshot())!,start=native.calls.length;
+ // The button is enabled before this focused draft has committed. Its action
+ // must flush that deliberate edit, then recheck the native Match capability.
+ await panel.getByTestId('transform-mix-1').fill('-100');await panel.getByTestId('transform-match-properties').click();
+ await expect.poll(async()=>(await model(native,f.id)).mix[1]).toBe(-1);
+ const reason='Match currently requires all Mix values from 0% to 100%.';
+ await expect(panel.getByTestId('transform-match-offsets')).toBeDisabled();await expect(panel.getByTestId('transform-match-properties')).toBeDisabled();
+ await expect(panel.getByTestId('transform-match-unavailable')).toHaveText(reason);
+ const extended=await model(native,f.id),after=(await native.snapshot())!;
+ expect(extended.mix).toEqual([0,-1,0,0,0,0]);expect(without(extended,'mix')).toEqual(without(f.constraint,'mix'));await unchangedBones(native,before);
+ expect(after.revision).toBe(before.revision+1);expect(calls(native,start).map(c=>(c.args.edit as {type:string}).type)).toEqual(['updateConstraint']);expect(matchCalls(native,start)).toHaveLength(0);expect(native.calls.slice(start).filter(c=>c.command==='evaluate_project')).toHaveLength(0);
+ // Extended Mix is valid authored data: saving/reopening keeps the exact lane
+ // and capability, rather than normalizing it to make Match available.
+ const file='extended-mix-without-match.fbones',menu=await saveAs(page,native,file);
+ await menu.locator('summary').click();await menu.getByRole('button',{name:/^Close project/}).click();await expect.poll(()=>native.snapshot()).toBeNull();
+ await native.queueDialog('open',file);await page.getByRole('button',{name:'Open project',exact:true}).first().click();await expect.poll(()=>native.snapshot()).not.toBeNull();await select(page,f.id);
+ expect(await model(native,f.id)).toEqual(extended);await expect(panel.getByTestId('transform-mix-1')).toHaveValue('-100');await expect(panel.getByTestId('transform-match-properties')).toBeDisabled();
+ await panel.getByTestId('transform-mix-1').fill('0');await panel.getByTestId('transform-mix-1').press('Enter');await expect.poll(async()=>(await model(native,f.id)).mix[1]).toBe(0);
+ await expect(panel.getByTestId('transform-match-offsets')).toBeEnabled();await expect(panel.getByTestId('transform-match-properties')).toBeEnabled();await expect(panel.getByTestId('transform-match-unavailable')).toHaveCount(0);
+ const normalized=await model(native,f.id),prior=(await native.snapshot())!,matchedStart=native.calls.length;await panel.getByTestId('transform-match-offsets').click();await expect.poll(async()=>(await native.snapshot())!.revision).toBe(prior.revision+1);expect(matchCalls(native,matchedStart)).toHaveLength(1);
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await expect.poll(()=>model(native,f.id)).toEqual(normalized);
+});
+
 test('@native dedicated Transform view matches its explicit stable constraint while Tree selects an unrelated bone',async({page,native})=>{
- const f=await fixture(native,true,true);const {id:_id,order:_order,editorRangeBits:_bits,...input}=f.constraint;await edit(native,{type:'addConstraint',constraint:{...input,name:'Unrelated Transform'}});await openNativeEditor(page);
+ const f=await fixture(native,true,true);const {id:_id,order:_order,editorRangeBits:_bits,editorRangeValues:_resolved,...input}=f.constraint;
+ const added=await edit(native,{type:'addConstraint',constraint:{...input,name:'Unrelated Transform',mix:[0,0,0,0,0,1.25],properties:input.properties.filter(row=>row.property==='x')}}),unrelated=added.constraints!.find(c=>c.name==='Unrelated Transform')!;await openNativeEditor(page);
  await page.locator(`[data-tree-kind="bone"][data-tree-id="${f.root}"]`).getByRole('treeitem').click();const menu=page.locator('header details').filter({has:page.locator('summary').filter({hasText:/^Views$/})});await menu.locator('summary').click();await page.getByTestId('view-toggle-transform').check();await menu.locator('summary').click();
- const view=page.getByTestId('dock-panel-transform');await view.getByRole('combobox',{name:'Constraint',exact:true}).selectOption(String(f.id));const before=(await native.snapshot())!,start=native.calls.length;await view.getByTestId('transform-match-properties').click();await expect.poll(async()=>(await native.snapshot())!.revision).toBe(before.revision+1);
+ const view=page.getByTestId('dock-panel-transform');await view.getByRole('combobox',{name:'Constraint',exact:true}).selectOption(String(unrelated.id));
+ await expect(view.getByTestId('transform-mix-5')).toHaveCount(0);await expect(view.getByTestId('transform-match-offsets')).toBeDisabled();await expect(view.getByTestId('transform-match-properties')).toBeDisabled();await expect(view.getByTestId('transform-match-unavailable')).toBeVisible();
+ await view.getByRole('combobox',{name:'Constraint',exact:true}).selectOption(String(f.id));await expect(view.getByTestId('transform-match-offsets')).toBeEnabled();await expect(view.getByTestId('transform-match-properties')).toBeEnabled();await expect(view.getByTestId('transform-match-unavailable')).toHaveCount(0);
+ const before=(await native.snapshot())!,start=native.calls.length;await view.getByTestId('transform-match-properties').click();await expect.poll(async()=>(await native.snapshot())!.revision).toBe(before.revision+1);
  expect(matchCalls(native,start)).toHaveLength(1);expect((matchCalls(native,start)[0]!.args.edit as {id:number}).id).toBe(f.id);expect((await native.snapshot())!.constraints!.find(c=>c.name==='Unrelated Transform')).toEqual(before.constraints!.find(c=>c.name==='Unrelated Transform'));await expect(page.locator(`[data-tree-kind="bone"][data-tree-id="${f.root}"]`)).toHaveClass(/selected/);await unchangedBones(native,before);
 });
 

@@ -18,6 +18,8 @@ import {EventAudioPlayer,type AudioReceipt} from '../domain/eventAudio.ts';
 import {evaluate as evaluateScene,PhysicsState} from '../domain/solve/index.ts';
 import {logicalDocumentKey} from '../domain/resourceContinuity.ts';
 import {batchField,batchFieldValue,sameBatchValue} from '../domain/constraintBatch.ts';
+import {canMatchTransform} from '../domain/transformMapping.ts';
+import {i18n} from '../i18n.ts';
 
 export type Intent = 'new' | 'open' | 'close' | 'quit' | 'update';
 
@@ -726,7 +728,10 @@ export const useWorkspace = defineStore('workspace', () => {
     if(editFlight&&!(await editFlight))return false;
     if(inspectorError.value){showNotice(inspectorError.value,true);return false;}
     const model=project.value;
-    if(!sceneEditing.value||!model||model.documentId!==expectedDocument||!model.constraints?.some(c=>c.id===id&&c.type==='transform'))return false;
+    if(!sceneEditing.value||!model||model.documentId!==expectedDocument)return false;
+    const constraint=model.constraints?.find(c=>c.id===id);
+    if(constraint?.type!=='transform')return false;
+    if(!canMatchTransform(constraint)){showNotice(i18n.global.t('matchTransformMixUnsupported'),true);return false;}
     return editRig({type:'matchTransform',id,section},model.revision);
   }
   async function removeConstraintById(id:number,revision?:number){return sceneEditing.value&&constraints.value.some(c=>c.id===id)?editRig({type:'deleteConstraint',id},revision):false;}

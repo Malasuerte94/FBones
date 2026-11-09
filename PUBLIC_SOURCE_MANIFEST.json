@@ -1,5 +1,5 @@
 {
-  "release": "v0.9.5-beta.2",
+  "release": "v0.9.6-beta.1",
   "kind": "source-only",
   "files": [
     {
@@ -9,13 +9,13 @@
     },
     {
       "path": "AGENTS.md",
-      "bytes": 16601,
-      "sha256": "63a5c5e6846204ca03e80bb3b9155966bbd6c3acc11a3f13407e68e37624c90e"
+      "bytes": 16950,
+      "sha256": "b626424d2e6c1cd252108229c782d4584c0464aaec920652cc239593ba04ffc1"
     },
     {
       "path": "README.md",
-      "bytes": 12279,
-      "sha256": "f20dfac5ed49892c85862258bc9bc634fba512e64d2ef75afdfc3203068a4ad3"
+      "bytes": 12658,
+      "sha256": "87f6cd32ba05d9b1ca28c5fdb3ae0bb77e5ee583d8553dbd74f3252d5d9427bc"
     },
     {
       "path": "CONTRIBUTING.md",
@@ -35,17 +35,17 @@
     {
       "path": "Cargo.toml",
       "bytes": 258,
-      "sha256": "73de614610d23f9c196b36a86b69d6c311e3205e3c2f9aecbd40b7aeaf09d7dc"
+      "sha256": "9c932523f0833688a29bc4d7b4b0f0f6b9fefcec7b6d43e4a6c392b257a08867"
     },
     {
       "path": "Cargo.lock",
       "bytes": 116290,
-      "sha256": "d902470cca585363a62278e6c5367130765a16d9ece931657dc63991bf58a858"
+      "sha256": "624066cf1e3c8bb333a5caa659490aaec83d580c3e2c8af4dab3713f06f1595a"
     },
     {
       "path": "package.json",
       "bytes": 1294,
-      "sha256": "95d3b41f07171510fd308930896dd8ba321314401be3d95ce0bb724714c0eb96"
+      "sha256": "c7550695b2fa4ba284d61d707a911867eb61892f06bf62b18be8dad0aa93a508"
     },
     {
       "path": "pnpm-lock.yaml",
@@ -214,8 +214,8 @@
     },
     {
       "path": "src/components/organisms/ConstraintInspector.vue",
-      "bytes": 19270,
-      "sha256": "c267e7487ea4675072b83448bf87ffc7a4d89d17051c148ad8c472e617e5b336"
+      "bytes": 19851,
+      "sha256": "91688205a20d8c0be54223f4c20a6f2e612b17e467dd52e56a669a4f874b42e3"
     },
     {
       "path": "src/components/organisms/ConstraintViewPanel.vue",
@@ -274,8 +274,8 @@
     },
     {
       "path": "src/components/organisms/TransformMappingEditor.vue",
-      "bytes": 6803,
-      "sha256": "7711ba11e96908c3b0b33fd99031f5b43b7e2772e9cb0d13f1e8ff2928ccc615"
+      "bytes": 7089,
+      "sha256": "715c1b3a9616c015d3ec048cdf8deb79e7b9aa8bd06392a26dd28ddeb4a65f25"
     },
     {
       "path": "src/components/organisms/TransformRangeEditor.vue",
@@ -549,8 +549,8 @@
     },
     {
       "path": "src/domain/transformMapping.ts",
-      "bytes": 730,
-      "sha256": "3a054bcd17b84e289f5501dc7c09aeffadfd4674304619742ff8a8fb4701e84c"
+      "bytes": 1115,
+      "sha256": "3e919ef3232a2a143d332b473471ea6c69490645814c961b44a5941d0b2c945a"
     },
     {
       "path": "src/domain/transformRangeFields.ts",
@@ -574,8 +574,8 @@
     },
     {
       "path": "src/i18n.ts",
-      "bytes": 26841,
-      "sha256": "624bbe9f9ce4aec5e3ca4aef4439a1d2a407a9f4e683ce470e6f70b8a2f5595b"
+      "bytes": 27029,
+      "sha256": "1483477c528263003b9b5ef0695b5f56d84dbe6c7de1660613c0f8dab933dd33"
     },
     {
       "path": "src/main.ts",
@@ -594,8 +594,8 @@
     },
     {
       "path": "src/stores/workspace.ts",
-      "bytes": 83547,
-      "sha256": "af4a44d8a6f4257bcac499516e6245c3a145445a69e3685ff71f525ab01cdff8"
+      "bytes": 83812,
+      "sha256": "2e72040197ef355066602385c2102a263a8ec8eb1d7609733b565aa6fde82173"
     },
     {
       "path": "src/styles.css",
@@ -844,8 +844,8 @@
     },
     {
       "path": "src-tauri/src/project.rs",
-      "bytes": 131262,
-      "sha256": "092e825bdab44c95739eff396e897a365de3e6043c5cea172509e82da5df9d9e"
+      "bytes": 131213,
+      "sha256": "58b2e9ce25d0100c24a2ed034c264474c1a26f15ace41071ef8f83ea5ca6d9a2"
     },
     {
       "path": "src-tauri/src/rig.rs",
@@ -994,8 +994,8 @@
     },
     {
       "path": "src-tauri/src/scene_transform_match_prefix_tests.rs",
-      "bytes": 14690,
-      "sha256": "36feeed63aaab7ccf273d3713a594d64741f18cbc816a5603929c528d74756ff"
+      "bytes": 20968,
+      "sha256": "3ee0316d970119a7aa332d1c45302d1e206566f6cce1f30ca20834bdd8ec863e"
     },
     {
       "path": "src-tauri/src/scene_transform_match_tests.rs",
@@ -1059,8 +1059,8 @@
     },
     {
       "path": "src-tauri/src/solve/mod.rs",
-      "bytes": 11417,
-      "sha256": "37dfa828218a6f98e295ff5aed05c985755ca383b9d95b70ca87817d49ed8333"
+      "bytes": 12565,
+      "sha256": "34db4700d8a155dbc7f6c1596ca9d5c2c46ad6d838c132ff874a409ce9584e26"
     },
     {
       "path": "src-tauri/src/solve/oracle.json",
@@ -1079,8 +1079,8 @@
     },
     {
       "path": "src-tauri/src/solve/tests.rs",
-      "bytes": 32016,
-      "sha256": "603d5ce7f95b403629423ee93f17616b0420d23ea494de66900804d954f4a12a"
+      "bytes": 35161,
+      "sha256": "8d9539d101fdb6f15655473ee54bde1087b64ac50cf7fbda27a7a4fc3b6994e3"
     },
     {
       "path": "src-tauri/src/solve/transform.rs",
@@ -1145,7 +1145,7 @@
     {
       "path": "src-tauri/tauri.conf.json",
       "bytes": 1805,
-      "sha256": "6a609a90f526ef02de20402a9d29b36260fc09fcccf514637d21ba2f3ae76e81"
+      "sha256": "0a43956f3ba9f0f5d660fff03bb7031ea907057f468b1637f863df0507e08438"
     },
     {
       "path": "src-tauri/tauri.updater.conf.json",
@@ -1614,8 +1614,8 @@
     },
     {
       "path": "tests/e2e/animation-physics-preview.native.spec.ts",
-      "bytes": 18153,
-      "sha256": "571c6a7f13a4a83169382a40c23ba25eefa33653b23afb696997593af452d1e8"
+      "bytes": 18173,
+      "sha256": "de1d52c8f1cc3bfc4f92221fabceb02c689331814868c79d237023307744e2e7"
     },
     {
       "path": "tests/e2e/animation-playback-workflow.native.spec.ts",
@@ -1784,8 +1784,8 @@
     },
     {
       "path": "tests/e2e/transform-active-offset.native.spec.ts",
-      "bytes": 10550,
-      "sha256": "77d0990284d9acacf0c586a68a8aa3bfabeaead2cb628f2f3486bafc4cf15df4"
+      "bytes": 19158,
+      "sha256": "95c69cdbcf155b6e0fec6ceb50e58abdab37a5b888a9a28f16edb1e15d988b72"
     },
     {
       "path": "tests/e2e/transform-active-properties.native.spec.ts",
@@ -1794,8 +1794,8 @@
     },
     {
       "path": "tests/e2e/transform-match.native.spec.ts",
-      "bytes": 14632,
-      "sha256": "53a50f3267d351bd0c6ecf117e88787ad4ca93faa6fa8879db8473168481e47a"
+      "bytes": 18618,
+      "sha256": "336e7561d9fea3330269f28e1362f20e1dca6f90fa20fc5272ee37cb744d0254"
     },
     {
       "path": "tests/e2e/transform-member-order.native.spec.ts",
@@ -1944,8 +1944,8 @@
     },
     {
       "path": "tests/transform-mapping.test.mjs",
-      "bytes": 1376,
-      "sha256": "e2a1d5da578dc7b085c3d4a925ae1e27f8f4f9fd85aaaa6b433a243e496c3c7b"
+      "bytes": 1971,
+      "sha256": "5e9315ab178b7ef44311f2e678edd83d58f0a5be0dbc0175cfdd1089d5bcd97f"
     },
     {
       "path": "tests/transform-negative-setup-evaluation.test.mjs",
@@ -2060,7 +2060,7 @@
     {
       "path": "scripts/prepare-public-release.py",
       "bytes": 7730,
-      "sha256": "965fa3705320b4519d038f2fc04523da424674ec5e614e0fc21050e8844c819b"
+      "sha256": "312cb84a0b61570aa7b942238bc2bd9a0499c1cb9fd4b5135e8028880caa9e96"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -2075,7 +2075,7 @@
     {
       "path": "scripts/publish-public-beta.sh",
       "bytes": 3562,
-      "sha256": "035c50f21293fc1589ebcfe395ff4189c02932e598568c70a7c8ada0295792e0"
+      "sha256": "3eb90a78d3c787b381bceed84a5dbb1ed740f027b314ab017d5b64979f92eb12"
     },
     {
       "path": "scripts/run-ui-tests.mjs",
@@ -2204,8 +2204,8 @@
     },
     {
       "path": "docs/ROADMAP.md",
-      "bytes": 7237,
-      "sha256": "c2bd1174634416f0e27ad4468c24df6d171581dd4c3b3cff4a289c48a0999be5"
+      "bytes": 7717,
+      "sha256": "b39fc926eb26565fb4766a630e257852b33572fd465b8382f7a5e047abb55209"
     },
     {
       "path": "docs/SLOT-ATTACHMENTS-4.3.26.md",
@@ -2214,13 +2214,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 19420,
-      "sha256": "6d9e337ae150ba99d4dcea3d4c5152ad127755b9c5b5e6fac78bfc97ba29c8d3"
+      "bytes": 24130,
+      "sha256": "2d8af096afeb297a70567c86bed7c148d926595889723cff18296f508c260a7b"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 20489,
-      "sha256": "861541b63d7468cb899859f08cec82e1d6d129ff46dcd2698c1df0bb894ad975"
+      "bytes": 20335,
+      "sha256": "75524432b0b8045dfabfa691fc05c8af2be9cf01eb0fb6e46d472520a21dfb2e"
     },
     {
       "path": "docs/TESTING.md",
@@ -2286,6 +2286,11 @@
       "path": "docs/releases/v0.9.5-beta.2.md",
       "bytes": 6564,
       "sha256": "7a0ea5fa557d13e6ef001bb6b6eaa757edcf0fa71c9780fa5f8859367e3ced01"
+    },
+    {
+      "path": "docs/releases/v0.9.6-beta.1.md",
+      "bytes": 6363,
+      "sha256": "cdbc05910fe4065b9126e4b69880bba37118c24f2bcc2d95f0a6b4f3975ad5cb"
     },
     {
       "path": "docs/research/ANIMATION-BONE-BEZIER-UI-2026-11-06.md",
@@ -2506,6 +2511,11 @@
       "path": "docs/research/ANIMATION-PHYSICS-PREVIEW-PLAN.md",
       "bytes": 11367,
       "sha256": "c2391ad3ef5304036f9bc9e1f237e12facb0a8ddeda0ef3582e583f605ddb916"
+    },
+    {
+      "path": "docs/research/ANIMATION-PHYSICS-TEST-CLOCK-GATE-2026-11-09.md",
+      "bytes": 3746,
+      "sha256": "a7dd892dd5ee0ee6f263c1cf587febc29e67a9d718f721aa4a7d0948dfd7cfac"
     },
     {
       "path": "docs/research/ANIMATION-REAL-PROJECTS-DATA-2026-11-06.md",
@@ -2918,6 +2928,11 @@
       "sha256": "dfbb4b493d43b94c876a28f7b8749f3457e986ec2e03a757a49eb21075318fef"
     },
     {
+      "path": "docs/research/PHYSICS-BUNDLED-LINUX-OWN-TOY-RESULT-2026-11-09.md",
+      "bytes": 5126,
+      "sha256": "aa3bb9646f87881056e30def0d455a96ea4a015c7eb011dda1255b7ef881edd6"
+    },
+    {
       "path": "docs/research/PHYSICS-CALL-OBSERVER-WINDOWS-DATA-GATE.md",
       "bytes": 5464,
       "sha256": "3ef4c8936c0d26c375f59144df21c699f7989500a76a52ee8f11e9dc0dfcdc5a"
@@ -2936,6 +2951,11 @@
       "path": "docs/research/PHYSICS-CLASS-BUFFER-OWN-TOY-RESULT-2026-10-30.md",
       "bytes": 2620,
       "sha256": "b19478feafe3e58b5569f7d2437bc7abf72e67420677748d59c117d311077644"
+    },
+    {
+      "path": "docs/research/PHYSICS-CLASSFILE-FRAMING-GATE-2026-11-09.md",
+      "bytes": 1760,
+      "sha256": "9e9e99cc22aecf65adcd43f443ab0f0a5b12d702c519ca56bfb2ce92d0f93465"
     },
     {
       "path": "docs/research/PHYSICS-CLI-TRACE-DATA-GATE.md",
@@ -2993,6 +3013,31 @@
       "sha256": "ff4c310e916c2c6247000ab22b255cc603fa061109172b80b007d73a8adc6cc6"
     },
     {
+      "path": "docs/research/PHYSICS-MATCH-STABILIZATION-DATA-GATE-2026-11-08.md",
+      "bytes": 11590,
+      "sha256": "e1918d04ba6928cdc51467410db816136b479a95efdc56270965ef1c8628c0e7"
+    },
+    {
+      "path": "docs/research/PHYSICS-MEMORY-OWN-CAPABILITY-GATE-2026-11-09.md",
+      "bytes": 3718,
+      "sha256": "8c0d0b97b924033a0bac7eebba23e76c20b7c8a984987e81aa883f70044ef02d"
+    },
+    {
+      "path": "docs/research/PHYSICS-MEMORY-OWN-HEAP-GATE-2026-11-09.md",
+      "bytes": 1772,
+      "sha256": "3b65f3dfa5efe7e31a47103190d248e7d770b9235837ffb7953075782ada86d2"
+    },
+    {
+      "path": "docs/research/PHYSICS-MEMORY-OWN-IDENTITY-GATE-2026-11-09.md",
+      "bytes": 1319,
+      "sha256": "627828d13a236825410f3c11ba9f84f3fad3322b14864110110d68780d2d4afe"
+    },
+    {
+      "path": "docs/research/PHYSICS-MEMORY-OWN-REPORTED-CONFIG-GATE-2026-11-09.md",
+      "bytes": 1558,
+      "sha256": "b6b68844b45c070c7ebacfbccb853769757111c6869b5367647593e8e3672ab1"
+    },
+    {
       "path": "docs/research/PHYSICS-MULTI-BONE-AUTHORING-DATA-HANDOFF.md",
       "bytes": 6828,
       "sha256": "6904dfbbb2139fe2bc621114a8d89159870db6bc784ac7a036c04cf336febe90"
@@ -3008,6 +3053,31 @@
       "sha256": "8b8bd4cf5b8b92e87681638b804a8cafdfc10f7622511e1eb4d87f59faf03c40"
     },
     {
+      "path": "docs/research/PHYSICS-ORIGINAL-SEED-METADATA-PLAN-2026-11-09.md",
+      "bytes": 5524,
+      "sha256": "94f49dedb12dad33f576debf2ffe397e1dc535dfd6da97afe170d7765b5b6b45"
+    },
+    {
+      "path": "docs/research/PHYSICS-ORIGINAL-SEED-METADATA-RESULT-2026-11-09.md",
+      "bytes": 2821,
+      "sha256": "1ca961b20b209c6cec223d7098ee1d09c81974906dc555e6af8472f805351f51"
+    },
+    {
+      "path": "docs/research/PHYSICS-OWN-FILE-METADATA-RESULT-2026-11-09.md",
+      "bytes": 3637,
+      "sha256": "7bb69f75862d61367aa65f92945bcfe29ee2eb6037871588387cc70175b49b63"
+    },
+    {
+      "path": "docs/research/PHYSICS-OWN-MEMORY-CAPABILITY-RESULT-2026-11-09.md",
+      "bytes": 4687,
+      "sha256": "30a4b09472e7c08eff079f1510c2569851fd9fa79c8479ccf58927e7a2b0d87f"
+    },
+    {
+      "path": "docs/research/PHYSICS-OWN-MEMORY-RECOVERY-UI-GATE-2026-11-09.md",
+      "bytes": 2818,
+      "sha256": "574b65f733e298ca4bac1c3895b1011155585f2c91d6b49a56d5937297f8ec29"
+    },
+    {
       "path": "docs/research/PHYSICS-PHASE-NEXT-HANDOFF.md",
       "bytes": 8585,
       "sha256": "c9800155e8e27299c2b64476acaab7cfc0747d4aa4f97454c4366bb0c9df691a"
@@ -3016,6 +3086,16 @@
       "path": "docs/research/PHYSICS-PHASE-OPERATOR-HANDOFF.md",
       "bytes": 5295,
       "sha256": "1775a13c7e78bf34630630b663df74fb9a6c864711a08b8283e04824999000e7"
+    },
+    {
+      "path": "docs/research/PHYSICS-PSS-DUPLICATE-OWN-FILE-GATE-2026-11-09.md",
+      "bytes": 2877,
+      "sha256": "fd405806945e2e26c569300acd32c5fc8620c8f0bb03570ac83260495b3ef62c"
+    },
+    {
+      "path": "docs/research/PHYSICS-PSS-OWN-FILE-GATE-2026-11-09.md",
+      "bytes": 2642,
+      "sha256": "b3fa3b3fff582524074fca52afb9c957c8a8d2469be6a647cd8745b57b1d1947"
     },
     {
       "path": "docs/research/PHYSICS-REPLAY-DATA-HANDOFF.md",
@@ -3031,6 +3111,11 @@
       "path": "docs/research/PHYSICS-RESPONSE-PHASE-2026-10-29.md",
       "bytes": 8328,
       "sha256": "de060ecaa43315626b0d7301c420894e001339cf7171d0d44da25e226af14aa0"
+    },
+    {
+      "path": "docs/research/PHYSICS-TRANSFORM-STABILIZATION-UI-GATE-2026-11-08.md",
+      "bytes": 13062,
+      "sha256": "f7d530df5649a4d05f95ef74eff01b04aff3965a56a5b27b4bcd9a920cb0e1a4"
     },
     {
       "path": "docs/research/PHYSICS-WINDOWS-LOADER-BOUNDARY-2026-10-30.md",
@@ -3223,6 +3308,26 @@
       "sha256": "212225f9399cc4e1562b887dd639fe3bca2817218e125f1e58b823e588d5c3f6"
     },
     {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-LOCAL-WORLD-DATA-PLAN-2026-11-09.md",
+      "bytes": 4853,
+      "sha256": "d2a7a111f4e2400fd042cc815d3269abc803b0c0604024503e75e34bbc6d04db"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-LOCAL-WORLD-OFFSET-RESULT-2026-11-09.md",
+      "bytes": 7284,
+      "sha256": "fd28b36a9a788d0e94412e5470469ae1dfc537be48294912f1baa28e6664520a"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-LOCAL-WORLD-UI-PLAN-2026-11-09.md",
+      "bytes": 5321,
+      "sha256": "11f5d3e48dc2ec598c3a8371c6e9b4afa280e513d20b37a29fd476cc574fa587"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-ACTIVE-LOCAL-WORLD-UI-RESULT-2026-11-09.md",
+      "bytes": 3744,
+      "sha256": "a5323f85b60c6870f17e8fb5a5d0e2c98d5e8d56e90813dace8a7e129f443966"
+    },
+    {
       "path": "docs/research/TRANSFORM-MATCH-ACTIVE-OFFSET-SAMPLING.md",
       "bytes": 3222,
       "sha256": "0c7c3ef225b450e51c83ded4009cb86efa5a881d68bbf1256c9a9c6c5561f69a"
@@ -3301,6 +3406,26 @@
       "path": "docs/research/TRANSFORM-MATCH-STATIC-UI-HANDOFF.md",
       "bytes": 9254,
       "sha256": "99c88fb11b3177c0bfdfdf7e0dcca7d48449bcd1219ceda1a2dc4d7ec57a676a"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-SUFFIX-OFFSET-RESULT-2026-11-08.md",
+      "bytes": 4878,
+      "sha256": "5a1f01f2cf678b6c91588a494ed2571a96984c2c3e0f7b9557693d5ef6abc5dc"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-SUFFIX-OFFSET-UI-RESULT-2026-11-09.md",
+      "bytes": 6814,
+      "sha256": "49ddd302758b56b1307c2dfd79cc33a9a1c6c2d4dd2887b8d527f3e55f62fc4c"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-SUFFIX-PROPERTIES-RESULT-2026-11-08.md",
+      "bytes": 5866,
+      "sha256": "3ace10cfab826b690ad7c3552fed0fabdfe525d5e9cc7b54da1affe6fd64dac0"
+    },
+    {
+      "path": "docs/research/TRANSFORM-MATCH-SUFFIX-PROPERTIES-UI-RESULT-2026-11-09.md",
+      "bytes": 4725,
+      "sha256": "9165a53691fc3a4b658b52a20f64dca39257d7aaebddb5ac86d647dbe23e7c65"
     },
     {
       "path": "docs/research/TRANSFORM-MATCH-SUFFIX-SOURCE-PLAN.md",
@@ -3398,6 +3523,11 @@
       "sha256": "8489f29e220420b5b9f224a4469b99e87cb76367eb8ef4c6c02a02437ead7e53"
     },
     {
+      "path": "docs/research/fixtures/transform-match-active-local-world-offset-reference.json",
+      "bytes": 8680,
+      "sha256": "ecb8b54b8ca612dd3cc57cdefebafbaae3f580acefba33eed716182e917fb59a"
+    },
+    {
       "path": "docs/research/fixtures/transform-match-active-offset-reference.json",
       "bytes": 1029,
       "sha256": "e01324f93247002be82cf01476075818e5b19d958a5fe8369074be0bf6b28292"
@@ -3406,6 +3536,16 @@
       "path": "docs/research/fixtures/transform-match-active-properties-reference.json",
       "bytes": 11198,
       "sha256": "7a881342985528ebf0afafceecb75e11d0fb2d45b8dda8955882d26a09828d66"
+    },
+    {
+      "path": "docs/research/fixtures/transform-match-suffix-offset-reference.json",
+      "bytes": 6911,
+      "sha256": "72a147713a14a6db6e61b50f8999f813c3beef4885f568daf8876f6aea465ee9"
+    },
+    {
+      "path": "docs/research/fixtures/transform-match-suffix-properties-reference.json",
+      "bytes": 12030,
+      "sha256": "f50ee5b4a24e87f66818de9dd609acdb2183ae063c8741dc2a2893f85055dc0c"
     },
     {
       "path": "docs/screenshots/README.md",
@@ -3484,13 +3624,13 @@
     },
     {
       "path": "docs/tasks/F307-physics.md",
-      "bytes": 8368,
-      "sha256": "a8ffaadb62d020c91605aa5328081ab785cd0d7e7f6903cf322219b861b9cf34"
+      "bytes": 9673,
+      "sha256": "4e09a85977a394518562afac7659439694b44c542befe46997fbba13b3843b6f"
     },
     {
       "path": "docs/tasks/F308-transform-constraint.md",
-      "bytes": 12380,
-      "sha256": "718af25e355b9977d89e00517e6de1c469c8e2264012ee3c54f2f72268a36176"
+      "bytes": 14157,
+      "sha256": "d6b617698c2cb226800ed6956650c6401dc7b9dc3dcdda329f70c4c37faaf526"
     },
     {
       "path": "docs/tasks/F309-parenting-tree-docking.md",

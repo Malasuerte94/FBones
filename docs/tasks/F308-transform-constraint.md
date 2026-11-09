@@ -4,18 +4,43 @@ Status: **ACTIVE** for remaining unmeasured original sampling/interaction parity
 Offset Match, Properties Match and functional24-cell endpoint authoring are
 delivered under the explicit canonical-profile policies.
 
-Latest sampling delivery: **Windows0eedc946 corrects Offset Match** to the
-same ordered prefix used by Properties. One NEW original active Local/Local
-Offset action proves all6 offset bits exactly, including X20 versus prior15.5;
-all48 earlier Properties scalars remain retained.65/65 rebuilt Linux UI,200native/
-93legacy and2actual Windows groups/native SaveCloseOpen pass. Independent UI/
-Windows binaries preserve the full typed graph; extra new UI-source CLI export
-is pending protected personal-instance isolation, not claimed accepted.
-Suffix distinction and broader spaces/additive/Physics remain unmeasured. See
-`../research/TRANSFORM-MATCH-ACTIVE-OFFSET-SAMPLING.md`,
-`../research/TRANSFORM-MATCH-SUFFIX-SOURCE-PLAN.md`, `../STATE.md` and
-`../research/TRANSFORM-MATCH-ACTIVE-PROPERTIES-SAMPLING.md`; do not repeat the
-accepted Properties observation or canonical baseline Save.
+Current stabilization2026-11-09: both Match sections now evaluate the full
+ordered scratch scene excluding only the selected Transform. Two independent
+NEW original4.3.26 suffix actions disprove the prior uniform-prefix policy for
+the tested nonadditive Local/Local graph: all6Offset bits (X=-930) and all
+24endpoints+24runtime scalars (FromX989..990/ToX70..71) match exactly. Full scene
+validation/Physics indexing, precise authored poses, stale/singular rejection,
+cache nonpublication and one history action are retained.
+
+New active Local-source/World-target Offset observation also passes the frozen
+first-target selected-excluded/prefix stage classification and all32bone bits/
+full driver/unrelated primary/48null preservation. One new canonical and one
+independent Offset action close normally/retainedexit0; old zero-mix/LL/suffix
+probes are not repeated. Five fields match frozen f64 bits; the known World
+shear gap remains explicit under the unchanged0.0005 bound. No math changed.
+See [new DATA result](../research/TRANSFORM-MATCH-ACTIVE-LOCAL-WORLD-OFFSET-RESULT-2026-11-09.md)
+and [UI result](../research/TRANSFORM-MATCH-ACTIVE-LOCAL-WORLD-UI-RESULT-2026-11-09.md).
+The unchanged cached native Session passes oneUndoRedo/SaveCloseOpen and all6
+fields within the retained bound (five exact; shear9ULPs). Its new independently
+encoded750-byte source also passes original4.3.26 CLI/79numeric-reference checks
+under unchanged5.1e-6, with five sparse Mix omissions labeled. This does not close
+Properties/World-suffix/additive/Physics/rounding branches.
+
+Shared six-lane finite0..1 capability guards disable both Match actions for
+extended mixes, show a reason and recheck the captured constraint after draft
+flush. Extended Setup values remain exact/editable/savable. Paired reference
+findings and independent branches precede implementation; no original probe
+was replayed. Final123/123 real-Rust UI cases and6/6 actual Windows groups pass,
+including both Match/UndoRedo/native SaveAs/CloseOpen, extended Mix and invalid
+draft/Escape. One newly UI-encoded Properties file is accepted/exported by
+original4.3.26 with observed exit0 and independent90numeric/reference checks.
+
+See [Offset result](../research/TRANSFORM-MATCH-SUFFIX-OFFSET-RESULT-2026-11-08.md),
+[Properties result](../research/TRANSFORM-MATCH-SUFFIX-PROPERTIES-RESULT-2026-11-08.md),
+their paired UI results and [STATE](../STATE.md). These are bounded Local/Local
+results, not general World/additive/Physics/rounding/manual gesture parity.
+The old prefix observations remain historical evidence for their inputs; do not
+repeat accepted actions or baseline Save. Full F308 remains ACTIVE.
 
 Historical endpoint delivery: **all24 Transform fields functional**, Windows448d83ff
 through the unchanged shared launcher.54existing Linux UI cases plus4new pass

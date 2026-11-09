@@ -873,3 +873,88 @@ fn properties_prefix_rejects_unapplied_invalid_transform_physics_and_ik_metadata
         }
     }
 }
+
+#[test]
+fn transform_exclusion_keeps_suffix_order_full_physics_layout_and_atomic_validation() {
+    let data = corpus();
+    let mut project = scene(
+        data["cases"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["name"] == "physics-y-trajectory")
+            .unwrap(),
+    );
+    let mut selected = TransformConstraint::new("selected-match".into(), vec![1], 0);
+    selected.local_source = true;
+    selected.local_target = true;
+    selected.mix[1] = 1.;
+    selected.properties = vec![TransformFrom {
+        property: TransformProperty::X,
+        offset: 0.,
+        to: vec![TransformTo {
+            property: TransformProperty::X,
+            offset: 100.,
+            max: 101.,
+            scale: 1.,
+        }],
+    }];
+    let mut suffix = selected.clone();
+    suffix.name = "suffix-after-physics".into();
+    suffix.mix[1] = 0.5;
+    suffix.properties[0].to[0].offset = 200.;
+    suffix.properties[0].to[0].max = 201.;
+    project
+        .constraints
+        .insert(0, Constraint::Transform(selected));
+    project.constraints.push(Constraint::Transform(suffix));
+    let mut state = PhysicsState::default();
+    evaluate(&project, None, &mut state, StepMode::Reset { time: 0. }).unwrap();
+    evaluate(&project, None, &mut state, StepMode::Update { time: 0.25 }).unwrap();
+    let before = state.clone();
+    let matched =
+        evaluate_excluding_transform(&project, None, &mut state, StepMode::Pose, 0).unwrap();
+    let expected_x =
+        (f64::from(project.rig.bones[0].x) + 200. + f64::from(project.rig.bones[1].x)) * 0.5;
+    assert_eq!(matched.bones[1].applied.x, expected_x);
+    assert_eq!(
+        state, before,
+        "the intervening Physics uses its original indexed state"
+    );
+    let full = evaluate(&project, None, &mut state, StepMode::Pose).unwrap();
+    assert_ne!(full.bones[1].applied.x, matched.bones[1].applied.x);
+    assert_eq!(matched.bones[1].applied.y, full.bones[1].applied.y);
+    for invalid in [1, project.constraints.len(), usize::MAX] {
+        assert_eq!(
+            evaluate_excluding_transform(&project, None, &mut state, StepMode::Pose, invalid),
+            Err(SolveError::InvalidConstraint)
+        );
+        assert_eq!(state, before);
+    }
+    let mut malformed = project.clone();
+    let Constraint::Transform(skipped) = &mut malformed.constraints[0] else {
+        unreachable!()
+    };
+    skipped.source = usize::MAX;
+    assert_eq!(
+        evaluate_excluding_transform(&malformed, None, &mut state, StepMode::Pose, 0),
+        Err(SolveError::InvalidConstraint)
+    );
+    assert_eq!(
+        state, before,
+        "excluded records still receive full validation"
+    );
+    let mut malformed = project;
+    let Constraint::Transform(suffix) = malformed.constraints.last_mut().unwrap() else {
+        unreachable!()
+    };
+    suffix.offsets[1] = f32::NAN;
+    assert_eq!(
+        evaluate_excluding_transform(&malformed, None, &mut state, StepMode::Pose, 0),
+        Err(SolveError::InvalidConstraint)
+    );
+    assert_eq!(
+        state, before,
+        "invalid suffix cannot partially publish Physics"
+    );
+}

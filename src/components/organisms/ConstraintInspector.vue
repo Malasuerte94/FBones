@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import {computed,ref,watch} from 'vue';
+import {computed,ref,watch,useId} from 'vue';
 import {useI18n} from 'vue-i18n';
 import {useWorkspace} from '../../stores/workspace';
 import {useSceneFieldEditor} from '../../composables/useSceneFieldEditor';
 import type {ConstraintView,ConstraintInput,TransformChannels,PhysicsConstraintInput} from '../../domain/project';
 import type {SceneFieldValue} from '../../domain/sceneFields';
 import {canTargetIk,orderedIkMembers} from '../../domain/constraintSelection';
-import {retainedTransformMembers} from '../../domain/transformMapping';
+import {canMatchTransform,retainedTransformMembers} from '../../domain/transformMapping';
 import TransformMappingEditor from './TransformMappingEditor.vue';
 import AppButton from '../atoms/AppButton.vue';
 import AppIcon from '../atoms/AppIcon.vue';
@@ -17,6 +17,8 @@ const w=useWorkspace(),{t,te}=useI18n(),animate=computed(()=>w.editorMode==='ani
 const batch=computed(()=>props.constraintId===undefined&&w.selectedConstraintIds.length>1);
 const batchKey=computed(()=>`${w.project?.documentId}:${w.selectedConstraintIds.join(',')}`);
 const matching=ref(false);
+const matchSupportId=useId(),matchSupported=computed(()=>constraint.value?.type==='transform'&&canMatchTransform(constraint.value));
+const matchHint=computed(()=>t(matchSupported.value?'matchTransformHint':'matchTransformMixUnsupported'));
 const animationText=(key:string,fallback:string)=>te('animation_'+key)?t('animation_'+key):fallback;
 const animationElapsed=computed(()=>Number.isFinite(w.animationPhysicsTime)?`${Math.max(0,w.animationPhysicsTime).toFixed(3)} s`:'—');
 async function match(section:'offsets'|'properties',id=constraint.value?.id){
@@ -104,9 +106,10 @@ function global(field:typeof physicsDynamic[number],event:Event){const c=constra
    </template>
    <template v-else>
     <div class="grid grid-cols-2 gap-1 text-[11px]"><label v-for="key in (['localSource','localTarget','additive','clamp'] as const)" :key="key" class="flex items-center gap-1"><input :disabled="w.busy||animate" type="checkbox" :checked="constraint[key]" @change="boolean(key,$event)"/>{{t(key)}}</label></div>
-    <fieldset :disabled="animate"><details><summary class="mb-2 text-xs text-muted"><span class="inline-flex w-[calc(100%-1rem)] items-center justify-between gap-2"><span>{{t('constraintOffsets')}}</span><AppButton type="button" :disabled="animate||!w.canEdit||w.busy||matching" :aria-label="t('matchTransformOffsets')" :title="t('matchTransformHint')" data-testid="transform-match-offsets" @pointerdown.prevent @click.stop.prevent="match('offsets')">{{t('match')}}</AppButton></span></summary><div class="space-y-1" data-testid="transform-offset-controls"><div v-for="row in offsetRows" :key="row[0]!.index" class="grid grid-cols-2 gap-1"><template v-for="cell in row" :key="cell.index"><label v-if="cell.visible" class="min-w-0 text-[10px] text-muted" :class="{'col-span-2':row.length===1}">{{t('channel_'+cell.channel)}}<input :disabled="w.busy||animate" v-model="editor.draft[`offset:${cell.index}`]" :data-testid="`transform-offset-${cell.index}`" type="number" step="any" class="editor-input mt-1 w-full min-w-0" @change="editor.commit(`offset:${cell.index}`)" @keydown.enter.prevent="editor.enter($event,`offset:${cell.index}`)" @keydown.esc.prevent="editor.escape"/></label><span v-else class="h-6 self-end border border-line bg-shell/40" aria-hidden="true" :data-testid="`transform-offset-gap-${cell.index}`"/></template></div><p v-if="!offsetRows.length" class="text-[10px] text-muted">{{t('noMappedChannels')}}</p></div></details></fieldset>
+    <fieldset :disabled="animate"><details><summary class="mb-2 text-xs text-muted"><span class="inline-flex w-[calc(100%-1rem)] items-center justify-between gap-2"><span>{{t('constraintOffsets')}}</span><AppButton type="button" :disabled="animate||!w.canEdit||w.busy||matching||!matchSupported" :aria-label="t('matchTransformOffsets')" :title="matchHint" :aria-describedby="!animate&&!matchSupported?matchSupportId:undefined" data-testid="transform-match-offsets" @pointerdown.prevent @click.stop.prevent="match('offsets')">{{t('match')}}</AppButton></span></summary><div class="space-y-1" data-testid="transform-offset-controls"><div v-for="row in offsetRows" :key="row[0]!.index" class="grid grid-cols-2 gap-1"><template v-for="cell in row" :key="cell.index"><label v-if="cell.visible" class="min-w-0 text-[10px] text-muted" :class="{'col-span-2':row.length===1}">{{t('channel_'+cell.channel)}}<input :disabled="w.busy||animate" v-model="editor.draft[`offset:${cell.index}`]" :data-testid="`transform-offset-${cell.index}`" type="number" step="any" class="editor-input mt-1 w-full min-w-0" @change="editor.commit(`offset:${cell.index}`)" @keydown.enter.prevent="editor.enter($event,`offset:${cell.index}`)" @keydown.esc.prevent="editor.escape"/></label><span v-else class="h-6 self-end border border-line bg-shell/40" aria-hidden="true" :data-testid="`transform-offset-gap-${cell.index}`"/></template></div><p v-if="!offsetRows.length" class="text-[10px] text-muted">{{t('noMappedChannels')}}</p></div></details></fieldset>
+    <p v-if="!animate&&!matchSupported" :id="matchSupportId" class="text-[10px] leading-4 text-muted" data-testid="transform-match-unavailable">{{t('matchTransformMixUnsupported')}}</p>
     <details open><summary class="mb-2 text-xs text-muted">{{t('constraintMixes')}}</summary><div class="space-y-1" data-testid="transform-mix-controls"><div v-for="row in mixRows" :key="row[0]!.index" class="grid grid-cols-2 gap-1"><template v-for="cell in row" :key="cell.index"><div v-if="cell.visible" class="numeric-slider-stack min-w-0" :class="{'col-span-2':row.length===1}"><NumericSliderRow v-model="editor.draft[`mix:${cell.index}`]!" :label="`${t('channel_'+cell.channel)} %`" :test-id="`transform-mix-${cell.index}`" :context-key="fieldContext" :min="0" :max="100" :tone="physicsColor[cell.channel]??'danger'" :icon="cell.channel==='shearY'?'shearX':cell.channel==='scaleY'?'scaleX':cell.channel" :disabled="!w.canEdit||(w.busy&&!w.editing)" :locked="w.busy" @commit="editor.commit(`mix:${cell.index}`)" @cancel="cancelSlider(`mix:${cell.index}`)"/></div><span v-else class="h-6 self-end border border-line bg-shell/40" aria-hidden="true" :data-testid="`transform-mix-gap-${cell.index}`"/></template></div><p v-if="!mixRows.length" class="text-[10px] text-muted">{{t('noMappedChannels')}}</p></div></details>
-    <fieldset :disabled="w.busy||animate"><TransformMappingEditor :constraint-id="constraint.id" :matching="matching" @match="id=>match('properties',id)"/></fieldset>
+    <fieldset :disabled="w.busy||animate"><TransformMappingEditor :constraint-id="constraint.id" :matching="matching" :match-description-id="animate?undefined:matchSupportId" @match="id=>match('properties',id)"/></fieldset>
    </template>
    <AppButton v-if="animate&&constraint.type!=='physics'" class="w-full" :disabled="w.busy||!w.activeAnimation" data-testid="constraint-animation-key" @click="insertAnimationKey()"><AppIcon name="key" class="!size-3"/>Key {{t('constraint_'+constraint.type)}}</AppButton>
    <p class="text-[10px] leading-4 text-muted">{{t('constraintEvaluationNotice')}}</p>

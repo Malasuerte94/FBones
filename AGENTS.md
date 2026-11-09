@@ -22,9 +22,11 @@ archives are evidence for lookup, not an additional procedural checklist.
 
 Roadmap: lifecycle → bones → images → meshes → weights/binding → timeline →
 constraints/physics → full compatibility → additional tools. Latest user steering
-accepts current Physics/meshes, defers remaining F307/F308 fidelity research as
-pending, and prioritizes Animate/timeline/keyframes now. Do not restart the
-remaining Match/Physics probes unless needed for animation or requested.
+resumes F307/F308: finish and stabilize existing Physics and both Transform Match
+actions before adding new features. Preserve existing Animate work and verify its
+integration with these fixes. Skins move to the end. Historical Physics/Match
+deferrals are superseded; reuse accepted evidence and resume only unanswered
+discriminating probes, never completed batches or unchanged failed tool routes.
 
 Animation UI must follow the supplied `animare/` screenshots very closely:
 Spine-like panel placement, density, Graph/Dopesheet, toolbar, tracks/ruler,
@@ -183,12 +185,15 @@ these, avoid unchanged retries or guessed object offsets. STATE links evidence.
   Serialize checkpoint/freeze leases; canceled replies cannot resurrect holds.
 - Transform endpoints preserve exact nullable f32 bits, unrelated rows and source/
   target order. Metadata never authors runtime caches; runtime diagnostics remain
-  read-only. Both Match actions sample the ordered prefix on precise cached authored
-  poses and scratch Physics; active Local/Local references prove48 Properties
+  read-only. Both Match actions use precise cached authored poses and scratch
+  Physics; active Local/Local references prove48 Properties
   scalars and6 Offset scalars. Preserve
   None mode, pending-field flush, atomic stale/singular rejection and one history
-  action. Broader suffix/space/additive/Physics sampling and clear/equal/conflict
-  choices remain labeled until measured in the original.
+  action. New independent suffix Offset/Properties observations prove sampling
+  all constraints except the selected Transform for their Local/Local graph;
+  implement that correction without changing cached Physics. Broader spaces,
+  additive/Physics sampling and clear/equal/conflict choices remain labeled
+  until measured in the original.
 
 ## Verification, delivery and launch
 

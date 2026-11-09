@@ -1,0 +1,357 @@
+{
+  "schema": "fbones-own-transform-suffix-offset-reference-v1",
+  "referenceVersion": "4.3.26",
+  "provenance": "One isolated original Offset Match+Save on our four-bone/three-constraint suffix graph; all six actual saved offset bits independently checked. Semantic own recipe/results only, no proprietary binary/code/asset/private path.",
+  "sceneReference": "transform-match-active-properties-reference.json",
+  "selectedConstraint": "active-sampling-match",
+  "suffix": {
+    "cloneConstraintIndex": 0,
+    "name": "suffix-drive-source-x",
+    "destinationXOffset": 989.0,
+    "destinationXMax": 990.0
+  },
+  "constraintEvaluationOrder": [
+    "drive-source-x",
+    "active-sampling-match",
+    "suffix-drive-source-x"
+  ],
+  "expectedOffsetF32Bits": [
+    3261071360,
+    3295182848,
+    1109917696,
+    3197737372,
+    1056964606,
+    3252682752
+  ],
+  "expectedOffsetValues": [
+    -56.0,
+    -930.0,
+    42.0,
+    -0.30000007152557373,
+    0.4999999403953552,
+    -28.0
+  ],
+  "fieldOrder": [
+    "rotate",
+    "x",
+    "y",
+    "scaleX",
+    "scaleY",
+    "shearY"
+  ],
+  "all32AuthoredBoneBitsAndUnrelatedFieldsPreserved": true,
+  "samplingLimit": "Offset only, nonadditive Local/Local, preceding and suffix Transforms. All-except-selected matches all six bits; Properties suffix and broader World/additive/Physics/time remain unmeasured.",
+  "bones": [
+    {
+      "name": "root",
+      "length": 0.0,
+      "x": 11.0,
+      "y": -9.0,
+      "rotation": 23.0,
+      "scaleX": -1.2999999523162842,
+      "scaleY": 0.800000011920929,
+      "shearX": 7.0,
+      "shearY": -12.0
+    },
+    {
+      "name": "source",
+      "length": 35.0,
+      "x": 13.0,
+      "y": -7.0,
+      "rotation": 31.0,
+      "scaleX": 1.2000000476837158,
+      "scaleY": 0.800000011920929,
+      "shearX": 0.0,
+      "shearY": 17.0,
+      "parent": "root"
+    },
+    {
+      "name": "firstTarget",
+      "length": 45.0,
+      "x": 70.0,
+      "y": 35.0,
+      "rotation": -25.0,
+      "scaleX": 0.8999999761581421,
+      "scaleY": 1.2999999523162842,
+      "shearX": 0.0,
+      "shearY": -11.0,
+      "parent": "root"
+    },
+    {
+      "name": "secondTarget",
+      "length": 30.0,
+      "x": -40.0,
+      "y": 15.0,
+      "rotation": 80.0,
+      "scaleX": 1.5,
+      "scaleY": 0.6000000238418579,
+      "shearX": 0.0,
+      "shearY": 9.0,
+      "parent": "root"
+    }
+  ],
+  "constraintsBefore": [
+    {
+      "name": "drive-source-x",
+      "source": "root",
+      "bones": [
+        "source"
+      ],
+      "localSource": true,
+      "localTarget": true,
+      "additive": false,
+      "clamp": false,
+      "offsets": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mix": [
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "properties": [
+        {
+          "property": "x",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "x",
+              "offset": 39.0,
+              "max": 40.0,
+              "scale": 1.0
+            }
+          ]
+        }
+      ],
+      "rangeCache": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "name": "active-sampling-match",
+      "source": "source",
+      "bones": [
+        "firstTarget",
+        "secondTarget"
+      ],
+      "localSource": true,
+      "localTarget": true,
+      "additive": false,
+      "clamp": false,
+      "offsets": [
+        7.0,
+        11.0,
+        -13.0,
+        0.20000000298023224,
+        -0.10000000149011612,
+        19.0
+      ],
+      "mix": [
+        0.0,
+        0.5,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "properties": [
+        {
+          "property": "rotate",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "rotate",
+              "offset": 0.0,
+              "max": 1.0,
+              "scale": 1.0
+            }
+          ]
+        },
+        {
+          "property": "scaleX",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "scaleX",
+              "offset": 0.0,
+              "max": 1.0,
+              "scale": 1.0
+            }
+          ]
+        },
+        {
+          "property": "scaleY",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "scaleY",
+              "offset": 0.0,
+              "max": 1.0,
+              "scale": 1.0
+            }
+          ]
+        },
+        {
+          "property": "shearY",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "shearY",
+              "offset": 0.0,
+              "max": 1.0,
+              "scale": 1.0
+            }
+          ]
+        },
+        {
+          "property": "x",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "x",
+              "offset": 0.0,
+              "max": 1.0,
+              "scale": 1.0
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "y",
+              "offset": 0.0,
+              "max": 1.0,
+              "scale": 1.0
+            }
+          ]
+        }
+      ],
+      "rangeCache": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "name": "suffix-drive-source-x",
+      "source": "root",
+      "bones": [
+        "source"
+      ],
+      "localSource": true,
+      "localTarget": true,
+      "additive": false,
+      "clamp": false,
+      "offsets": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mix": [
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "properties": [
+        {
+          "property": "x",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "x",
+              "offset": 989.0,
+              "max": 990.0,
+              "scale": 1.0
+            }
+          ]
+        }
+      ],
+      "rangeCache": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  ]
+}

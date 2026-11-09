@@ -1,295 +1,361 @@
-# Current state — 2026-11-08
+# Current state — 2026-11-09
 
 ## Active goal and priorities
 
-Implemented for app0.9.5: signed release updates, distinctIK/Transform/Physics
-icons, Ctrl/Cmd/Shift constraint cohorts and atomic shared-field edits. Paired
-[DATA](research/CONSTRAINT-MULTIEDIT-UPDATER-DATA-GATE-2026-11-08.md)/
-[UI](research/CONSTRAINT-MULTISELECT-UPDATER-UI-GATE-2026-11-08.md) gates reuse
-accepted4.3.26 evidence; original multi-edit gesture parity remains unknown.
-F307/F308 deferred fidelity research stays pending.
+Latest user steering: finish and stabilize existing Physics (F307) and both
+Transform Match actions (F308) before adding new features. Skins move to the end.
+The historical F307/F308 deferral is superseded. Preserve existing Animate work;
+this pass fixes established behavior rather than expanding timeline/runtime scope.
+Current Physics research uses three subagents for DATA, UI/ownership and tooling;
+root integrates and alone operates Windows/reference processes. Actual capacity
+is four agents total, despite the latest request for ten. No global settings
+changed. The accepted0.9.5 delivery is retained. The user now authorizes push and release
+of the accumulated stabilization. Release metadata/visible label move to0.9.6
+for the updater; no new solver, clock or numeric-bound change is introduced.
 
-Shared Setup fields cover homogeneous Physics/IK/Transform groups; mixed types,
-identity/references/order/Match/delete are guarded. Supported Animate fields use
-working drafts or one combined key action. FrozenIDs/revision, rawf32/signedzero/
-nullable rotation, unrelated fields and singleUndo/Redo/persistence are covered.
-Native7batch tests,5composable tests and3realSession browser cases pass. Canonical
-payload caching preserves bit-sensitive no-op/dirty equality without per-frame
-encoding. One strictmap-only signed-bits decoder fixes Serde's sequence acceptance.
+## Current release publication
 
-Updater uses pinnedTauri2.12.5/build2.7.4/CLI2.12.4/plugin2.14.1, strictHTTPS,
-authenticated package+version signatures and separate installer routes. Startup
-checks/background downloads are optional; restart is explicit and guarded by
-Save/Discard/Cancel plus native clean-revision mutex. Local immutable/workspace
-builds cannot replace themselves. Earlier0.9.4 needs the first updater-enabled
-installer once. [Policy](UPDATES.md) explains publication and version increments.
-Private durable signing identity is provisioned owner-only and Actions secret set;
-never print/publish/delete the private identity. Only its public key enters source.
-GenuineCLI signatures pass independentNode and pinnedRustminisign verification;
-wrong announcedversion and8tamper/key/framing cases reject. Native6updater boundary
-cases plus the Session guard pass. Frontend13controller/6actualPinia lifecycle and
-3browser updater cases pass; no OS installed-app upgrade claim follows from these.
+The requested release is v0.9.6-beta.1/application0.9.6, retaining runtime
+0.1.0-beta.1. Published Latest is still v0.9.5-beta.2/application0.9.5 at
+preparation. A higher installed version is required by the signed-updater gate;
+the old54e27667 executable stays0.9.5 and is not relabeled. The new release
+must build installers in CI from its own exact commit, retaining all existing
+platform/UI/runtime/source/signature/version gates and native-install limits.
 
-Current local integration passes:120/120production-CSP UI in177.55seconds with no
-skip/failure/retry;442JavaScript pass/one existingPhysics skip;340desktopnative/
+Paired DATA/UI release audits confirm allowlisted source publication only,
+no original/private assets, honest Physics/shear limits and no repeated original
+probe. Workspace .git is an empty placeholder; the fresh public snapshot will
+retain remote main500f710d as its parent instead of initializing this workspace
+or overwriting old checkouts. Source/tag atomic push and the existing gated
+workflow own publication. Tests already pass for release policy7, signed release2,
+version guard4, locked offline Cargo metadata, live0.9.5→0.9.6 version comparison,
+JavaScript suite, frontend typecheck/build and README content/integrity. New
+exact-tag hosted checks/assets are not yet observed. Next: verify the reviewed
+snapshot diff, commit/tag, push, wait for CI and independently verify publication.
+
+## New exact4.3.26 observations
+
+Paired [DATA](research/PHYSICS-MATCH-STABILIZATION-DATA-GATE-2026-11-08.md)/
+[UI](research/PHYSICS-TRANSFORM-STABILIZATION-UI-GATE-2026-11-08.md) audits first
+reused accepted evidence. The existing four-bone/three-Transform canonical source
+2d78523c was reused without repeating its original Save. Two independent fresh
+forks then received exactly ONE Match and ONE Save each:
+
+- [Offset DATA](research/TRANSFORM-MATCH-SUFFIX-OFFSET-RESULT-2026-11-08.md)/
+  [UI](research/TRANSFORM-MATCH-SUFFIX-OFFSET-UI-RESULT-2026-11-09.md): original
+  X=-930 versus old prefix20, full-frame-934.5, hybrid15.5 or authored57.
+  All six Offset bits match all-except-selected/first ordered target exactly.
+  Before2d78523c; afterd2df4adf.32authored bone-channel bits, both drivers,
+  primary unrelated fields and72nullable cells are preserved.
+- [Properties DATA](research/TRANSFORM-MATCH-SUFFIX-PROPERTIES-RESULT-2026-11-08.md)/
+  [UI](research/TRANSFORM-MATCH-SUFFIX-PROPERTIES-UI-RESULT-2026-11-09.md): original
+  FromX989..990/ToX70..71; all24endpoints+24runtime scalars match the same model
+  bit-exact, independently from Offset. Before2d78523c; aftere71757f1. All six
+  offsets, bone fields, other constraints, flags, mixes and references remain.
+
+These observations falsify the old uniform prefix policy for this Local/Local,
+nonadditive graph. They do not establish proprietary scheduling or general
+World/additive/Physics/rounding parity. The correction must retain full scene
+validation/layout/Physics indices and skip only the selected Transform in a
+scratch evaluation, without publishing/advancing cached Physics or its clock.
+
+Both owned original instances closed normally with bound retained-handle exit0:
+Offset92376/start2026-11-08T21:56:43.2409149Z and
+Properties99036/start2026-11-08T22:05:03.8751852Z. These are closed historical
+identities, never reusable authorization. Private raw captures, saved stages,
+classifiers, gates and terminal receipts remain under
+.local/research/stabilization-2026-11-08/{suffix-offset-1,suffix-properties-1}.
+No personal original/project/window was operated. Current process isolation is
+always rechecked rather than inferred from these receipts.
+
+The new [active Local/World Offset DATA result](research/TRANSFORM-MATCH-ACTIVE-LOCAL-WORLD-OFFSET-RESULT-2026-11-09.md)/
+[UI result](research/TRANSFORM-MATCH-ACTIVE-LOCAL-WORLD-UI-RESULT-2026-11-09.md)
+changes only primary targetLocal true→false in the accepted four-bone/two-
+constraint own recipe. One NEW canonical Save423bf317→60741ccb precedes one
+independent Offset Match+Save60741ccb→258c48f9; no accepted zero-mix/LL/suffix
+batch repeated. Frozen23-input checker selects first ordered target and the
+selected-excluded/prefix equivalence group: X=-123.1509628296 versus authored
+-86.15096 or complete-frame-56.07548. All32bone bits, complete driver, unrelated
+primary fields, order and48nulls remain exact. Five frozen f64 fields match bits;
+shear differs0.00006103515625 under unchanged0.0005 classification bound.
+Current Rust-formula translation also matches five fields but shear differs
+0.00006866455078125/9ULPs; that translation is not native execution. No rounding
+fit or math change follows. The graph has no suffix/Physics: it cannot establish
+World suffix scheduling, Properties or general-space parity. Both new owned
+originals85528/start10:41:08.0504102Z and85828/start10:43:18.9149080Z close
+normally with retained exit0/unchanged gates/source. Raw current captures,
+before/after/proofs/terminals remain in the ignored active-local-world-ui-v1 run;
+local aggregate checkpoint `analysis/transform-match-active-local-world-check.json`
+(private/ignored; the linked public DATA/UI findings carry the sanitized result)
+and sanitized own semantic reference retain reproducibility without raw binaries.
+
+## Product integration and current verification
+
+Both native Match sections now use full ordered selected exclusion. The entire
+scene remains validated with unchanged indexed scratch Physics, exact authored
+values, None/Pose, stale/singular rejection, cache nonpublication and one history
+action. Own6Offset/48Properties fixtures and regressions are integrated.
+
+Both Match buttons and explicit-ID workspace actions share a six-lane finite
+0..1 capability guard after pending-field flush. A visible EN/RO reason explains
+extended mixes; extended authored values remain exact/editable/savable. Hidden
+lanes and dedicated-view identity are tested. Animate accessibility descriptions
+reference visible Setup reasons only.
+
+Current checks:443JavaScript pass/oneexistingPhysics skip,343desktopnative/
 2existingignored,102legacy/1existingignored,16defaultformat/103Sceneformat,
-7researchtests; runtime16package/24nativeexport samples. TypeScript/UItypes,
-web/runtimebuilds, nativecheck, strictClippy andrustfmt pass. Releasepolicy7,
-signedassembly2/versiongate4 andrealcrypto checks pass. NewTLS dependency requires
-MSVCClang/llvm-lib for crossbuild; builder supports explicit validatedtoolpaths
-and correctly documents sharedClang resource preprocessing. Own cached tools work.
+strictClippy/check/rustfmt, finalwebbuild and realRusthost pass. Runtime16package/
+24nativeexport samples pass. Focused21/21UI passes, including exact saved Match
+bits and live/Off/lease/history/native-session binary SaveCloseOpen. Independent
+raw UI-before/after projections match both actual original graphs exactly;
+reports ui-{offset,properties}-independent-data.json remain under the current
+private run folder.
 
-FinalWindows0.9.5 image94293013 passes4owned native groups: actualHelp menu/custom
-commands report local-copy unsupported, nativeOSOpen ofown5Physicsfixture,
-Ctrl/Shift selection+gravity-only one-revision edit/Undo/Redo, nativeSaveAs and
-Close/Open exact authored records. Clean normal close confirmed; user/original
-windows untouched. This proves the named own image, not installed-app upgrading.
-[Current checkpoint](../analysis/constraint-updater-check.json) owns raw receipts.
+ONE newly UI-encoded Properties sourcee368fee8 now also passed original4.3.26
+CLI53180/start2026-11-08T22:18:47.7462282Z, observed terminalexit0/Complete,
+bounded completed streams and unchanged source/copy. Independent90numeric/
+reference checks pass (61explicit/29labeleddefaults, max1.19e-7 under unchanged
+5.1e-6);10sparse unmappedMix omissions remain unrepresented. Raw48scalar proof
+is separate from runtimeJSON. Private original-ui-export and
+ui-original-export-independent-data.json own that new single-source acceptance.
 
-Normalcurrent94293013Windows0.9.5 launch passed frontend/WebGL/visible/version/
-no-debugger checks; new53988window ownership transferred to user and protected.
-Sharedbootstrap unchanged; rootmanifest/pointer select the tested immutable image.
-OwnQA normallyclosed, profile removed. Initialcleanup recovered205,806,219bytes from
-ownobsolete firstcandidate, obsoleteTauri2.11.5 compiler artifacts, duplicateQAimage
-and profile. Currentprofiles/dependencies/citedevidence and signingidentity retained.
+First fullUI run:122pass/1failure/0skip/retry. The failure compared f64frame29.88
+against its f32key29.8799991607666 near the next frame30; correct interpolation
+exceeded the test's fixed.0002 cross-time comparison by9.8e-6. Independent DATA/
+UI reproduced native output exactly; no evaluator defect was established.
+[Paired clock finding](research/ANIMATION-PHYSICS-TEST-CLOCK-GATE-2026-11-09.md)
+precedes a deterministic pause-before-Play/fixed250ms test-clock correction.
+All numeric bounds/epoch/history/nonbake assertions remain; focused3/3 passes.
+The final full123-case run passes123/123 with zero failure/skip/flaky/retry
+in244.913seconds. Its final JSON/log remain in the current private run. First
+failed trace/context/results are retained in ui-full-first-artifacts and ui-full-first-results.json, not
+shared Playwright output that subsequent runs replace.
 
-Initialtagdc15a34/v0.9.5-beta.1 publication was withheld: macOS signedassembly
-negatives exposed a CLIentrypath alias gap (/var versus canonicalmodulepath).
-OwnLinuxsymlink reproduction exited0without verifying. PairedDATA/package gates
-preceded correction: realpathbothentrypaths and requireexactsuccessreceipt, with
-actualCLIalias/junction badargs/valid/tamper/version tests in normal/preserved-main
-modes. Correctedcrypto/CLI/signedassembly/policy tests pass. This packaging-only
-change leaves the tested editor image unchanged. Bothfirsttag/mainCIruns canceled;
-no releasepublished and beta1tagremains immutable. Candidate isv0.9.5-beta.2,
-app0.9.5 unchanged because no0.9.5 updater package was published.
+## Accepted local Windows stabilization build
 
-PublishedLatestv0.9.5-beta.2 at1913f20e477caa73b6a5e08441661ba04332760b,
-release438536371 on2026-11-08T21:32:57Z. Tag42524571053 andmain42524571125 both
-passed; all3platforms, hosted120/120UI(9.9minutes),runtime16+24samples andall
-signature/assembly/versiongates pass. All16downloaded GitHubdigests,15checksums,
-3sourcecommitreports/4signedpayloads/5bundlemanifestentries,711sourcefiles+manifest
-and32runtimefiles pass. Published40,803-byte runtime exactly matches localoffline
-packageSHA2565f8e171bff34384e7219e8adfe345ea49e92632962bf1965b95b644d49954544.
-Independent pinnedRustminisign verifies all4actualpublishedpayloads+signedversions.
-ExactLatestHTTPSendpoint matches downloadedmanifest0.9.5 andLatestAPIresolvesbeta2.
-The realversiongate now correctly rejects anotherapp0.9.5 publication.
+Current immutable0.9.5 image is
+54e27667a55738fbbb524488b2a238010c6d2a5c7b2ff91788677314a8c80503 under
+WINDOWS_TEST/builds. The shared manifest/current pointer now select it through
+the unchanged stable root bootstrap. It is a local working-copy delivery, not
+a new public release or commit claim. The retained255-file product snapshot belongs to that0.9.5 image;
+release-only version/visible-label metadata now differ from the working tree; digest42c5b169fb0073f30c07fa26ae7e786c16cfc603a6d607c41aad013370749379.
 
-Requested implementation/delivery is complete within the stated supportedprofile.
-Remaining acceptance: controlledactualinstalled-app upgrade onWindows/Linux/macOS
-when the first genuinely higherappversion is published; no suchOSupgrade is claimed.
-Firstinstalled0.9.5package is required forolder0.9.4/workspacecopies. NativeOS
-publisher signing/notarization andfullSpine/runtimeparity remainoutside this result.
-Keep protected53988userwindow andallpersonal/originalinstances untouched.
+Final own Windows QA passes6/6 groups: native OS Open, both independent Match
+branches with exact6+48scalars and UndoRedo, native SaveAs/CloseOpen, extended
+Mix flush/guard/persistence and explicit normalization/invaliddraft/Escape.
+Seven native dialogs have exact filename native+UIA readback before one post,
+then actual path/raw binary checks. Independent DATA verifies all saved graphs
+against actual original outputs and unchanged authored bones/drivers; normalized
+final save is byte-identical to the Properties save. UI review independently
+confirms the receipts/DOM assertions and screenshots. Own QA30068/start
+2026-11-08T22:43:38.5738007Z closed normally/clean, no forced termination.
+Its identity is historical, never authorization for another process. Raw reports
+live in windows-qa-v2/{resume-result,closed}.json and
+windows-final-independent-data.json in the current private run.
 
-Finalcleanup removed approximately226MB ofownobsoleteTauri/compiler/candidate/QA
-andone-offverificationoutputs, preservingconciseevidence/currentdeliveries andthe
-durableprivate signingidentity. Finalfree:827GiBLinux/88,539,729,920bytesWindowsC;
-7.4GiBdebugdependencies retained forcurrentprofiles/uncertainhistoricalownership.
-Nextreproducibleaction forfutureupdateracceptance: installpublicbeta2 in a dedicated
-owninstallation, publish agenuinelyhigher appversion through thesamegates, and
-observe check/download/SaveCancel/install/relaunch while protectinguserinstances.
-Do not republishbeta2 or restart deferredF307/F308probes.
+Earlier QA and initial V2 Open failures remain separately passed:false. The
+first helper selected an ambiguous filename Edit without readback and saved
+only OUR generated input at its source path. Its modified file was archived;
+only after normal close was that copy restored from unchanged own source.spine.
+A data-free dialog toy proved a unique modern Save filename binding/readback.
+V2 then discovered a distinct classic Open shape before any input. Reviewed
+Open-only1148/label1090 support resumed that pending dialog once; modern Save
+keeps its FileNameControlHost1001 path. No completed Match or frozen baseline
+was replayed. No product SaveAs defect was established; these were harness
+corrections with failed evidence preserved. The two own temporary QA profiles
+are removed after normal-close and fresh image/profile inactivity checks.
 
-The latest user clarified the exact target: the repository RIGHT sidebar
-Releases card, rather than README/release-body Download tables. This is fixed
-and directly verified on the live repository. Existing beta6 release438467646
-was changed from GitHub prerelease=true to prerelease=false and make_latest=true.
-The Beta/Early beta title, product limits, immutable tag57ee1f26 and all10asset
-IDs/names/digests are unchanged. GitHub's category does not claim stable quality.
+Native evidence is targeted own WebView2 plus actual OS pickers/lifecycle,
+not physical global-mouse routing, original gesture parity, Physics phase,
+macOS or installed-app upgrade. Existing protected user53988/image94293013 and
+all other personal/mascot/editor windows remain untouched. The old immutable
+image/manifest are preserved.
 
-GET releases/latest now resolves to beta6. Anonymous Chrome1440×1000 confirms
-the actual right-hand Releases section shows the beta6 card, green Latest badge
-and correct release URL. Private evidence: .local/public-beta/beta6-sidebar/
-after.json and after.png. The before browser capture caught a loading skeleton;
-before absence is supported by the user's report and live latest404, not that
-incomplete capture. Paired installer DATA/UI gate appendices record the latest
-instruction overriding the prior retain-prerelease policy before mutation.
+## Current Physics research: own-memory capability proved
 
-Future workflow publication now uses --prerelease=false --latest under the same
-platform/UI/runtime/archive gates. No new tag, asset rebuild/reupload or installer
-execution is needed. Main-only metadata-policy followup42b8eb2 is pushed;
-the already published beta6 tag and downloadable content stay immutable.
+Latest user asks to finish Physics and requests10agents. Actual hard capacity
+is4total, so root coordinates3 parallel DATA/UI/tooling workers. No settings
+were changed to evade that limit. Existing37static/990dynamic original checks
+remain accepted; moving-parent/export phase is still unresolved at unchanged
+3.35184/2.24952step and1.26276ramp residuals. Product solver/clock/bounds are
+unchanged. New DATA algebra reuses308old60/new90 samples: half/full inertia
+outputs are linearly dependent (max.0625residual), and conditional lag inversion
+is ambiguous in173samples. No unique hidden clock follows; zero-delta Update
+cannot supply the finite-limit80-unit correction. No old grid/oracle was rerun.
 
-Prior delivery remains verified: tag42513851453/main42513850954 passed, publishing
-beta6 on2026-11-08T19:26:25Z. Its10downloaded assets comprise4desktop kits,
-runtime/source/3reports/checksums. Every digest,9checksums,4installer/report
-matches, source686blob/archive and runtime31file equality pass. CI7policytests,
-3platform jobs,114/114UI,16runtime checks and24native samples pass. Live desktop/
-narrow Download tables also passed, separately from the new sidebar proof.
-[Current checkpoint](../analysis/public-beta6-check.json) owns the results.
+A materially new passive own-console route now succeeds. V1's image guard
+stopped before any reads; V2 directly proved actualUNC versus requestedW: are
+the same file and read512MiB without errors but exhausted its byte budget, so
+its classfile negative was partial. V3 requested-Xmx64m, measured128MiB via
+standard JNI and refused its strict64MiB prerequisite before own-class loading.
+The reviewed final V4 keeps that request and accepts only the actually observed
+reported128MiB configuration; no heap-flag/value search or original flags.
 
-All255product/runtime/format source files are unchanged from accepted beta5;
-this change affects packaging/retention/publication and download presentation.
-No local app rebuild, new original probe or user-window interaction occurred.
-Native installation of CI packages remains unverified; Windows is unsigned,
-macOS ad-hoc signed without Developer ID/notarization. No installed-app updater,
-npm publication, stable/full-compatibility or new native GUI claim is made.
+V4 created only our own no-agent JNI toy: child65484/startFILETIME
+134386869766486254 and controller53500/start2026-11-09T08:36:16.5438334Z both
+exit0 after hold/Destroy0. Complete collected readable-region coverage is
+421,531,648bytes/419regions in266ms, zero partial/failed reads. Two MEM_PRIVATE
+copies match all1764bytes of the known own class exactly; independent strict
+full parsing and pinned javap pass. Three prefix candidates are distinct: one
+full mismatch and two exact captures; no overlap-duplicate explanation is used.
+This proves natural own classfile-copy retention in requested64/reported128MiB
+runtime only, not a live VM definition, original editor recovery or method order.
+All consumed source/tool/gate pins and failures remain frozen under the private
+physics-phase-sprint-2026-11-09 run. Original/user-window operations are zero.
 
-Beta5 fixes semantic mode/index/authored-f32-delay key no-ops and recursive native
-File/Edit item lookup. Tauri's shallow root lookup missed submenu commands; all
-project capability guards remain. Own native menu QA passes6groups on8f65102a,
-then closed normally; current selected39efc9c1differs only by the Sequence guard.
-Current [publication checkpoint](../analysis/public-beta5-check.json),
-[Sequence DATA](research/SEQUENCE-SETUP-NOOP-DATA-2026-11-08.md), paired
-[release DATA](research/PUBLIC-UPDATE-DATA-GATE-2026-11-08.md)/
-[UI](research/PUBLIC-UPDATE-UI-GATE-2026-11-08.md) and
-[native menu gate](research/NATIVE-FILE-MENU-UI-GATE-2026-11-08.md) own the results.
-Prior candidate evidence remains under its named checkpoint.
+The [own capability result](research/PHYSICS-OWN-MEMORY-CAPABILITY-RESULT-2026-11-09.md)
+owns the versioned failures/positive and evidence limits. The generic static
+prefix framer now passes38groups/all1764truncation cuts; six exact slices also
+pass the frozen independent parser/javap. The controller-local Windows DLL/C#
+bridge passes13actual own-file vectors, exact metadata comparison and executable
+file-identity W:/UNC/same/different controls. No original process is involved.
 
-The prior Animate X/Y/performance/runtime delivery stays implemented and verified;
-full F105/runtime/Spine compatibility remains open. The user clarified that the
-opened mascot came from the Desktop import test; the protected window's earlier
-read-only title observation confirms a loaded document. The user then tested
-that mascot and confirmed runtime export and the other File buttons work. This
-is user-reported command acceptance, not a fresh original-format equivalence
-check. No automation of that user window is authorized. Do not resume unrelated E/B/F/G or user-deferred
-F307/F308 fidelity research.
+[One original-owned metadata scenario](research/PHYSICS-ORIGINAL-SEED-METADATA-PLAN-2026-11-09.md)
+is fully implemented and independently source/ownership/manifest reviewed.
+Its manifest6b5ba5b2d9967e3c281c616f7569b8c50a7ba9f917d704bd2e84c82c8a513417
+binds93relative pins, two checked Linux compiler pins, the Windows ABI proof and
+an unchanged722-byte accepted own Physics fixture plus its own images. It seeks
+only exact Editor/EditorErrors classfile copies, at most512MiB/15seconds,
+4MiB metadata and two1MiB bodies. No Play/Match/export/Save/heap flags/injection.
 
-Historical beta5 selected immutable Windows0.9.4:
-`39efc9c1c8bb370811fe827dc9a0a378fdf6210eb3e2a2efa0a95becb5d03a58`
-(13,301,760bytes), selected by unchanged bootstrap/shortcuts in `WINDOWS_TEST`.
-Fresh normal visible launch90656 reached frontend ready without a debugger port;
-ownership transferred to the user. That new window is protected; do not automate
-or close it. Its receipt is `.local/public-beta5-user-process.json`. The older
-protected mascot window was untouched. Final image differs from the menu-QA
-image only by the Sequence key guard; final-image native gestures were not rerun.
-The earlier WSL launch failure is historical: Windows interop worked this session.
-No user/original project or window was operated. Public beta.2 is unchanged.
+**Original seed scenario is now CONSUMED.** After the user closed the personal
+instance, fresh isolation showed no original; the one reviewed own4.3.26 run
+completed with retained-handle normal close/exit0 and unchanged source/manifest.
+[Result](research/PHYSICS-ORIGINAL-SEED-METADATA-RESULT-2026-11-09.md):0seeds,
+76structural metadata records/13unique generated classes;452,218,889unique bytes
+covered versus1,346,592,768queried,76partial/failed reads. No Editor absence,
+class provenance, method body or Physics caller observation is established.
+Strict postcheck remains FAILED15002ms versus15000ms; no tolerance was changed.
+Independent ownership/raw-accounting/lifecycle checks pass. Never rerun this
+consumed scenario or recover old process identities. Protected user ledgers,
+including .local/physics-2026-11-09-user-process.json, remain immutable historical
+protection evidence; fresh current absence is always required.
 
-[Single checkpoint](../analysis/animation-reliability-check.json),
-[integration and limits](research/ANIMATION-RELIABILITY-INTEGRATION-2026-11-08.md),
-[drag DATA](research/ANIMATION-DRAG-RELEASE-DATA-2026-11-08.md),
-[UI/performance](research/ANIMATION-DRAG-PLAYBACK-UI-GATE-2026-11-08.md) and
-[numeric DATA](research/ANIMATION-NUMERIC-FOCUS-DATA-2026-11-08.md) own this work.
-Accepted earlier format/source evidence remains in the
-[mascot checkpoint](../analysis/mascot-support-check.json) and paired gates.
+The own-only PSS known-file provider is now consumed:46entries, exact reported
+file handle172 once, but name length0. Capture/walk/free/lifecycle succeed;
+controller exits7 on the failed name assertion, child closes normally/exit0.
+Type length10 has unknown content in that first receipt. No original was used.
+[Own metadata result](research/PHYSICS-OWN-FILE-METADATA-RESULT-2026-11-09.md)
+retains all pins, bounded negative and exact46-byte temporary cleanup.
 
-## Current behavior
+The distinct [attribute-only duplicate gate](research/PHYSICS-PSS-DUPLICATE-OWN-FILE-GATE-2026-11-09.md)
+has now passed one actual Windows own-only run and independent DATA/pin checks.
+ONE access128/options0/noninherit duplicate of reported+enumerated handle172
+returns DISK1, exact132-unit NT path and same volume/file ID, then closes locally.
+Raw PSS type is directly observed as File+UTF16NUL; snapshot name remains absent.
+Elapsed15ms; controller51100/child60400 normalexit0, temporary46bytes removed.
+Manifestba0c968b/rootfreezeba8d68ff and all15tool/14relative/threeexternal pins
+match. This is an own metadata capability, not an original class/Physics datum.
+A future original candidate-selection scenario remains separate. Only a new,
+previously uninventoried class/archive path under approved roots would change
+source inspection; known package/JAR/JVM/fixture paths stop the route.
 
-The release jump was a second application of a previewed transform: a measured
-extra26units. Frozen Animate gestures now key against the original native local
-pose and world matrices. Signed X/Y, groups, Rotate/Scale/Shear, Auto Key on/off,
-Escape/stale epochs and single-action history remain covered. Setup is untouched.
+The separate new active Local/World Offset observation and native verification
+are complete. The unchanged cached real Rust Session passes15request/response
+pairs: None/currentepoch-revision Match once, oneUndoRedo, authored preservation,
+SaveCloseOpen and normalEOFexit0. Five actual native fields match original bits;
+shear differs0.00006866455078125/9ULPs under unchanged0.0005. Cached binary0e694ce7
+has the retained83dependency/81historical+twoexplicitcurrent-generated pin chain;
+this is file-level provenance, not embedded source attestation or new GTK/UI QA.
+Independent raw parsing verifies the newly native-encoded750-byte sourcee3ea3e74.
 
-Numeric input keeps exact text in the DOM throughout focus, with an inaccessible,
-noninteractive compact display overlay when unfocused. This preserves selections
-made before focus and fixes replacement text appending to the old precise value.
-A synchronous focus-write attempt was disproved; reuse final evidence, not that
-superseded proposal. Replacement/Enter/Escape/Sequence/Refresh retention pass.
-Central Setup/Animate transform placement and Animate-only Key/Auto Key remain.
+ONE fresh original4.3.26 CLI then accepts that independently encoded copy, own
+85256/start2026-11-09T11:02:58.2249315Z normalexit0 at11:03:04.4619582Z,
+version+Complete/streams complete/source+copy unchanged. Its1237-byte runtimeJSON
+matches79numeric/reference fields (41explicit/38known omitted defaults), maximum
+4.638671867951416e-6 under unchanged5.1e-6. Five sparse unmapped driver Mixes stay
+unrepresented; raw48nulls/FPS are not JSON claims. No Match/rendered-pose parity
+follows from loader acceptance. The new aggregate checkpoint records all receipts.
+No product source, solver, clock or bound changed, and no build was needed.
 
-Playback recomputes only affected constraint subtrees, submits one viewport draw
-per pose instead of two, and caches unchanged timeline metadata/rows/Graph.
-Measured mascot evaluator CPU mean1.010→0.253ms (4.00×); all-bone custom-renderer
-Timeline CPU13.579→1.002ms (13.55×).756complete frames/Physics states and48draft
-samples match exactly, with additional retained solver comparisons. These are
-component CPU measurements, not a whole-app Windows mascot FPS guarantee.
+Offline exact-loader inspection resolves Editor.main lookup as a fallback
+following a Throwable during field registration; actual branch execution and
+primary registration details remain unknown. The ordinary two-argument
+URLClassLoader searches its parent first, so a URL alone does not prove Editor's
+actual byte source. These are static/documented constraints, not observed calls.
+Future recovered references should guide one narrow method question, never a
+blanket decompile. Earlier bundled-Linux/JVMTI/VMStruct/class-buffer/CLI-trace
+negatives remain valid; no unchanged failed route or accepted PNG batch reran.
 
-## Independent runtime preview
+## Previously accepted delivery and profile boundaries
 
-`@fbones/runtime`0.1.0-beta.1 has platform-free Node/browser ESM/types and optional
-PixiJS8 `/pixi` view. It bundles our own code under MIT, no Spine runtime code,
-assets or dependency. Usage/support/limits are in
-[packages/runtime/README.md](../packages/runtime/README.md).
+Published0.9.5-beta.2/1913f20e is the existing public release, separate from this
+locally verified working change. All120hosted/localUI,442JS+oneknownskip,340native/twoignored,
+102legacy/oneignored,16default/103Sceneformat,7research and runtime16+24samples
+belong to that delivery. Full signature/16asset/source/runtime verification,
+release438536371 and CI42524571053/42524571125 are retained in
+[its checkpoint](../analysis/constraint-updater-check.json).
 
-Published installable archive:
-[fbones-runtime-0.1.0-beta.1.tgz](https://github.com/Malasuerte94/FBones/releases/download/v0.9.5-beta.2/fbones-runtime-0.1.0-beta.1.tgz),
-40,803bytes/32files, SHA256
-`5f8e171bff34384e7219e8adfe345ea49e92632962bf1965b95b644d49954544`.
-The downloaded package matches current locally tested source/dist byte for byte.
-Earlier offline standalone Node/strict NodeNext checks remain named evidence;
-headless use needs neither Pixi nor the editor. The historical local40,353-byte
-archive is retained under WINDOWS_TEST/RUNTIME for its earlier receipt. Use the
-published archive for the current distribution. npm scope/publication is pending;
-direct repository-root installation installs the editor instead of the runtime.
+Shared WINDOWS_TEST now selects immutable54e27667. Protected user53988's
+older normal startup still belongs to94293013. Never automate/close that window,
+its bootstrap transport or any other protected personal/mascot/editor window.
+Read relevant .local/*user-process*.json ledgers and recheck current identity
+before any own process operation.
 
-File → Export runtime uses a native destination-folder picker and creates a new
-`FBones-runtime-*` bundle: `skeleton.fbones.runtime.json`, referenced PNG/WAVs.
-It rejects missing resources, stale revisions and inspection-only projects,
-never bakes working poses or marks the authoring project saved. Separate game
-JSON does not replace/change binary `.fbones`. Unknown timelines/data fail
-validation. Mixing, direct project-binary loading and full Spine numeric/dynamics
-parity remain unsupported. Physics retains the existing bounded FBones policy.
+The current runtime remains independent MIT0.1.0-beta.1, published40,803-byte/
+32file archive SHA5f8e171bff34384e7219e8adfe345ea49e92632962bf1965b95b644d49954544.
+Game JSON export is separate from binary .fbones; mixing/directbinary/npm/full
+parity are open. Native installed-app upgrade awaits an actually higher app
+version; unsignedWindows/ad-hocmacOS/notarization/nativeMac acceptance remain.
 
-## Current proof
-
-Fresh beta5 local114/114browser cases pass in2.5minutes, zero skips/failures/retries,
-rebuilt production CSP and isolated real Rust Session. This includes both
-Sequence Undo boundaries, final numeric focus, signed drag,
-geometry/history/binary SaveCloseOpen, resources and shipped Pixi WebGL pixels
-for Region/weighted Mesh/Clip/Sequence/two-color/topology changes.418JavaScript
-pass/one existing Physics skip. Fresh runtime16package tests and24generated
-native-export samples pass (maximum matrix residual6.36e-7). Prior named
-326native/two ignored,95legacy/one ignored,16default-format/103Scene-format,
-types/build/native-check/Clippy/rustfmt/delivery/bootstrap proofs remain retained;
-they are not a new combined beta5 run or a remote CI result.
-
-Fresh own Windows native-menu QA on immutable`8f65102a…24dbf` passes6groups:
-actual WinAPI Save/SaveAs/Export disabled when blank; all3enabled after native
-Open of an own editable fixture; native WM_COMMAND SaveAs and runtime Export
-reach OS pickers and produce the expected outputs; inspection-only SaveAs is
-byte-identical while Save/export remain disabled; Close restores all3disabled.
-Typed-f32 runtime JSON is exact, and export preserves authoring. Inspection copy
-advances the Session revision once by `project.rs` copy policy, not authoring.
-The QA session closed normally. Caption/revision assertion failures and traces
-remain retained; successful mutations were not repeated. Receipt:
-`.local/native-file-menu-qa-result.json`. This proves that own Windows image's
-native menu state/routes, separately from browser custom-File coverage.
-
-Own Windows WebView2 QA on immutable`6ea2ad16…26d9e` passes five groups: two
-signed XY drags with preview/release and Undo/Redo, non-authoring playback,
-native Open/SaveAs and native runtime export. The owned QA was saved and closed
-normally. Exact typed-f32 comparison resolves81.6 versus81.5999984741211 JSON
-spellings without loosening integer/reference checks. Failed attempts/raw traces
-were retained; completed drags were not repeated.
-
-Prior`80c71cc0…a1645` differs from that earlier drag-QA image only in numeric HUD
-presentation/styles, covered by all114final browser cases. Its normal Windows
-startup was observed. Current`39efc9c1…03a58` normal startup is observed, but no
-final-image native numeric gesture or fresh original4.3.26 acceptance is claimed.
-macOS remains unverified. No new
-original editor launch, probe or compatibility acceptance was attempted.
-
-## Preserved profile boundaries
-
-Mascot remains typed/editable125bones/24slots/22PNGs/2clips/79constraints with
-all223769source payload bytes independently regenerated and accepted earlier
-native/saved-field proofs. Known source state/Slot8 remain typed read-only
-snapshots; remembered export/PSD paths never cause operations. Existing whole
-canonical reserialization equality and unknown-record guards remain mandatory.
-Earlier eight-source corpus remains4editable/4guarded; mascot is fifth of nine.
-
-Scene bones256/slots512, Mesh512/Clip256vertices, geometry4096/edge4096,
-binding/constraints128, cliptracks1024/projecttracks4096/projectkeys8192,
-perclip/pertrack/nativebatch4096, domain16384/depth256 remain unchanged.
-PNG128MiBcompressed/256MiBdecoded-cache/max4096side and legacy bounds remain.
-E reversing keys, B inheritance/curves, F larger budgets/curves and G Path/other
-unmodeled data remain guarded. Full animation roadmap stays under F105;
-F307/F308 broader fidelity remains explicitly user-deferred.
+Real-source profile remains4editable/4guarded plus editable mascot125bones/
+24slots/22PNGs/2clips/79constraints, all223769source payload bytes independently
+regenerated. Fresh original acceptance for that broader mascot remains pending;
+[mascot checkpoint](../analysis/mascot-support-check.json) owns its limits.
+B/E reversing curves, nondefault inheritance, F capacity/curves and G Path/other
+records stay guarded. Full canonical equality and unknown-record preservation
+remain mandatory; no source gets admitted by deleting unsupported data.
 
 ## Cleanup and next reproducible action
 
-Generated policy-test fixtures were automatically removed. Packaging removed its
-14,338-byte helper cache; coordinator removed20,480allocated bytes of own current
-Python caches. No substantial local build or obsolete native variant was created.
-Earlier cleanup is retained in its named checkpoint, not counted as new recovery.
-Linux free831GiB, Windows Cfree87GiB; no physical/VHDX recovery is inferred from
-unlinked caches. Original/personal files and protected user windows stay untouched.
+Selected54e27667 and its prior normal-startup/user-ownership receipts remain
+unchanged; protect .local/stabilization-user-process.json and every other user
+ledger. This session is research-only, so no duplicate normal app was launched.
+Prior delivery cleanup/failure/source-restoration evidence remains in the linked
+stabilization checkpoint; it is not a new current test or disk measurement.
 
-Retained the current reviewed source snapshot/archive,10downloaded published
-assets95.34MiB for reproducible delivery verification, desktop/narrow real GitHub
-screenshots/report and useful calibration failures. Current Windows selection,
-referenced/uncertain older workspaces and prior delivery evidence remain. New
-large Actions installer artifacts expire after7days; release assets stay public.
+Current research cleanup removed15un-pinned C object/import-library files
+(259,857bytes), own Python bytecode40,144bytes, both own46-byte C:temporary files
+(92bytes), and the unused generated native-host audio2250bytes after verified
+normal host exit:302,343logicalbytes total. All cited sources/binaries/manifests,
+failed/positive observations and active test inputs/results remain exact.
+Nine obsolete FBones dependency-graph variants (~1.074GiB) remain retained because
+some process mappings cannot be read; never delete a mapped/uncertain executable.
+Debug deps~7.6GiB remain mixed/reusable; incremental is empty. No full Cargo clean,
+user-data deletion, large build or host physical recovery claim.
 
-Next: use the Download table on the repository/release page. Select the desktop
-package for the OS, or install the runtime tgz in a game and File → Export runtime.
-Native installer lifecycle/signing/notarization and broader runtime/fidelity remain
-open; full F105 and deferred F307/F308 are unchanged. Main pushes check/build;
-validated beta tags publish all4desktop packages and runtime/source as GitHub
-Latest after all existing gates pass. Keep immutable tags and scoped release validators. This
-post-publication checkpoint records outcomes observed after the source tag.
+**Host-disk correction:** Ubuntu's registered VHDX is on G:, not C:. The actual
+host has only2.35GiB free; Linux's~825GiB and the earlier C:measurements do not
+prove VHDX host safety. VHDX224,135,217,152bytes is not sparse. Linux advertises
+mounted discard support, but no manual trim, shutdown, compaction or global
+setting change was performed, and no physical host recovery is claimed. Keep
+large builds/captures deferred; the prepared reference output is capped at6MiB.
 
-Sidebar followup cleanup: removed the unpublished main-snapshot archive/checksum
-(2.20MiBallocated); retained source/Git and actual sidebar evidence. Existing
-published tag/archive/assets and user windows are untouched.
+Final read-only process check11:05:00UTC found a NEW unowned installed Spine
+49192/start2026-11-09T11:03:49.8698784Z/HWND3213622 with an unsaved marker. It
+appeared after our CLI's terminal and was not operated. Preserve its protection
+ledger .local/physics-2026-11-09-second-user-process.json plus all earlier user
+ledgers. Do not input/save/close/attach/activate it or forward another test into
+it. This is a current original-only boundary, not a user pause of the full goal.
+
+Next reproducible action: read-only preparation of ONE bounded original current-
+open-resource question after the proven own metadata capability. Review generic
+File selection/privacy/live-handle reuse first; only a previously uninventoried
+class/archive resource under approved roots could justify targeted inspection.
+Known package/JAR/JVM/fixture paths would stop that route. Original execution must
+wait for actual absence of the protected49192 and fresh isolation; its old PID
+or any consumed receipt never authorizes process operations. No memory rescan,
+old oracle grid, accepted Match/canonical Save or new encoding export repeats.
+For future F308 work reuse the accepted60741ccb canonical; freeze a distinct
+unanswered action first. Actual G:free2,525,851,648bytes and Linux
+885,719,416,832bytes were measured at session end; no physical reclamation is
+inferred. The selected54e27667 image remains exact; all255 source pins were exact before
+the current release-only0.9.6 metadata/visible-label changes.
+Research-only session: no duplicate normal FBones launch was required.
+
+Full Physics caller reset/update/Pose timing and moving-parent parity remain
+ACTIVE; broader Match World/additive/Physics/rounding/manual branches remain
+open. No new features/skins started. Accepted product evidence remains in the
+local/private `analysis/physics-match-stabilization-check.json`;
+current bounded research/hold/cleanup is in
+local/private `analysis/physics-memory-inspection-check.json`.

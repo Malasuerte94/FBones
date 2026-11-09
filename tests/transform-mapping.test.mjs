@@ -1,6 +1,15 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {nextMappingProperty,transformProperties,retainedTransformMembers} from '../src/domain/transformMapping.ts';
+import {canMatchTransform,nextMappingProperty,transformProperties,retainedTransformMembers} from '../src/domain/transformMapping.ts';
+test('Match supports normalized finite mixes while every hidden lane retains its extended authored value',()=>{
+ const normalized=Object.freeze({mix:Object.freeze([-0,0,.25,.5,.75,1])});
+ assert.equal(canMatchTransform(normalized),true);
+ for(let lane=0;lane<6;lane++)for(const value of[-1,1.25,NaN,Infinity,-Infinity]){
+  const mix=[...normalized.mix];mix[lane]=value;const before=[...mix];
+  assert.equal(canMatchTransform({mix}),false);assert.deepEqual(mix,before);
+ }
+ assert.equal(canMatchTransform({mix:[]}),false);assert.equal(Object.is(normalized.mix[0],-0),true);
+});
 test('a Rotate destination can add each other channel once, then the mapping is full',()=>{
  const to=[{property:'rotate'}];
  assert.equal(nextMappingProperty(to),'x');to.push({property:'x'});

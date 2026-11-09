@@ -1,17 +1,36 @@
 # F307 — Physics constraints with verified simulation
 
-Latest research2026-10-30: one tiny own original4.3.26 `--trace` export completed
-with3 PNGs but only generic startup/settings/export logs. No executed Physics
-mode/time/order/count was exposed. Stop this route; no simulation change follows.
-See `../research/PHYSICS-CLI-TRACE-RESULT-2026-10-30.md` and `../STATE.md`.
+Current research2026-11-09: a new passive own-console classfile-memory route
+succeeds where prior JVMTI/debugger routes did not. Independent full parsing,
+byte equality and javap verify two natural own-class copies; normal VM/host/
+controller exit is proved. Static unknown-length framing38groups/all1764cuts and
+actual Windows DLL/PInvoke13vectors pass. These are tool capabilities only:
+[bounded result](../research/PHYSICS-OWN-MEMORY-CAPABILITY-RESULT-2026-11-09.md).
 
-Earlier research checkpoint2026-10-30: own Linux method-observer toy passes, while
-Windows JNI/Toy passes but the requested observer produces no records. A
-separate direct query measures JVMTI1.2/1.1/1.0 as−3/NULL in this VM/config;
-standard HotSpot schema globals are also absent. These results rule out the
-tested observation routes, not all possible observation or any physics law.
-No solver/model change or original editor run followed. Read the latest STATE,
-PHYSICS-CALLER-NEXT-OBSERVATION.md and independent Windows/capability reports.
+The separately reviewed exact4.3.26 seed scenario is now CONSUMED after fresh
+absence and one own launch: normal close/exit0, fixture/93pins unchanged. It
+recovered no target seeds,76generated-class metadata records/13unique names;
+partial coverage and76partial/failed reads prevent absence claims. Strict
+postcheck failed15002ms versus15000ms; that bound remains unchanged. See
+[result](../research/PHYSICS-ORIGINAL-SEED-METADATA-RESULT-2026-11-09.md).
+
+A new own-only PSS provider enumerated the exact known file handle but supplied
+no name; normal child exit and cleanup pass. That consumed negative is retained.
+A distinct own-only attribute DuplicateHandle provider now passes actualWindows:
+exact NT path/file-ID, DISK1, local close, normal child/controllerexit0 in15ms;
+PSS type File+NUL is observed while its name remains absent. Paired DATA/UI gate:
+[own duplicate metadata](../research/PHYSICS-PSS-DUPLICATE-OWN-FILE-GATE-2026-11-09.md).
+No original rerun, file-content read or class-origin claim follows from that
+own-console capability test. See [STATE](../STATE.md) and
+analysis/physics-memory-inspection-check.json for the current checkpoint.
+
+Moving-parent/export phase remains unresolved at3.35184/2.24952/1.26276errors.
+Existing37static/990dynamic original comparisons and prior123/123UI/live/Off/
+leases/non-baking acceptance remain retained. This research changes no product
+solver/clock/bound; no old grid/oracle is rerun. Earlier bundled-Linux own toy
+and no-agent startup SIGSEGV/JVMTI/VMStruct/CLI negatives stay valid and are not
+retried unchanged. Current cleanup/actualG:VHDXhost2.35GiBlimit are in STATE;
+no full Cargo clean or host compaction/settings change occurred.
 
 Status: IMPLEMENTATION AND NUMERIC COMPARISON ACTIVE. Part of the full active
 goal; no scope reduction.

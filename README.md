@@ -8,20 +8,20 @@ Build rigs, paint weights, and animate offline with an editor built for Windows,
 
 [Download](#download) · [Getting started](#getting-started) · [Developer runtime](#developer-runtime-preview) · [Implementation status](#implementation-status) · [Contributing](CONTRIBUTING.md) · [Roadmap](docs/ROADMAP.md) · [Builds](https://github.com/Malasuerte94/FBones/actions/workflows/desktop.yml)
 
-**0.9.5 · Early beta · MIT licensed**
+**0.9.6 · Early beta · MIT licensed**
 
 </div>
 
 ## Download
 
-**FBones `v0.9.5-beta.2` — desktop app and developer runtime.** Downloads are published only after the release's build, UI and runtime gates pass. [Release page](https://github.com/Malasuerte94/FBones/releases/tag/v0.9.5-beta.2) · [All published releases](https://github.com/Malasuerte94/FBones/releases).
+**FBones `v0.9.6-beta.1` — release candidate with desktop app and developer runtime.** Candidate download links become available only after the tag workflow passes its build, UI, runtime and signing gates and publishes the release. [Release page](https://github.com/Malasuerte94/FBones/releases/tag/v0.9.6-beta.1) · [All published releases](https://github.com/Malasuerte94/FBones/releases).
 
 | Download | Platform / use |
 | --- | --- |
-| [Windows installer (.exe)](https://github.com/Malasuerte94/FBones/releases/download/v0.9.5-beta.2/FBones_0.9.5_x64-setup.exe) | Windows x64 desktop app |
-| [macOS disk image (.dmg)](https://github.com/Malasuerte94/FBones/releases/download/v0.9.5-beta.2/FBones_0.9.5_universal.dmg) | macOS 13+; Intel and Apple Silicon |
-| [Linux AppImage](https://github.com/Malasuerte94/FBones/releases/download/v0.9.5-beta.2/FBones_0.9.5_amd64.AppImage) · [Debian package (.deb)](https://github.com/Malasuerte94/FBones/releases/download/v0.9.5-beta.2/FBones_0.9.5_amd64.deb) | Linux x64 desktop app |
-| [Developer runtime (.tgz)](https://github.com/Malasuerte94/FBones/releases/download/v0.9.5-beta.2/fbones-runtime-0.1.0-beta.1.tgz) | Node/browser player with optional PixiJS 8 view |
+| [Windows installer (.exe)](https://github.com/Malasuerte94/FBones/releases/download/v0.9.6-beta.1/FBones_0.9.6_x64-setup.exe) | Windows x64 desktop app |
+| [macOS disk image (.dmg)](https://github.com/Malasuerte94/FBones/releases/download/v0.9.6-beta.1/FBones_0.9.6_universal.dmg) | macOS 13+; Intel and Apple Silicon |
+| [Linux AppImage](https://github.com/Malasuerte94/FBones/releases/download/v0.9.6-beta.1/FBones_0.9.6_amd64.AppImage) · [Debian package (.deb)](https://github.com/Malasuerte94/FBones/releases/download/v0.9.6-beta.1/FBones_0.9.6_amd64.deb) | Linux x64 desktop app |
+| [Developer runtime (.tgz)](https://github.com/Malasuerte94/FBones/releases/download/v0.9.6-beta.1/fbones-runtime-0.1.0-beta.1.tgz) | Node/browser player with optional PixiJS 8 view |
 
 Install the downloaded runtime in your game project:
 
@@ -29,7 +29,7 @@ Install the downloaded runtime in your game project:
 npm install ./fbones-runtime-0.1.0-beta.1.tgz
 ```
 
-Early beta: Windows installer is unsigned; macOS is ad-hoc signed without Developer ID or notarization. Native installation of these CI packages remains unverified. Install this updater-enabled version once; later releases can be downloaded in the background and installed after you choose to restart. Existing 0.9.4 copies require this one-time installer. See [release scope and checks](docs/releases/v0.9.5-beta.2.md).
+Early beta: Windows installer is unsigned; macOS is ad-hoc signed without Developer ID or notarization. Native installation and installed-app upgrades remain unverified. Packaged 0.9.5 installations already support signed updates; installation/restart remains explicit. Existing 0.9.4 copies require a one-time updater-enabled installer. See [release scope and checks](docs/releases/v0.9.6-beta.1.md).
 
 ![FBones Animate workspace with a rig, animation timeline, and property controls](docs/screenshots/animate-dopesheet.png)
 
@@ -49,13 +49,13 @@ Animate includes Dopesheet and Graph views, key editing, playback, a live Previe
 
 ## Implementation status
 
-| Area | Available in 0.9.5 | Remaining work / limits |
+| Area | Implemented profile in the 0.9.6 candidate | Remaining work / limits |
 | --- | --- | --- |
 | Projects and history | Native New/Open/Save As, Undo/Redo, resource copying, conservative inspection of unsupported documents | Broad project compatibility remains progressive |
 | Bones and hierarchy | Create, rename, reparent, group selection, affine transforms, viewport gizmos | Further reference-driven interaction polish |
 | Images and slots | Folder-backed PNGs, attachment alternatives, nullable active attachment, draw order, color and blend modes | Editing is limited to the supported portable/default-skin profile |
 | Meshes and weights | Tracing, geometry editing, binding, direct/brush weights, weighted meshes and clipping | Exact proprietary auto-weight/brush fidelity is not claimed |
-| Constraints | IK, Transform, and live Setup Physics; type icons, multi-selection and atomic shared-field edits with mixed-value controls |  Path constraints and broader numerical/Match fidelity are pending |
+| Constraints | IK, Transform, live Setup Physics; verified Offset/Properties Match fixes, multi-selection and atomic shared-field edits | Path constraints, general World rounding and broader Match/Physics fidelity remain pending |
 | Animation | Named clips, FPS, Rotate/Translate/Scale/Shear and split Translate/Scale X/Y, slot activation/light RGBA/linear two-color keys, draw order, mesh/clipping deformation, constraint keys | Separate RGB/alpha and broader animation compatibility remain pending |
 | Timeline and curves | Dopesheet/Graph, linear/stepped/Bezier interpolation, mixed key selection, move/delete/copy/paste, playback and looping | Advanced timing/Graph tools, mixing, and onion skin remain pending |
 | Image sequences | Region/Mesh numbered PNG sequences with Hold/Once/Loop keys and portable resources | Supported sequence modes and resource budgets are bounded |
@@ -65,13 +65,13 @@ Animate includes Dopesheet and Graph views, key editing, playback, a live Previe
 | Export and compatibility | Independently encoded `.fbones` files retain the supported Spine 4.3.26 binary structure; separate game export includes authored data and referenced resources | Full `.spine` compatibility is not established; unsupported editor data stays guarded |
 | Developer runtime | Independent MIT Node/browser player and optional PixiJS 8 view for the declared FBones profile | Preview release: no automatic mixing, direct project-binary loader, or full Spine numerical parity claim |
 
-**Animation remains the active implementation priority.** See the [public roadmap](docs/ROADMAP.md), [full animation scope](docs/tasks/F105-animation.md), and [current engineering checkpoint](docs/STATE.md).
+**Stabilizing existing Physics and both Transform Match actions is the current priority, while preserving Animate. Skins are scheduled last.** See the [public roadmap](docs/ROADMAP.md), [full animation scope](docs/tasks/F105-animation.md), and [current engineering checkpoint](docs/STATE.md).
 
 Unsupported structures remain inspection-only rather than being discarded to make a file editable. Keep backups and work on copies of important projects. Saving an FBones project does not overwrite an original `.spine` source.
 
 ## Getting started
 
-Use the [desktop app downloads](#download) for your platform. The application displays **0.9.5**; the release tag is **`v0.9.5-beta.2`**. Its installers and runtime are published together only after the required checks pass. Source code is also included in the [release assets](https://github.com/Malasuerte94/FBones/releases/tag/v0.9.5-beta.2).
+Use the [desktop app downloads](#download) for your platform. The application displays **0.9.6**; the release tag is **`v0.9.6-beta.1`**. Its installers and runtime are published together only after the required checks pass. Source code is also included in the [release assets](https://github.com/Malasuerte94/FBones/releases/tag/v0.9.6-beta.1).
 
 To build from source, install **Node.js 22.12+**, **pnpm 11.1.0**, **Rust 1.93+**, and the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/).
 
@@ -92,7 +92,7 @@ The independent **`@fbones/runtime` 0.1.0-beta.1** package plays the supported F
 
 In the desktop editor, choose **File → Export runtime** and select a destination folder. The new bundle contains `skeleton.fbones.runtime.json` and referenced PNG/WAV resources. This separate game export does not replace the binary `.fbones` authoring format or bake temporary poses into saved keys.
 
-Download the [runtime archive](https://github.com/Malasuerte94/FBones/releases/download/v0.9.5-beta.2/fbones-runtime-0.1.0-beta.1.tgz) from the gated [beta release](https://github.com/Malasuerte94/FBones/releases/tag/v0.9.5-beta.2), then use the install command above. To build the package from source:
+Download the [runtime archive](https://github.com/Malasuerte94/FBones/releases/download/v0.9.6-beta.1/fbones-runtime-0.1.0-beta.1.tgz) from the gated [beta release](https://github.com/Malasuerte94/FBones/releases/tag/v0.9.6-beta.1), then use the install command above. To build the package from source:
 
 ```sh
 pnpm build:runtime
@@ -119,7 +119,7 @@ cargo test --workspace --locked
 
 For the full browser UI suite, install Chromium or set `CHROME_BINARY`, run `cargo fetch --locked` once, build the runtime with `pnpm build:runtime`, then run `pnpm test:ui`. It uses the production CSP and isolated instances of the real Rust Session, including shipped-runtime GPU checks. See [development](docs/DEVELOPMENT.md) and [testing](docs/TESTING.md).
 
-The previous 0.9.4-beta.6 implementation checkpoint records **114 passing Ubuntu UI cases**, **418 passing JavaScript tests with one known skip**, and **326 native / 95 legacy tests** with existing ignored cases tracked separately. The runtime adds 16 package checks and 24 native-export samples. Release CI results belong to the exact source commit reported by its jobs; these engineering results do not claim every platform or Spine feature is verified. The [checkpoint](docs/STATE.md) retains their scope and limitations.
+The stabilization checkpoint before the 0.9.6 version bump records **123 passing Ubuntu UI cases**, **443 passing JavaScript tests with one existing skip**, and **343 native / 102 legacy tests** with existing ignored cases kept distinct. Runtime checks add 16 package tests and 24 native-export samples. Six targeted native Windows QA groups passed on the earlier 0.9.5 working build; this does not establish acceptance of the new packaged candidate or an installed-app upgrade. Release CI results belong to the exact source commit reported by its jobs; these engineering results do not claim every platform or Spine feature is verified. The [checkpoint](docs/STATE.md) retains their scope and limitations.
 
 ## License
 

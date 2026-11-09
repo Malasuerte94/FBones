@@ -87,14 +87,14 @@ pub fn evaluate(
         authored,
         physics,
         mode,
-        scene.constraints.len(),
+        ConstraintSelection::Prefix(scene.constraints.len()),
         None,
         &[],
     )
 }
 
-/// Internal authoring policy: sample before one ordered constraint, while the
-/// complete scene still defines validation and the cached Physics layout.
+/// Test-only partial-evaluation regression harness. Match uses selected exclusion.
+#[cfg(test)]
 pub(crate) fn evaluate_prefix(
     scene: &SceneProject,
     authored: Option<&[LocalPose]>,
@@ -110,10 +110,41 @@ pub(crate) fn evaluate_prefix(
         authored,
         physics,
         mode,
-        exclusive_constraint,
+        ConstraintSelection::Prefix(exclusive_constraint),
         None,
         &[],
     )
+}
+
+/// Samples all ordered constraints except one selected Transform, while the
+/// complete scene retains validation and the cached Physics layout/indices.
+pub(crate) fn evaluate_excluding_transform(
+    scene: &SceneProject,
+    authored: Option<&[LocalPose]>,
+    physics: &mut PhysicsState,
+    mode: StepMode,
+    excluded_constraint: usize,
+) -> Result<Evaluation, SolveError> {
+    if !matches!(
+        scene.constraints.get(excluded_constraint),
+        Some(Constraint::Transform(_))
+    ) {
+        return Err(SolveError::InvalidConstraint);
+    }
+    evaluate_through(
+        scene,
+        authored,
+        physics,
+        mode,
+        ConstraintSelection::Excluding(excluded_constraint),
+        None,
+        &[],
+    )
+}
+
+enum ConstraintSelection {
+    Prefix(usize),
+    Excluding(usize),
 }
 
 /// Uses authored layout for spring lifecycle and borrowed sampled coefficients for application.
@@ -130,7 +161,7 @@ pub(crate) fn evaluate_sampled(
         authored,
         physics,
         mode,
-        scene.constraints.len(),
+        ConstraintSelection::Prefix(scene.constraints.len()),
         Some(values),
         resets,
     )
@@ -141,7 +172,7 @@ fn evaluate_through(
     authored: Option<&[LocalPose]>,
     physics: &mut PhysicsState,
     mode: StepMode,
-    constraint_count: usize,
+    selection: ConstraintSelection,
     sampled: Option<&[ConstraintValue]>,
     resets: &[usize],
 ) -> Result<Evaluation, SolveError> {
@@ -192,7 +223,14 @@ fn evaluate_through(
     for index in resets {
         candidate.reset_constraint(*index)?;
     }
+    let (constraint_count, excluded_constraint) = match selection {
+        ConstraintSelection::Prefix(count) => (count, None),
+        ConstraintSelection::Excluding(index) => (scene.constraints.len(), Some(index)),
+    };
     for (i, constraint) in scene.constraints.iter().take(constraint_count).enumerate() {
+        if excluded_constraint == Some(i) {
+            continue;
+        }
         match constraint {
             Constraint::Ik(c) => ik::apply(scene, &mut frame, c, sampled.map(|v| &v[i]))?,
             Constraint::Transform(c) => {

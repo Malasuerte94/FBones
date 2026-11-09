@@ -9,7 +9,7 @@ import shutil
 import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_TAG = 'v0.9.5-beta.2'
+DEFAULT_TAG = 'v0.9.6-beta.1'
 FILES = (
     '.gitignore', 'AGENTS.md', 'README.md', 'CONTRIBUTING.md', 'LICENSE',
     'THIRD_PARTY_NOTICES.md', 'Cargo.toml', 'Cargo.lock', 'package.json',
@@ -41,7 +41,7 @@ def digest(data):
 
 def release_tag(value):
     if not re.fullmatch(r'v\d+\.\d+\.\d+-beta\.[1-9]\d*', value):
-        raise ValueError('Expected a versioned beta tag, for example v0.9.5-beta.2.')
+        raise ValueError('Expected a versioned beta tag, for example v0.9.6-beta.1.')
     version = value[1:].split('-beta.')[0]
     if json.loads((ROOT / 'package.json').read_text())['version'] != version:
         raise ValueError('Release tag must match the application package version.')

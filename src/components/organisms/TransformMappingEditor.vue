@@ -4,16 +4,17 @@ import {useI18n} from 'vue-i18n';
 import {useWorkspace} from '../../stores/workspace';
 import {useSceneFieldEditor} from '../../composables/useSceneFieldEditor';
 import type {TransformFromView,TransformProperty} from '../../domain/project';
-import {nextMappingProperty} from '../../domain/transformMapping';
+import {canMatchTransform,nextMappingProperty} from '../../domain/transformMapping';
 import AppButton from '../atoms/AppButton.vue';
 import TransformStoredRanges from './TransformStoredRanges.vue';
 import TransformRangeEditor from './TransformRangeEditor.vue';
-const props=defineProps<{constraintId?:number;matching?:boolean}>();
+const props=defineProps<{constraintId?:number;matching?:boolean;matchDescriptionId?:string}>();
 const emit=defineEmits<{match:[id:number]}>();
 const w=useWorkspace(),{t}=useI18n();
 const channels:TransformProperty[]=['rotate','x','y','scaleX','scaleY','shearY'];
 const constraint=computed(()=>{const c=props.constraintId===undefined?w.selectedConstraint:w.constraints.find(c=>c.id===props.constraintId);return c?.type==='transform'?c:null;});
-function requestMatch(){const id=constraint.value?.id;if(id!==undefined&&w.canEdit&&!w.busy&&!props.matching)emit('match',id);}
+const matchSupported=computed(()=>!!constraint.value&&canMatchTransform(constraint.value));
+function requestMatch(){const id=constraint.value?.id;if(id!==undefined&&matchSupported.value&&w.canEdit&&!w.busy&&!props.matching)emit('match',id);}
 function edit(patch:{properties:TransformFromView[]},revision?:number){const id=constraint.value?.id;return id===undefined?Promise.resolve(false):w.editConstraintById(id,patch,revision);}
 const properties=computed(()=>constraint.value?.properties??[]);
 function values(){const values:Record<string,number>={};properties.value.forEach((from,i)=>{values[`from:${i}`]=from.offset;from.to.forEach((to,j)=>{for(const key of ['offset','max','scale'] as const)values[`to:${i}:${j}:${key}`]=to[key];});});return values;}
@@ -25,7 +26,7 @@ function addDestination(i:number){const property=nextMappingProperty(properties.
 </script>
 <template>
  <section v-if="constraint" class="mapping-editor border-t border-line pt-2" data-testid="transform-mappings">
-  <div class="mb-2 flex items-center justify-between gap-2"><h4 class="text-[11px] font-medium text-ink">{{t('propertyMappings')}}</h4><AppButton type="button" :disabled="!w.canEdit||w.busy||matching" :aria-label="t('matchTransformProperties')" :title="t('matchTransformHint')" data-testid="transform-match-properties" @pointerdown.prevent @click.stop.prevent="requestMatch">{{t('match')}}</AppButton></div>
+  <div class="mb-2 flex items-center justify-between gap-2"><h4 class="text-[11px] font-medium text-ink">{{t('propertyMappings')}}</h4><AppButton type="button" :disabled="!w.canEdit||w.busy||matching||!matchSupported" :aria-label="t('matchTransformProperties')" :title="t(matchSupported?'matchTransformHint':'matchTransformMixUnsupported')" :aria-describedby="matchSupported?undefined:matchDescriptionId" data-testid="transform-match-properties" @pointerdown.prevent @click.stop.prevent="requestMatch">{{t('match')}}</AppButton></div>
   <TransformRangeEditor :constraint-id="constraint.id" :disabled="matching"/>
   <details class="mt-2 border-t border-line pt-2" data-testid="transform-advanced-connections"><summary class="text-[11px] text-muted">{{t('advancedConnections')}}</summary><p class="my-1 text-[10px] text-muted">{{t('runtimeRangeDiagnostics')}}</p>
   <div class="mb-1 grid grid-cols-2 text-center text-[10px] uppercase tracking-wide text-muted"><span>{{t('mappingFrom')}}</span><span>{{t('mappingTo')}}</span></div>

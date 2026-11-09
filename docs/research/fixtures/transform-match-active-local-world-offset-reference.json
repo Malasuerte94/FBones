@@ -1,0 +1,422 @@
+{
+  "schema": "fbones-own-transform-active-local-world-offset-reference-v1",
+  "referenceVersion": "4.3.26",
+  "provenance": "One new isolated original Offset Match+Save on our own four-bone/two-constraint active Local-source/World-target graph. Semantic own recipe/results only, no proprietary binary/code/assets/private paths.",
+  "sceneReference": "transform-match-active-properties-reference.json",
+  "selectedConstraint": "active-sampling-match",
+  "bones": [
+    {
+      "name": "root",
+      "length": 0.0,
+      "x": 11.0,
+      "y": -9.0,
+      "rotation": 23.0,
+      "scaleX": -1.2999999523162842,
+      "scaleY": 0.800000011920929,
+      "shearX": 7.0,
+      "shearY": -12.0
+    },
+    {
+      "name": "source",
+      "length": 35.0,
+      "x": 13.0,
+      "y": -7.0,
+      "rotation": 31.0,
+      "scaleX": 1.2000000476837158,
+      "scaleY": 0.800000011920929,
+      "shearX": 0.0,
+      "shearY": 17.0,
+      "parent": "root"
+    },
+    {
+      "name": "firstTarget",
+      "length": 45.0,
+      "x": 70.0,
+      "y": 35.0,
+      "rotation": -25.0,
+      "scaleX": 0.8999999761581421,
+      "scaleY": 1.2999999523162842,
+      "shearX": 0.0,
+      "shearY": -11.0,
+      "parent": "root"
+    },
+    {
+      "name": "secondTarget",
+      "length": 30.0,
+      "x": -40.0,
+      "y": 15.0,
+      "rotation": 80.0,
+      "scaleX": 1.5,
+      "scaleY": 0.6000000238418579,
+      "shearX": 0.0,
+      "shearY": 9.0,
+      "parent": "root"
+    }
+  ],
+  "constraintsBefore": [
+    {
+      "name": "drive-source-x",
+      "source": "root",
+      "bones": [
+        "source"
+      ],
+      "localSource": true,
+      "localTarget": true,
+      "additive": false,
+      "clamp": false,
+      "offsets": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mix": [
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "properties": [
+        {
+          "property": "x",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "x",
+              "offset": 39.0,
+              "max": 40.0,
+              "scale": 1.0
+            }
+          ]
+        }
+      ],
+      "rangeCache": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "name": "active-sampling-match",
+      "source": "source",
+      "bones": [
+        "firstTarget",
+        "secondTarget"
+      ],
+      "localSource": true,
+      "localTarget": false,
+      "additive": false,
+      "clamp": false,
+      "offsets": [
+        7.0,
+        11.0,
+        -13.0,
+        0.20000000298023224,
+        -0.10000000149011612,
+        19.0
+      ],
+      "mix": [
+        0.0,
+        0.5,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "properties": [
+        {
+          "property": "rotate",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "rotate",
+              "offset": 0.0,
+              "max": 1.0,
+              "scale": 1.0
+            }
+          ]
+        },
+        {
+          "property": "scaleX",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "scaleX",
+              "offset": 0.0,
+              "max": 1.0,
+              "scale": 1.0
+            }
+          ]
+        },
+        {
+          "property": "scaleY",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "scaleY",
+              "offset": 0.0,
+              "max": 1.0,
+              "scale": 1.0
+            }
+          ]
+        },
+        {
+          "property": "shearY",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "shearY",
+              "offset": 0.0,
+              "max": 1.0,
+              "scale": 1.0
+            }
+          ]
+        },
+        {
+          "property": "x",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "x",
+              "offset": 0.0,
+              "max": 1.0,
+              "scale": 1.0
+            }
+          ]
+        },
+        {
+          "property": "y",
+          "offset": 0.0,
+          "to": [
+            {
+              "property": "y",
+              "offset": 0.0,
+              "max": 1.0,
+              "scale": 1.0
+            }
+          ]
+        }
+      ],
+      "rangeCache": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  ],
+  "expectedPrimaryAfter": {
+    "name": "active-sampling-match",
+    "source": "source",
+    "bones": [
+      "firstTarget",
+      "secondTarget"
+    ],
+    "localSource": true,
+    "localTarget": false,
+    "additive": false,
+    "clamp": false,
+    "offsets": [
+      -167.06399536132812,
+      -123.15096282958984,
+      -20.014436721801758,
+      -2.394608497619629,
+      0.2725960612297058,
+      -78.81201171875
+    ],
+    "mix": [
+      0.0,
+      0.5,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "properties": [
+      {
+        "property": "rotate",
+        "offset": 0.0,
+        "to": [
+          {
+            "property": "rotate",
+            "offset": 0.0,
+            "max": 1.0,
+            "scale": 1.0
+          }
+        ]
+      },
+      {
+        "property": "scaleX",
+        "offset": 0.0,
+        "to": [
+          {
+            "property": "scaleX",
+            "offset": 0.0,
+            "max": 1.0,
+            "scale": 1.0
+          }
+        ]
+      },
+      {
+        "property": "scaleY",
+        "offset": 0.0,
+        "to": [
+          {
+            "property": "scaleY",
+            "offset": 0.0,
+            "max": 1.0,
+            "scale": 1.0
+          }
+        ]
+      },
+      {
+        "property": "shearY",
+        "offset": 0.0,
+        "to": [
+          {
+            "property": "shearY",
+            "offset": 0.0,
+            "max": 1.0,
+            "scale": 1.0
+          }
+        ]
+      },
+      {
+        "property": "x",
+        "offset": 0.0,
+        "to": [
+          {
+            "property": "x",
+            "offset": 0.0,
+            "max": 1.0,
+            "scale": 1.0
+          }
+        ]
+      },
+      {
+        "property": "y",
+        "offset": 0.0,
+        "to": [
+          {
+            "property": "y",
+            "offset": 0.0,
+            "max": 1.0,
+            "scale": 1.0
+          }
+        ]
+      }
+    ],
+    "rangeCache": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "expectedOffsetValues": [
+    -167.06399536132812,
+    -123.15096282958984,
+    -20.014436721801758,
+    -2.394608497619629,
+    0.2725960612297058,
+    -78.81201171875
+  ],
+  "expectedOffsetF32Bits": [
+    3274117218,
+    3270921547,
+    3248496017,
+    3222880580,
+    1049334198,
+    3265109952
+  ],
+  "fieldOrder": [
+    "rotate",
+    "x",
+    "y",
+    "scaleX",
+    "scaleY",
+    "shearY"
+  ],
+  "all32AuthoredBoneBitsAndUnrelatedFieldsPreserved": true,
+  "all48NullableCellsAbsent": true,
+  "samplingClass": "Selected-excluded/prefix-equivalent, first ordered target; no suffix in this measured graph.",
+  "classificationAbsoluteBound": 0.0005,
+  "computedBitParityClaim": false,
+  "frozenF64CandidateBitExactFields": 5,
+  "frozenF64CandidateShearResidual": 6.103515625e-05,
+  "sourceHashes": {
+    "newOwnEncodedSource": "423bf317a05e6fc7073e2697e04973e5f7a6d9471713a43fcc1bbbea8b24e0ff",
+    "originalCanonicalBefore": "60741ccbb089a204da9b26dc40d64690d30c5999a32c47ffa2ed62f30dba28bd",
+    "originalOffsetAfter": "258c48f93e0ef72aaee977adf1053964c2175db11f5399f71dbd2cae44cd6b21"
+  },
+  "limits": [
+    "Observed all-six bits are reference data, not a claim that current native math matches every bit. Stage classification and precision are separate.",
+    "Only active nonadditive Local-source/World-target Offset with one preceding Transform; no World suffix, Properties, Physics, additive or repeated action measured.",
+    "The old zero-mix LocalWorld action was reused as evidence and not repeated."
+  ]
+}

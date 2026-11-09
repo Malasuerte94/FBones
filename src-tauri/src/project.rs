@@ -2651,9 +2651,6 @@ mod transform_setup_mix_tests;
 
 #[cfg(feature = "scene-editing")]
 impl Session {
-    /// Both Match sections sample the ordered prefix using one immutable frame
-    /// of precise frozen authored poses and scratch Physics.
-    /// This is distinct from the world-only context used to interpret geometry.
     fn animation_key_context(
         state: &SessionState,
         pose_epoch: u64,
@@ -2875,6 +2872,8 @@ impl Session {
             keys: vec![key],
         })
     }
+    /// Match samples precise frozen authored poses with scratch Physics.
+    /// Both sections exclude only their selected effect, including later constraints.
     fn authoring_evaluation(
         state: &SessionState,
         pose_epoch: Option<u64>,
@@ -2933,7 +2932,7 @@ impl Session {
         } else {
             crate::solve::StepMode::Pose
         };
-        crate::solve::evaluate_prefix(
+        crate::solve::evaluate_excluding_transform(
             &frame.project,
             Some(&authored),
             &mut scratch_physics,

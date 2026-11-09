@@ -123,7 +123,7 @@ export const i18n = createI18n({
     bendPositive:'Positive bend',compress:'Compress',stretch:'Stretch',mix:'Mix %',softness:'Softness',
     ikChainHint:'Choose one bone or two bones in a direct parent–child chain. The target must be outside the constrained branch.',
     evaluationOrder:'Evaluation order',evaluateEarlier:'Evaluate earlier',evaluateLater:'Evaluate later',
-    constraintOffsets:'Offsets',constraintMixes:'Mixes',match:'Match',matchTransformOffsets:'Match offsets',matchTransformProperties:'Match properties',matchTransformHint:'Match the source and the first constrained bone.',noMappedChannels:'Add a property mapping to use these controls.',deleteConstraint:'Delete constraint',
+    constraintOffsets:'Offsets',constraintMixes:'Mixes',match:'Match',matchTransformOffsets:'Match offsets',matchTransformProperties:'Match properties',matchTransformHint:'Match the source and the first constrained bone.',matchTransformMixUnsupported:'Match currently requires all Mix values from 0% to 100%.',noMappedChannels:'Add a property mapping to use these controls.',deleteConstraint:'Delete constraint',
     constraintEvaluationNotice:'Constraints affect the viewport in evaluation order. Authored setup transforms are preserved.',
     physicsAuthoringOnly:'Simulate updates physics in Setup while you move bones. Preview time is not saved.',
     simulatePhysics:'Simulate',physicsPreview:'Setup physics',previewTime:'Preview time',physicsPreviewControls:'Physics preview controls',
@@ -145,8 +145,9 @@ export const i18n = createI18n({
     autoWeightsScope:'Auto: {vertices} vertices · {bones} influences',all:'All',allVertices:'All vertices',allInfluences:'All influences',
     toggleWeightLock:'Toggle weight lock for {name}',weightLockHint:'Keep this influence’s weight when editing another influence. Direct edits of this influence are allowed.',
     weightLocksSessionHint:'Locks apply during this editing session. Binding a different set of bones clears them.',
-    appVersion: 'Version 0.9.5',
+    appVersion: 'Version 0.9.6',
   }, ro: {
+    matchTransformMixUnsupported:'Match necesită momentan toate valorile Mix între 0% și 100%.',
     updateTitle:'Actualizări',updateIdle:'Caută o versiune FBones nouă.',updateCheck:'Caută actualizări',updateAuto:'Verifică și descarcă automat actualizările',updateChecking:'Se caută actualizări…',updateUpToDate:'Ai versiunea actuală.',updateAvailable:'Versiunea {version} este disponibilă.',updateDownloading:'Se descarcă actualizarea…',updateReady:'Versiunea {version} este pregătită pentru instalare.',updateInstalling:'Se instalează și se repornește…',updatePreparing:'Încheie sau salvează lucrul curent.',updateError:'Actualizarea nu este disponibilă.',updateUnsupported:'Actualizările automate nu sunt disponibile pentru această copie.',updateInitialInstaller:'Instalează o versiune compatibilă de pe GitHub pentru a activa actualizările automate.',updateCurrentVersion:'Versiunea curentă: {version}',updateDownloadProgress:'Progresul descărcării',updateDownload:'Descarcă',updateInstallRestart:'Instalează și repornește',updateRetry:'Reîncearcă',updateLater:'Mai târziu',updateReleaseNotes:'Noutăți și descărcări',
     constraintBatchKey:'Cheie {name}',constraintBatchIndividualAction:'Selectează o singură constrângere pentru această acțiune.',constraintSelectionCount:'{count} constrângeri selectate',constraintBatchTitle:'{count} × {type}',constraintBatchMixedTypes:'Selectează constrângeri de același tip pentru a edita valorile comune.',constraintBatchHint:'Modificările se aplică tuturor constrângerilor selectate. Numele și referințele la oase se editează individual.',mixedValue:'Valori diferite',constraintBatchAnimateHint:'Aici poți edita doar proprietățile de animație acceptate.',constraintBatchNoSharedFields:'Selecția nu are câmpuri comune editabile.',
 
