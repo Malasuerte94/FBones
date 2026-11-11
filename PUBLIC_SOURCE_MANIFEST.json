@@ -2584,8 +2584,8 @@
     },
     {
       "path": "scripts/native-windows-upgrade/windows.ps1",
-      "bytes": 24531,
-      "sha256": "b4c5efe0f960195c303fba466ca6337458ba07386e40676c7f40e36523920e46"
+      "bytes": 28343,
+      "sha256": "68c1ae096c000d190a69082bfef11255530dc9aa863199be155647777300e383"
     },
     {
       "path": "scripts/prepare-installer-release.py",
