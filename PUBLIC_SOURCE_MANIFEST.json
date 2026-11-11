@@ -2574,8 +2574,8 @@
     },
     {
       "path": "scripts/native-windows-upgrade/provider-functions.ps1",
-      "bytes": 1620,
-      "sha256": "59ee1ec1ee39e69c259f947d125eee46f2dcd10ab861ee52fb30e5f20414a907"
+      "bytes": 5291,
+      "sha256": "5ef14e6787fa21c174264699a5da18208ac6ba5426e232e2aba40ce00d573915"
     },
     {
       "path": "scripts/native-windows-upgrade/selftest.py",
@@ -2589,8 +2589,8 @@
     },
     {
       "path": "scripts/native-windows-upgrade/windows.ps1",
-      "bytes": 38084,
-      "sha256": "8c24bda775a2e905b9e65440ef17fe3ad3dae36c8dc511531d4122315a6a0197"
+      "bytes": 39805,
+      "sha256": "ac25a2583e6bccbae4513bc8fd2b5f7a2183a0e6d21fc5ed64781f5468477653"
     },
     {
       "path": "scripts/prepare-installer-release.py",
@@ -3731,6 +3731,16 @@
       "path": "docs/research/NATIVE-UPGRADE-90-STARTUP-AND-DISK-UI-GATE-2026-11-11.md",
       "bytes": 2973,
       "sha256": "6282d2ff8edaa8062278845447a38609648a544c59a9415897114ae410720ede"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-AUTOMATIC-PROFILE-V7-DATA-GATE-2026-11-11.md",
+      "bytes": 3840,
+      "sha256": "e5ff86613b9146cd85858581f349db25e748fc2838a1ccfb0afe57b349ff483a"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-AUTOMATIC-PROFILE-V7-UI-FINDING-2026-11-11.md",
+      "bytes": 2784,
+      "sha256": "741e49b8aad032dbeec430de5e563a43b4611930199ae171dbd0a6fefca55c4f"
     },
     {
       "path": "docs/research/NATIVE-WINDOWS-CAPABILITY-V6-UI-GATE-2026-11-09.md",
