@@ -37,3 +37,8 @@ int32_t OwnFindSaveChild(int32_t mainPid,uint64_t mainSeconds,uint64_t mainMicro
  for(int n=0;n<argc;n++){size_t start=cursor;while(cursor<end&&data[cursor])cursor++;if(cursor==end||cursor-start>4096||used+cursor-start+1>sizeof(out->argv)){out->error=16;free(data);return 0;}size_t length=cursor-start;memcpy(out->argv+used,data+start,length);used+=length;out->argv[used++]=0;cursor++;}
  out->argBytes=(int32_t)used;free(data);struct proc_bsdinfo fresh;if(!tuple(out->childPid,&fresh)||fresh.pbi_ppid!=(unsigned)mainPid||fresh.pbi_uid!=getuid()||fresh.pbi_start_tvsec!=out->startSeconds||fresh.pbi_start_tvusec!=out->startMicroseconds||!currentMain(mainPid,mainSeconds,mainMicros)){out->error=17;return 0;}out->complete=1;return 1;
 }
+
+int32_t OwnCopySaveArgv(const OwnPickerChild *value,char *destination,int32_t capacity){
+ if(!value||!destination||value->complete!=1||value->argBytes<=0||value->argBytes>8192||capacity<value->argBytes||capacity>8192)return 0;
+ memcpy(destination,value->argv,(size_t)value->argBytes);return value->argBytes;
+}

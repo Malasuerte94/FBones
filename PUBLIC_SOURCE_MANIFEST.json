@@ -2334,8 +2334,8 @@
     },
     {
       "path": "scripts/native-mac-picker/mac.swift",
-      "bytes": 39925,
-      "sha256": "f563810cbf5a7be3c3e7885dd60566438f4c78a4b669f0485fe277a94639b5e3"
+      "bytes": 40388,
+      "sha256": "ed124441f69cdb05eef4d7234c32ffbb27f07cfcbfb578214025f11bfd114d3a"
     },
     {
       "path": "scripts/native-mac-picker/own-minimal-checkpoint.py",
@@ -2359,13 +2359,13 @@
     },
     {
       "path": "scripts/native-mac-picker/picker-child.c",
-      "bytes": 3913,
-      "sha256": "45c84d764b13fd33fc0135ab39359719052d6117d32d05075a1a0289a3b351c2"
+      "bytes": 4224,
+      "sha256": "24dc62d12b7ba9787741a903829f05172620d9be88d10731bc812ed1dd8f0c15"
     },
     {
       "path": "scripts/native-mac-picker/picker-child.h",
-      "bytes": 590,
-      "sha256": "5c0447536df1132d50edc27d254a346a3c469a8f53f032386bb5d979b475b855"
+      "bytes": 679,
+      "sha256": "202b25c51bda4eaa4c28cedc493fe1b54763ee4587680d8831331a05b88699c0"
     },
     {
       "path": "scripts/native-picker/assets.json",
@@ -3413,6 +3413,16 @@
       "sha256": "bc721f78b16ff21073755f4186d190f617145b75573187a768d4272f852a5fb4"
     },
     {
+      "path": "docs/research/NATIVE-MACOS-PICKER-ARGV-BRIDGE-UI-FINDING-2026-11-11.md",
+      "bytes": 1753,
+      "sha256": "92e213178006b8ba0d4fe953796c92c50182abe621d99166a847ce6f592f974a"
+    },
+    {
+      "path": "docs/research/NATIVE-MACOS-PICKER-ARGV-V3-DATA-GATE-2026-11-11.md",
+      "bytes": 2009,
+      "sha256": "ca938560cb0af4b1183435824a9e3c7ba6a88d647ecb8fb4cd0fa9e80109ccaa"
+    },
+    {
       "path": "docs/research/NATIVE-MACOS-PICKER-CAPABILITY-DATA-GATE-2026-11-11.md",
       "bytes": 3550,
       "sha256": "0da6b241318101c61f6720776b0382584771409d16c76a3b08eccd3b59bd5846"
@@ -3473,9 +3483,19 @@
       "sha256": "2f883aa20754e27784bc3cb47f281d1df3b7413ba719f085c1c072971a458875"
     },
     {
+      "path": "docs/research/NATIVE-WINDOWS-CORE-FOREGROUND-DATA-ADDENDUM-2026-11-11.md",
+      "bytes": 2484,
+      "sha256": "aea1b4f775a113f2f4e99935eb593484f27affeca76f2a180acd986a6193822f"
+    },
+    {
       "path": "docs/research/NATIVE-WINDOWS-CORE-UPGRADE-90-DATA-ADDENDUM-2026-11-11.md",
       "bytes": 3317,
       "sha256": "8708fa630a696a7effd57a6b08966f4540cbdd355fe8bd2e8fa61591a60d393c"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-CORE90-FOREGROUND-UI-ADDENDUM-2026-11-11.md",
+      "bytes": 1775,
+      "sha256": "b99ac3cda9178986328dcc881faf4f84396d71b44517462f6d1dcab26988acc3"
     },
     {
       "path": "docs/research/NATIVE-WINDOWS-CORE90-UPGRADE-UI-ADDENDUM-2026-11-11.md",

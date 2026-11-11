@@ -174,16 +174,24 @@ func exactCleanTitle(_ s:AXControlSnapshot)->Bool{guard let window=s.window else
 func pollApp(_ root:AXUIElement,_ pid:pid_t,_ name:String,_ predicate:(AXControlSnapshot)->Bool)throws->AXControlSnapshot{
  let deadline=Date(timeIntervalSinceNow:20);var last=AXControlSnapshot();repeat{_ = try verifyNativeKernel();last=inventoryControls(root,pid);if last.complete && predicate(last){try saveAX(last,name+".json");return last};pump(0.2)}while Date()<deadline;try saveAX(last,name+".json");throw error("Bounded app state missing: "+name)
 }
+func copiedArgs(_ value:OwnPickerChild)throws->[String]{
+ var local=value;var buffer=[CChar](repeating:0,count:8192)
+ let count=withUnsafePointer(to:&local){pointer in buffer.withUnsafeMutableBufferPointer{output in OwnCopySaveArgv(pointer,output.baseAddress,Int32(output.count))}}
+ guard local.complete==1,count>0,count<=8192,count==local.argBytes else{throw error("Bounded C argv getter failed")}
+ let bytes=buffer.prefix(Int(count)).map{UInt8(bitPattern:$0)};guard bytes.last==0 else{throw error("Copied argv missing final NUL")}
+ let parts=bytes.split(separator:0,omittingEmptySubsequences:false).dropLast();guard parts.count==Int(local.argc)else{throw error("Copied argv count changed")}
+ return parts.map{String(decoding:$0,as:UTF8.self)}
+}
 func findChild()throws->OwnPickerChild{
  _ = try verifyNativeKernel();guard let baseline=nativeKernelBaseline else{throw error("Kernel baseline missing")};var c=OwnPickerChild();let result=OwnFindSaveChild(baseline.pid,baseline.startSeconds,baseline.startMicroseconds,saveDispatchSeconds,saveDispatchMicros,&c)
  proof["pickerChildLastQuery"]=["result":result,"error":c.error,"argError":c.argError,"childCount":c.childCount,"candidates":c.candidates,"mainPid":c.mainPid,"mainUid":c.mainUid]
  guard result==1,c.complete==1,c.childParent==baseline.pid,c.childUid==Int32(getuid()),c.argBytes>0,c.argBytes<=8192 else{throw error("Fresh owned osascript child unqualified")}
- let argv:[String]=withUnsafeBytes(of:c.argv){raw in raw.prefix(Int(c.argBytes)).split(separator:0,omittingEmptySubsequences:false).dropLast().map{String(decoding:$0,as:UTF8.self)}}
+ let argv:[String]=try copiedArgs(c)
  let script="on run argv\nreturn POSIX path of (choose file name with prompt \"Save a project\" default name (item 1 of argv))\nend run"
  guard argv==["osascript","-e",script,"--",defaultName]else{try receipt("picker-child-argv-negative.json",["argv":argv,"argc":c.argc]);throw error("Child argv not exact shipped Save operation")}
  _ = try verifyNativeKernel();return c
 }
-func childTuple(_ c:OwnPickerChild)->[String:Any]{let argv:[String]=withUnsafeBytes(of:c.argv){raw in raw.prefix(Int(c.argBytes)).split(separator:0,omittingEmptySubsequences:false).dropLast().map{String(decoding:$0,as:UTF8.self)}};return ["argv":argv,"pid":c.childPid,"ppid":c.childParent,"uid":c.childUid,"startSeconds":c.startSeconds,"startMicroseconds":c.startMicroseconds,"device":c.device,"inode":c.inode,"argc":c.argc,"argvBytes":c.argBytes,"complete":c.complete==1]}
+func childTuple(_ c:OwnPickerChild)throws->[String:Any]{let argv:[String]=try copiedArgs(c);return ["argv":argv,"pid":c.childPid,"ppid":c.childParent,"uid":c.childUid,"startSeconds":c.startSeconds,"startMicroseconds":c.startMicroseconds,"device":c.device,"inode":c.inode,"argc":c.argc,"argvBytes":c.argBytes,"complete":c.complete==1]}
 func sameChild(_ first:OwnPickerChild)throws{let now=try findChild();guard now.childPid==first.childPid,now.childParent==first.childParent,now.childUid==first.childUid,now.startSeconds==first.startSeconds,now.startMicroseconds==first.startMicroseconds,now.device==first.device,now.inode==first.inode else{throw error("Picker child identity changed")}}
 func savePicker(_ c:OwnPickerChild)throws{
  chooserScope=true;defer{chooserScope=false};let app=AXUIElementCreateApplication(c.childPid);let initial=try snapshot("picker-inventory",app,c.childPid);guard let window=initial.window,initial.texts.contains("Save a project"),readAX(window,kAXModalAttribute).0 as?Bool==true else{throw error("Chooser exact host/window/modal/prompt association unknown")};try sameChild(c)
