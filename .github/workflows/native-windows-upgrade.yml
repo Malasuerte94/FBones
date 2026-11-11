@@ -1,4 +1,4 @@
-name: Stock Windows existing-project core upgrade 0.9.5 to 0.9.6
+name: Stock Windows clean upgrade90 and fresh installed startup
 on:
   push:
     branches: [work/native-install-upgrade-0.9.6]
@@ -34,7 +34,7 @@ jobs:
         run: |
           python scripts/native-windows-upgrade/assets.py windows-nsis --root "$RUN_ROOT"
           python scripts/native-windows-upgrade/prepare-target.py "$RUN_ROOT"
-      - name: One actual stock core upgrade and separately labeled native Open
+      - name: One actual stock clean upgrade90 and fresh native start
         shell: cmd
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\native-windows-upgrade\windows.ps1 -Root "%RUN_ROOT%"
       - name: Preserve bounded evidence including partial failures

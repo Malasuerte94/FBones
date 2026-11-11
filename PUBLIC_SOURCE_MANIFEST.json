@@ -154,8 +154,8 @@
     },
     {
       "path": ".github/workflows/native-windows-upgrade.yml",
-      "bytes": 1814,
-      "sha256": "01bc4035b980f09938335efe317bbdd86b6171e90059f4a8b44475a2e3cd6d0c"
+      "bytes": 1804,
+      "sha256": "a940431a34ffad05af1cbfe9b1d324e41616a8c5060965b37b4b38402a091039"
     },
     {
       "path": "src/App.vue",
@@ -2584,8 +2584,8 @@
     },
     {
       "path": "scripts/native-windows-upgrade/windows.ps1",
-      "bytes": 32946,
-      "sha256": "f28ca8dd217b36f57d2bfaf7da07a4c6343bcd49bf76bcb3e6df56ce690a18a6"
+      "bytes": 34001,
+      "sha256": "047827c99927d64949003ca83ae020d323182af7fd8bcc511f38a5e26f966004"
     },
     {
       "path": "scripts/prepare-installer-release.py",
