@@ -19,6 +19,7 @@ FILES = (
 TREES = ('.github', 'src', 'src-tauri', 'crates', 'tests', 'scripts', 'docs', 'packages/runtime')
 SKIP_PARTS = {'gen', '__pycache__', 'node_modules', 'target', 'dist', '.git', '.local', '.tools'}
 OWN_TEXT_FILES = {'packages/runtime/LICENSE',
+    'scripts/native-windows-upgrade/.gitattributes',
     'scripts/native-windows-upgrade/owned-rect-click.cs',
     'scripts/native-windows-upgrade/owned-job.cs',
     'scripts/native-windows-upgrade/nul-gui-launch.cs',

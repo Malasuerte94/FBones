@@ -1,0 +1,11 @@
+# macOS New/Save capability: authoring remains partial
+
+Actual stock0.9.5 runs retain distinct useful failures. Run43002745089 stops before the app because the absolute C compiler lacks an SDK root; run43004208109 fixes that input and reaches Swift, which cannot directly import our C argv[8192] field. The explicit SDK wrapper and bounded typed C getter subsequently compile successfully. No native behavior is inferred from either pre-app failure.
+
+Run43005554027 launches the exact owned stock bundle with Aqua/AX/kernel/image/window/renderer proof, performs toolbar New, sets and reads back Own macOS native save, and creates the project. It stops before editing a coordinate because the actual complete native field caption is lowercase x, not X. The next fresh run43007410715 uses only that measured caption correction and again completes New/name/Create.
+
+In run43007410715, root-x-before records one owned enabled/settable AXTextField titled/described x, value0, with the expected root name. ONE AXValue set to37.5 returns API success0, but its immediate readback is still string0, also without API error. The controller stops there. No ordinary Save, osascript child discovery, native chooser, directory/Where control or acceptance was reached. No saved file or native normal-close0 is proved. The dirty/unknown app is preserved without force/recovery input.
+
+This establishes a partial authoring provider, not a Save-picker failure. Because the controller reads immediately after the setter, it does not distinguish asynchronous application from a persistent no-effect setter. No bound or semantic check is relaxed, and an API success is not reported as a mutation. This Windows-independent macOS New/number-edit/Save UX can remain final100% work under the user's milestone rule.
+
+The cheapest core-upgrade continuation uses the already independently decoded OWN existing405-byte/e74a15b0 checkpoint through ordinary Open, with read-only project/rootX37.5 verification. It avoids further numeric authoring probes. The native Open chooser's exact helper/window/control shape is still unknown and needs its own scoped observation; this result cannot justify a guessed Where control or keyboard-path fallback. Old source/manifests/raw receipts remain immutable. No original/personal project, target/provider or CI operation by this auditor.

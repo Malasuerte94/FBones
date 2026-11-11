@@ -2408,6 +2408,11 @@
       "sha256": "e16b2154535195321518d899b94d7f434b3d6275f6740bd4d684b1564d0ef762"
     },
     {
+      "path": "scripts/native-windows-upgrade/.gitattributes",
+      "bytes": 29,
+      "sha256": "fb6817a7a71ae64f840aaf2827722bae9338210b803b3b61caa7e48aa2511fc0"
+    },
+    {
       "path": "scripts/native-windows-upgrade/assets.json",
       "bytes": 4025,
       "sha256": "d749af846f064141c976a304ad9d52f09eca8e9205177642fcf90f81ffb9c0ce"
@@ -2464,8 +2469,8 @@
     },
     {
       "path": "scripts/native-windows-upgrade/prepare-target.py",
-      "bytes": 6818,
-      "sha256": "76d463eeae0a37c60cc4b25c85890a2e7615678ae01f43ed764612ba577f43ee"
+      "bytes": 7860,
+      "sha256": "5f1ff3c24187df6e4a2fd55ca44798d28ef70361be5e6c729a38721dd75f1760"
     },
     {
       "path": "scripts/native-windows-upgrade/provider-functions.ps1",
@@ -2494,8 +2499,8 @@
     },
     {
       "path": "scripts/prepare-public-release.py",
-      "bytes": 8847,
-      "sha256": "5f9e59178a645710eda3524c1d6ba422ffd5588809c150b4034ab636c3485455"
+      "bytes": 8900,
+      "sha256": "25e17d893f7ce235ba88dbc3f9320ce0c3dbd7cb866990f559057b6783d78b52"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -3488,6 +3493,31 @@
       "sha256": "c4aabd8e7ee736414b3ef0c8d961a681c8be2a89d98ce18a45ba2f35e2146213"
     },
     {
+      "path": "docs/research/NATIVE-MACOS-CORE-OWNED-GOTO-DATA-GATE-2026-11-11.md",
+      "bytes": 3884,
+      "sha256": "d8b47791dd5bd6c9ea5ea6cf0dd14c50fc8cc9bb73e38df26fb1b1dff3691b28"
+    },
+    {
+      "path": "docs/research/NATIVE-MACOS-CORE-OWNED-GOTO-UI-FINDING-2026-11-11.md",
+      "bytes": 2537,
+      "sha256": "b58d69350d24b54a6fbdd9c5a41ddbc3270e7c88aec8bcbcb1c43b6e9e0e8bb8"
+    },
+    {
+      "path": "docs/research/NATIVE-MACOS-CORE90-EXISTING-PROJECT-DATA-GATE-2026-11-11.md",
+      "bytes": 3962,
+      "sha256": "6c359019c55dff0734ca64bdc5701a2eecf8a32cd30a387661b17908069a75ec"
+    },
+    {
+      "path": "docs/research/NATIVE-MACOS-CORE90-EXISTING-PROJECT-UI-ADDENDUM-2026-11-11.md",
+      "bytes": 2904,
+      "sha256": "e55dc00302132a0568e8abf170a1346c4a1fde275b63756c8efd598253fc47f9"
+    },
+    {
+      "path": "docs/research/NATIVE-MACOS-NEW-SAVE-CAPABILITY-LIMITS-RESULT-2026-11-11.md",
+      "bytes": 2348,
+      "sha256": "679dadb6458c7fa79d037686fd9069633f317237dd01580378c8d197bf79c4e0"
+    },
+    {
       "path": "docs/research/NATIVE-MACOS-OWN-NONCHILD-EXIT-DATA-GATE-2026-11-09.md",
       "bytes": 3740,
       "sha256": "971fad8eab51de56dfaaffb688357779cf6f6d651efb66e6c843bc1a4d3914ba"
@@ -3646,6 +3676,16 @@
       "path": "docs/research/NATIVE-WINDOWS-OWNED-RECT-CLICK-UI-GATE-2026-11-11.md",
       "bytes": 3511,
       "sha256": "0810e91d8c5639d2f355badbf470403269f45c019a01a0ac5dbe831c742ca909"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-PARSER-CHECKOUT-UI-FINDING-2026-11-11.md",
+      "bytes": 1119,
+      "sha256": "7e854702c34644630053fd7862a6fac426b6b948568fea02dfaef8b2f01f00fe"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-READER-EOL-V2-DATA-GATE-2026-11-11.md",
+      "bytes": 2001,
+      "sha256": "09c0e1661eec2434ef84f312c153b8c1736b41cdb6d509bf713fc378d651311f"
     },
     {
       "path": "docs/research/NATIVE-WINDOWS-READONLY-SPINNER-UI-AMENDMENT-2026-11-11.md",
