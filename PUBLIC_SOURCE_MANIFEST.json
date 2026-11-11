@@ -2589,8 +2589,8 @@
     },
     {
       "path": "scripts/native-windows-upgrade/windows.ps1",
-      "bytes": 39805,
-      "sha256": "ac25a2583e6bccbae4513bc8fd2b5f7a2183a0e6d21fc5ed64781f5468477653"
+      "bytes": 39820,
+      "sha256": "031074c70c42d898d067ea95f3b8bf9d9832069a6d5ba4d59a0b977e7e9d94e6"
     },
     {
       "path": "scripts/prepare-installer-release.py",
@@ -3786,6 +3786,16 @@
       "path": "docs/research/NATIVE-WINDOWS-CORE90-UPGRADE-UI-ADDENDUM-2026-11-11.md",
       "bytes": 3130,
       "sha256": "dc1e7561b5bbfa1c318918512fb9a55a4c07d4c9f31646908c2a6e8963c129a3"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-FOOTER-VERSION-90-V8-DATA-GATE-2026-11-11.md",
+      "bytes": 3026,
+      "sha256": "4cccc56be1b403c95407cf7f1909fb7958a2cae40b7a2df1decf5be261a9f77a"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-FOOTER-VERSION-90-V8-UI-GATE-2026-11-11.md",
+      "bytes": 2826,
+      "sha256": "9c079dcf8c4018f09c4c6300f983ea50609a4929cd0aaa788a4260532a9b83f2"
     },
     {
       "path": "docs/research/NATIVE-WINDOWS-INITIAL-WINDOW-BIND-V4-DATA-GATE-2026-11-11.md",
