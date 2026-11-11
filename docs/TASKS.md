@@ -1,14 +1,15 @@
 # FBones tasks
 
-Current user priority: finish and stabilize existing Physics (F307) and both
-Transform Match actions (F308) before new features; skins move to the end.
-Previous F307/F308 deferral is superseded. Existing0.9.5 updater/cohort delivery
-remains accepted; installed-app upgrade is now a separate ACTIVE acceptance.
-STATE owns the current results, evidence limits and next reproducible action.
+Current user priority (2026-11-11): general90% usable delivery milestone, then
+move on; remaining fidelity/edge cases return in the final100% pass. Physics F307
+and Transform Match F308 are READY90 by explicit user acceptance. Finish native
+Windows/macOS/AppImage upgrades now; Debian is accepted. Skins remain at the end.
+STATE owns current findings, evidence limits and the next reproducible action.
 
-Statuses: TODO, ACTIVE, WAITING, DONE. External checks remain WAITING until
-observed. Spine reference: **4.3.26 only**. Historical acceptance counts below
-belong to their named delivery, not to a new combined test run.
+Statuses: TODO, ACTIVE, WAITING, READY90, DONE. READY90 is an agreed usable planning
+milestone, not90% measured compatibility or complete parity. External checks
+remain unaccepted until observed. Reference: Spine4.3.26 only. Historical counts
+retain their named delivery; they are not a new combined test run.
 
 | ID | Status | Dependencies | Acceptance |
 | --- | --- | --- | --- |
@@ -74,8 +75,10 @@ belong to their named delivery, not to a new combined test run.
 | F304 | DONE | F220 | Four exact blend enums and independent RGBA, Sprite/weighted Mesh GPU pixels, Undo/Redo/native reopen, final original4.3.26 export independently checked. Evidence in docs/tasks/F304-slot-blending.md and analysis/qol-blend-ui-check.json. |
 | F305 | DONE | F222 inventory | Canonical clipping range/polygon/whole transforms plus real dense weighted authoring, inactive editing, Direct/brush/history/save and deformed concave-mask comparison accepted in0.8.2; seven Windows groups and1,082,200 pixels, zero mismatches. See docs/tasks/F305-clipping.md for profile/limits. |
 | F306 | DONE | F220 | One/two-link IK, separate authored/evaluated pose, target dragging/skinning, controls, ordering/persistence; self/descendant targets rejected atomically at every boundary. Supported profile verified numerically and on Windows; see docs/tasks/F306-ik.md. |
-| F307 | ACTIVE | F220 | Accepted37static/990dynamic retained; moving-parent residuals3.35184/2.24952step and1.26276ramp unchanged. Consumed memory/PSS/debugtransportnegatives retained; strictcontroller7 notcapabilityPASS. BoundedinstalledLinuxinventoryae256STOP: runtime2 unchangedSIGSEGVsnotrepeated; runtime1 exacteditorbindingUNKNOWN. No identifiedcallertimingprovider; no originalrerun/solver/clock/boundschange. G:2.35GiBfree; see STATE. |
-| F308 | ACTIVE | F220 | Deliveredselectedexclusion/extendedMixguard retained123UI+6Windows. ActiveLocalWorld/WorldLocal/WorldWorld Offset+Props observed; WWOffsetfrozenpredictorUNCLASSIFIED(existinginverseSourceomitted), retrospectivemodelseparate. CachedWW15requests/rawDTO/history/SaveCloseOpen/EOF0: Offset2/6exact/max0.00048828125, Props11/48/max0.0000457764, unchanged0.0005. SaveOnlyattempt openedOpen bycoordinateerror; negative/noSaveproof, separateowncleanupnormal0. Precision/Additive/Physics/suffix/manualfidelityopen; no mathfit. See STATE. |
+| F307 | READY90 | F220 | Accepted37static/990dynamic retained; moving-parent residuals3.35184/2.24952step and1.26276ramp unchanged. Consumed memory/PSS/debugtransportnegatives retained; strictcontroller7 notcapabilityPASS. BoundedinstalledLinuxinventoryae256STOP: runtime2 unchangedSIGSEGVsnotrepeated; runtime1 exacteditorbindingUNKNOWN. No identifiedcallertimingprovider; no originalrerun/solver/clock/boundschange. Remaining phase/caller fidelity deferred to final100%; milestone90%accepted2026-11-11. See STATE. |
+| F308 | READY90 | F220 | Deliveredselectedexclusion/extendedMixguard retained123UI+6Windows. ActiveLocalWorld/WorldLocal/WorldWorld Offset+Props observed; WWOffsetfrozenpredictorUNCLASSIFIED(existinginverseSourceomitted), retrospectivemodelseparate. CachedWW15requests/rawDTO/history/SaveCloseOpen/EOF0: Offset2/6exact/max0.00048828125, Props11/48/max0.0000457764, unchanged0.0005. SaveOnlyattempt openedOpen bycoordinateerror; negative/noSaveproof, separateowncleanupnormal0. Precision/Additive/Physics/suffix/manualfidelity deferred to final100%; milestone90%accepted2026-11-11. No mathfit. See STATE. |
+| F307-final | TODO | Final100%pass | Resolve moving-parent phase/timing with a new identified direct caller observation; reuse37static/990dynamic and all useful negative routes. Do not reopen at90% milestone. |
+| F308-final | TODO | Final100%pass | Revisit exact World arithmetic/span precision, Additive/Physics/suffix choices and fresh Save-only probe after diagnosed coordinate correction; preserve all original/native evidence and authoring guards. Do not reopen at90% milestone. |
 | F309 | DONE | F222 inventory | P group picking via Tree/viewport, usable New, parent-tip guides, no Project metadata, tapered bone icon/projected hierarchy, explicit constraint Views and movable/two-axis-resizable docks. Linux35/35, native145/93, one original P-source comparison and five Windowsbe1bc groups; actual normal user82772 opened. Authored-space/slot-isolation/dock policies explicit; docs/tasks/F309-parenting-tree-docking.md. |
 | F310 | DONE | F220, F309 | Product delivered2688a874: selected B/C/D create3 independent Physics in one history action without Target modal; generated names follow bone rename/custom names persist. Active preset, colored sliders+precise fields, live Setup A-drag reaction/settling before Save/Reset and explicit Off/non-baking persistence pass63/63 LinuxUI,200native/93legacy/28Scene,225JS+1knownskip and5actualWindows groups/native OS SaveCloseOpen. ONE new sourceab9e now passes exact original4.3.26 export and independent105Physics/32bone/24child-bit comparison; original gestures/phase remain outside this bounded authoring scope. See docs/tasks/F310-physics-authoring.md and analysis/physics-batch-delivery-check.json. |
 | F105 | WAITING | F222 | Full Animate/timeline scope stays open. Supported release-drag/playback/numeric corrections pass F105-reliability; runtime preview tracked F109-runtime. Current114UI/416JS/326native/95legacy/16default/103Scene checks pass with existing skips distinct. Mascot/source-profile evidence retained; remaining curves/inheritance/budgets/Path/original/macOS/mixing/onion-skin fidelity remain. See STATE and F105. |

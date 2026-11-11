@@ -22,11 +22,20 @@ archives are evidence for lookup, not an additional procedural checklist.
 
 Roadmap: lifecycle → bones → images → meshes → weights/binding → timeline →
 constraints/physics → full compatibility → additional tools. Latest user steering
-resumes F307/F308: finish and stabilize existing Physics and both Transform Match
-actions before adding new features. Preserve existing Animate work and verify its
-integration with these fixes. Skins move to the end. Historical Physics/Match
-deferrals are superseded; reuse accepted evidence and resume only unanswered
-discriminating probes, never completed batches or unchanged failed tool routes.
+(2026-11-11) sets a **general 90% delivery milestone**: finish and validate the
+usable core, record remaining fidelity/edge cases, then move on. Return to those
+explicit remaining items in the final 100% pass; do not block all other work on
+perfection. The percentage is a user-approved planning milestone, not measured
+reference coverage or a claim of full compatibility. Preserve data integrity,
+safe persistence, existing acceptance evidence and honest evidence limits.
+
+Physics F307 and both Transform Match actions F308 are **READY90**. Their known
+phase/precision/Additive/Physics/suffix gaps are deferred to the final 100% pass;
+do not resume their original probes now. Current priority: finish actual native
+0.9.5→0.9.6 upgrade acceptance on Windows, macOS and AppImage, reusing accepted
+Debian results and distinct diagnosed observations. Preserve existing Animate
+work and verify its integration when affected. Skins remain at the end. Reuse
+accepted evidence; never repeat completed batches or unchanged failed routes.
 
 Animation UI must follow the supplied `animare/` screenshots very closely:
 Spine-like panel placement, density, Graph/Dopesheet, toolbar, tracks/ruler,

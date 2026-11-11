@@ -1,18 +1,23 @@
-# Current state — 2026-11-09
+# Current state — 2026-11-11
 
 ## Active goal and priorities
 
-Latest user steering: finish and stabilize existing Physics (F307) and both
-Transform Match actions (F308) before adding new features. Skins move to the end.
-The historical F307/F308 deferral is superseded. Preserve existing Animate work;
-this pass fixes established behavior rather than expanding timeline/runtime scope.
-Current Physics research uses three subagents for DATA, UI/ownership and tooling;
-root integrates and alone operates Windows/reference processes. Actual capacity
-is four agents total, despite the latest request for ten. No global settings
-changed. The accepted0.9.5 delivery is retained. Release0.9.6 is published. Latest steering now explicitly requests all three
-remaining tracks: Physics phase, remaining Transform Match fidelity and actual
-native installation/0.9.5→0.9.6 upgrades. No new solver, clock or numeric-bound
-change is introduced without discriminating exact-version evidence.
+Latest user steering establishes a general **90% usable delivery milestone**.
+Complete and verify the core, track the remaining fidelity/edge cases and proceed;
+return to the final10% in the final100% pass. This is an agreed planning milestone,
+not a measured percentage of reference compatibility. Integrity/persistence guards
+and evidence limits remain mandatory. Skins remain at the end.
+
+Physics F307 and both Transform Match actions F308 are now **READY90** by explicit
+user acceptance. Existing phase/precision/Additive/Physics/suffix limitations and
+the failed separate Save-only probe remain recorded below and in final-pass task
+rows. No further Physics/Match reference work is active at this milestone.
+
+Current active work: close actual native0.9.5→0.9.6 upgrade acceptance on Windows,
+macOS and AppImage. Debian full upgrade and separate persistence are already
+accepted; reuse that evidence. Three agents own DATA, UI and tooling preparation;
+root integrates and alone operates shared tests/CI/target processes. Capacity is
+four agents total. Release0.9.6 and the accepted0.9.5 local delivery stay immutable.
 
 ## Current release publication
 
@@ -34,8 +39,8 @@ belongs to the retained 0.9.5 image 54e27667, never relabeled as 0.9.6. Debian i
 automatic successor and separate native Open/persistence session. Other native
 upgrade profiles remain open. Physics
 moving-parent phase, World shear precision and full compatibility remain open.
-The next product work remains unanswered F307/F308 fidelity; installed-update
-acceptance is now ACTIVE on disposable hosted native VMs. Fresh ownership/source
+F307/F308 fidelity is deferred to the final100% pass; installed-update
+acceptance is ACTIVE on disposable hosted native VMs. Fresh ownership/source
 guards still apply.
 
 ## New exact4.3.26 observations
@@ -412,16 +417,11 @@ VHDX224,135,217,152B nonsparse. Linux's~825GiB does not establish host safety.
 No manualtrim/shutdown/compaction/globalsettings changes. Keep large local
 builds/captures deferred; repeat both disk measurements at session end.
 
-Next reproducible work: preserve accepted Debian v6/known-nonchild evidence and
-prepare distinct paired-reference Windows/macOS/AppImage installed-upgrade
-scenarios. Windows SDKPress has no functional transition; a new discriminating
-provider/observation is required, not another unchanged click. F308 future
-Save-only precision needs diagnosed capture-coordinate correction in a fresh
-case, not a repeated Match or numeric fit. F307 has no identified next caller
-provider; the [installed Linux inventory](research/PHYSICS-LINUX-PROVIDER-INVENTORY-RESULT-2026-11-09.md)
-retains runtime2 negatives and runtime1 exact-editor binding UNKNOWN. No solver,
-clock or bounds change. Full fidelity remains ACTIVE, skins last, no new editor
-features. Prior product acceptance/cleanup are retained in ignored analysis
-checkpoints; current tools/raw receipts are under
-`.local/research/finish-three-2026-11-09/` and
-`.local/native-install-upgrade-2026-11-09/`.
+Next reproducible work: finish Windows/macOS/AppImage upgrade scenarios with
+paired DATA/UI findings and the existing exact package/member/native lifecycle
+and persistence checks. Do not repeat the ineffective Windows SDKPress unchanged.
+Physics/Transform Match remain READY90; remaining caller-timing, exact precision,
+Additive/Physics/suffix and diagnosed fresh Save-only probes belong to the final
+100% pass. Preserve existing evidence and do not reopen these routes now. Current
+ignored receipts/tools remain under `.local/native-install-upgrade-2026-11-09/`
+and `.local/research/finish-three-2026-11-09/`.

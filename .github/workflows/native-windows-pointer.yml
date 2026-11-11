@@ -1,0 +1,54 @@
+name: One owned Windows physical rectangle pointer capability
+on:
+  push:
+    branches: [work/native-install-upgrade-0.9.6]
+    paths:
+      - '.github/workflows/native-windows-pointer.yml'
+      - 'scripts/native-windows-pointer/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  capability:
+    name: Native capability ${{ matrix.route }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 7
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - route: windows-nsis
+            os: windows-latest
+    env:
+      FBONES_ROUTE: ${{ matrix.route }}
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Select fresh private runner output root
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']) / ('fbones-native-' + os.environ['GITHUB_RUN_ID'] + '-' + os.environ['GITHUB_RUN_ATTEMPT'] + '-' + os.environ['FBONES_ROUTE'])
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write('RUN_ROOT=' + str(root) + '\n')
+      - name: Verify and fetch one exact published stock 0.9.5 package
+        shell: bash
+        env:
+          FBONES_METADATA_TOKEN: ${{ github.token }}
+        run: python scripts/native-acceptance/assets.py '${{ matrix.route }}' --root "$RUN_ROOT"
+      - name: One current owned physical rectangle child pointer sequence
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\native-windows-pointer\windows.ps1 -Root "%RUN_ROOT%"
+      - name: Preserve bounded native capability receipts, including blockers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-windows-pointer
+          path: ${{ env.RUN_ROOT }}/reports/
+          retention-days: 7
+          if-no-files-found: warn

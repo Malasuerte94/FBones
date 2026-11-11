@@ -9,8 +9,8 @@
     },
     {
       "path": "AGENTS.md",
-      "bytes": 16950,
-      "sha256": "b626424d2e6c1cd252108229c782d4584c0464aaec920652cc239593ba04ffc1"
+      "bytes": 17583,
+      "sha256": "873263f71211495f183b92248dffee8b0970e71447ee5e2f268fb58448db0b06"
     },
     {
       "path": "README.md",
@@ -118,6 +118,11 @@
       "sha256": "333100522d3b2ad0f4a3c7d2d37ca1401f85e8a24d5a0fdd083cbf13857123b8"
     },
     {
+      "path": ".github/workflows/native-linux-appimage-upgrade.yml",
+      "bytes": 2431,
+      "sha256": "58acd54b4a157762676c65bc94af206c13542a3259b3553227dd9b731f2ac1d5"
+    },
+    {
       "path": ".github/workflows/native-linux-debian-upgrade.yml",
       "bytes": 2384,
       "sha256": "809f3068b0b940355ce66a2a9759b8d92420b7b2de876e12bbdbe639ef597389"
@@ -131,6 +136,11 @@
       "path": ".github/workflows/native-macos-nonchild.yml",
       "bytes": 996,
       "sha256": "ae3e75283dbea253f23530e145fdb7037d4597dc8eab1a04f88abe3f22a4735d"
+    },
+    {
+      "path": ".github/workflows/native-windows-pointer.yml",
+      "bytes": 2007,
+      "sha256": "893ae827806c08cab1c49327f0fb4495914dd40b649faf71101ced130ae6aa1f"
     },
     {
       "path": "src/App.vue",
@@ -2153,6 +2163,76 @@
       "sha256": "11a3aecfa3bc0610a5be11fe8b994de45d8802750c9068503187675d74fd8d5f"
     },
     {
+      "path": "scripts/native-appimage-upgrade/appimage_identity.py",
+      "bytes": 3952,
+      "sha256": "fe332500b7c6db95164c846985c68b9d25c8caa2c8767bcfd3749a96da590b89"
+    },
+    {
+      "path": "scripts/native-appimage-upgrade/assets.json",
+      "bytes": 4025,
+      "sha256": "d749af846f064141c976a304ad9d52f09eca8e9205177642fcf90f81ffb9c0ce"
+    },
+    {
+      "path": "scripts/native-appimage-upgrade/assets.py",
+      "bytes": 3919,
+      "sha256": "d5a0700c7b00e1a1074644b66c767498b1c2d2dfe1cfa2da278c36e2ce314b81"
+    },
+    {
+      "path": "scripts/native-appimage-upgrade/lifecycle.py",
+      "bytes": 6574,
+      "sha256": "5d4352a6ed7b9bed44c78877e280c3bbf724dc9407d4c678a355df1b0711da62"
+    },
+    {
+      "path": "scripts/native-appimage-upgrade/native-launch.py",
+      "bytes": 3026,
+      "sha256": "a086c06345a2d6b67cb88abeb6ff979ee810959d9045dabc490068218bf62c6f"
+    },
+    {
+      "path": "scripts/native-appimage-upgrade/native_access.py",
+      "bytes": 28216,
+      "sha256": "06c09680b4edcad960b65a80fa9e8e8a3c8f679fc6adf87011e76c9b702a86c4"
+    },
+    {
+      "path": "scripts/native-appimage-upgrade/own-minimal-checkpoint.py",
+      "bytes": 5057,
+      "sha256": "d823a5f32f013bd4c17adb13fe44b8babde452356205268ab3a35c5d38a3d6da"
+    },
+    {
+      "path": "scripts/native-appimage-upgrade/parse-project.py",
+      "bytes": 5391,
+      "sha256": "59f49f8a6b09d01aaf02a55f26caad923368c6d41a9357ca44ebf56c66f85284"
+    },
+    {
+      "path": "scripts/native-appimage-upgrade/prepare-target.py",
+      "bytes": 5073,
+      "sha256": "e75685a635c831fb0d444da671ac429202064d6ea3be37c19b2148c4c08b1a36"
+    },
+    {
+      "path": "scripts/native-appimage-upgrade/run.py",
+      "bytes": 15961,
+      "sha256": "8a7d28c3e0f970129b778f4633f4265c8632b550220fb2b42268ebef52b2141b"
+    },
+    {
+      "path": "scripts/native-appimage-upgrade/selftest.py",
+      "bytes": 8786,
+      "sha256": "03f08a55f08acb49e8666dd9445714cc9c6e9177511e4ad5e9d7d3a3a3f99817"
+    },
+    {
+      "path": "scripts/native-appimage-upgrade/session.py",
+      "bytes": 10714,
+      "sha256": "71aaf22dd35164e279e19e89a04a144f05b21943eafc6cc2e193372953d5a793"
+    },
+    {
+      "path": "scripts/native-appimage-upgrade/table_open.py",
+      "bytes": 12020,
+      "sha256": "84d6b6b027e08d756844de2cd3f5ae4999d4bcc126945586097bd1a208729433"
+    },
+    {
+      "path": "scripts/native-appimage-upgrade/target.json",
+      "bytes": 1252,
+      "sha256": "1013e6ccb5b1d930b84270384a7ebab85b04811ababd94bfe4169c13c1b21bd9"
+    },
+    {
       "path": "scripts/native-debian-upgrade/assets.json",
       "bytes": 4025,
       "sha256": "d749af846f064141c976a304ad9d52f09eca8e9205177642fcf90f81ffb9c0ce"
@@ -2258,14 +2338,24 @@
       "sha256": "a377c2f770e46a8d1b5633113c3cca0032a8b8cf08d480cfe8572ad00007660a"
     },
     {
+      "path": "scripts/native-windows-pointer/owned-rect-click.cs",
+      "bytes": 12493,
+      "sha256": "eb0fe45ecba9b5039f7f9c94f84ad0a4417b678577c601736483f9cd255afba9"
+    },
+    {
+      "path": "scripts/native-windows-pointer/windows.ps1",
+      "bytes": 24233,
+      "sha256": "e16b2154535195321518d899b94d7f434b3d6275f6740bd4d684b1564d0ef762"
+    },
+    {
       "path": "scripts/prepare-installer-release.py",
       "bytes": 13878,
       "sha256": "f60c96a09e52eb0503f3dde86633727e90379f77a34d3d5372b2e4eaebf9b83b"
     },
     {
       "path": "scripts/prepare-public-release.py",
-      "bytes": 8258,
-      "sha256": "4a80a71100084b51d2dfe7cf08a602ab484aba330744e1b61b1515b085f77acb"
+      "bytes": 8316,
+      "sha256": "440344951d109cb84da7a7d5ae0910bbc7db9c450d233bb6e366f87a736949cc"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -2419,13 +2509,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 29338,
-      "sha256": "adfb3ca1c7a4b0e03475453f69ecf2322b2cc3e9d10f77feb083865d8bb20ed1"
+      "bytes": 29197,
+      "sha256": "4c8d84bcf53a99de8e8da1df91ad6cd1be6392b451972f0171f9c3306600377d"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 20358,
-      "sha256": "a0fe05ee43314d520d1e93611e518f2f40e5df27ee1c7645673bb713e1f7a921"
+      "bytes": 21074,
+      "sha256": "a9da4f3cca97caf6dbe83ad5b1450b224b36b3e7fb5e07a0ce795748a8b49a19"
     },
     {
       "path": "docs/TESTING.md",
@@ -3118,6 +3208,16 @@
       "sha256": "b45ad6223351d7dc4c8173434c8d371feec0989b21279f284907427aa81dd0b4"
     },
     {
+      "path": "docs/research/NATIVE-APPIMAGE-UPGRADE-CLOSEOUT-DATA-GATE-2026-11-11.md",
+      "bytes": 4145,
+      "sha256": "a4fc0f621708a2b5e82a1bb6ac586e88e9b29f0696b6b6799176084264141c81"
+    },
+    {
+      "path": "docs/research/NATIVE-APPIMAGE-UPGRADE-CLOSEOUT-UI-GATE-2026-11-11.md",
+      "bytes": 4125,
+      "sha256": "fef993cea84c7b40cceac9379518f6c5ed6fd957d3488f8af3aeed4591d0c854"
+    },
+    {
       "path": "docs/research/NATIVE-FILE-MENU-UI-GATE-2026-11-08.md",
       "bytes": 5520,
       "sha256": "32dd86d23e9b72726bc0a017f8523336df043bdfcedf1e6bd58dc797d4300b1c"
@@ -3253,6 +3353,21 @@
       "sha256": "bc721f78b16ff21073755f4186d190f617145b75573187a768d4272f852a5fb4"
     },
     {
+      "path": "docs/research/NATIVE-MACOS-PICKER-CAPABILITY-DATA-GATE-2026-11-11.md",
+      "bytes": 3550,
+      "sha256": "0da6b241318101c61f6720776b0382584771409d16c76a3b08eccd3b59bd5846"
+    },
+    {
+      "path": "docs/research/NATIVE-MACOS-PICKER-CAPABILITY-UI-GATE-2026-11-11.md",
+      "bytes": 4093,
+      "sha256": "571962cf59c7dd9f6742ce850ec871fafb52c16d558c13698a0896a1880c48a1"
+    },
+    {
+      "path": "docs/research/NATIVE-MACOS-PICKER-CHILD-DATA-ADDENDUM-2026-11-11.md",
+      "bytes": 2691,
+      "sha256": "1023ca1da3777e70ef194090dbc987b71dd49d92e5a6687eebe3da26fd8e0cea"
+    },
+    {
       "path": "docs/research/NATIVE-NEXT-PICKER-AND-LAUNCH-DATA-GATE-2026-11-09.md",
       "bytes": 5841,
       "sha256": "efee44ba4f18c6ec654610afa8b9343e31b46a96302031dfa583177e6728f250"
@@ -3306,6 +3421,16 @@
       "path": "docs/research/NATIVE-WINDOWS-MACOS-UPDATER-PROVIDER-V5-DATA-GATE-2026-11-09.md",
       "bytes": 8202,
       "sha256": "a115d5b363edd1633539f0c8872382ebcebc4c36896a6977246ad84a5ae02491"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-OWNED-RECT-CLICK-DATA-GATE-2026-11-11.md",
+      "bytes": 3620,
+      "sha256": "8730668eaa248abad03a755b9198c8e83bba004da6bd1bc4da4119f3bb6888cc"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-OWNED-RECT-CLICK-UI-GATE-2026-11-11.md",
+      "bytes": 3511,
+      "sha256": "0810e91d8c5639d2f355badbf470403269f45c019a01a0ac5dbe831c742ca909"
     },
     {
       "path": "docs/research/NATIVE-WINDOWS-READY-PANEL-PRESS-V8-DATA-ADDENDUM-2026-11-09.md",
