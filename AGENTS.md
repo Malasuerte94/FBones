@@ -33,7 +33,12 @@ Physics F307 and both Transform Match actions F308 are **READY90**. Their known
 phase/precision/Additive/Physics/suffix gaps are deferred to the final 100% pass;
 do not resume their original probes now. Current priority: finish actual native
 0.9.5→0.9.6 upgrade acceptance on Windows, macOS and AppImage, reusing accepted
-Debian results and distinct diagnosed observations. Preserve existing Animate
+Debian results and distinct diagnosed observations. At90%, Windows/macOS
+acceptance is actual clean signed upgrade/automatic restart/current0.9.6/normal0,
+then fresh installed renderer-ready/current0.9.6/normal0 and unchanged independently
+decoded own file bytes on disk. Native project Open/reopen/New/edit/dirtyCancel/Save
+UX there belongs to final100%; never label fresh startup/disk checks project
+persistence. Preserve existing Animate
 work and verify its integration when affected. Skins remain at the end. Reuse
 accepted evidence; never repeat completed batches or unchanged failed routes.
 

@@ -9,8 +9,8 @@
     },
     {
       "path": "AGENTS.md",
-      "bytes": 17583,
-      "sha256": "873263f71211495f183b92248dffee8b0970e71447ee5e2f268fb58448db0b06"
+      "bytes": 17946,
+      "sha256": "2250abb1e7cbe431e3521de0a8369f61d8378050fffcbd3fc2a13714635f0784"
     },
     {
       "path": "README.md",
@@ -144,8 +144,8 @@
     },
     {
       "path": ".github/workflows/native-macos-upgrade.yml",
-      "bytes": 1745,
-      "sha256": "b1e62398ee55715de2b80c06899435b2e50aefecc3c6a793863245f655d1ee41"
+      "bytes": 1736,
+      "sha256": "47f019fe4ef61fc25cbd748a9d91042eb2e85dd5c355cf457828ba5c386076d6"
     },
     {
       "path": ".github/workflows/native-windows-pointer.yml",
@@ -2404,8 +2404,8 @@
     },
     {
       "path": "scripts/native-mac-upgrade/mac.swift",
-      "bytes": 58251,
-      "sha256": "743e09f6607eca37ed58f2c0f7c93e49dbd1371ba40bd790fd8db6a959c7c231"
+      "bytes": 59205,
+      "sha256": "a8d4920c8ef69395ee6a0eb9b78104bea72fc2a29dbc2edf727ff5d999945f18"
     },
     {
       "path": "scripts/native-mac-upgrade/native-exit.c",
@@ -2749,13 +2749,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 33007,
-      "sha256": "9954248495f6100160008ce6d1a1eafbaf0cea70f7db0e469dddf3b5c8e3523f"
+      "bytes": 33462,
+      "sha256": "c1c3425b77f3a7d857caae64ca06a3ff13e8c751915b0e6c224285d47f3e2b59"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 21817,
-      "sha256": "152758897748a939422a3fdecf72c8a3c724bcef1afc8acfaa82d4aa63840092"
+      "bytes": 21837,
+      "sha256": "34a2e8fb770d6b204203d0c46793a6f08e415d1d5aa1181e978debf1a5975e3e"
     },
     {
       "path": "docs/TESTING.md",
@@ -3718,6 +3718,11 @@
       "sha256": "f319990d85900d94f1769ee2beaffb247175736823765891790ff7618ee36807"
     },
     {
+      "path": "docs/research/NATIVE-UPGRADE-90-STARTUP-AND-DISK-UI-GATE-2026-11-11.md",
+      "bytes": 2973,
+      "sha256": "6282d2ff8edaa8062278845447a38609648a544c59a9415897114ae410720ede"
+    },
+    {
       "path": "docs/research/NATIVE-WINDOWS-CAPABILITY-V6-UI-GATE-2026-11-09.md",
       "bytes": 1775,
       "sha256": "2f883aa20754e27784bc3cb47f281d1df3b7413ba719f085c1c072971a458875"
@@ -3786,6 +3791,11 @@
       "path": "docs/research/NATIVE-WINDOWS-MACOS-CAPABILITY-V5-UI-GATE-2026-11-09.md",
       "bytes": 3140,
       "sha256": "d8ffee26617b40160366ff1886b6573005a5205379d8376ce7f84ee5789207ff"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-MACOS-CLEAN-UPGRADE-90-DATA-GATE-2026-11-11.md",
+      "bytes": 3245,
+      "sha256": "217669011a6c4b2c79470621512b35cd0f702ab1ff9d359d17d59658ef7606a4"
     },
     {
       "path": "docs/research/NATIVE-WINDOWS-MACOS-UPDATER-PROVIDER-V5-DATA-GATE-2026-11-09.md",

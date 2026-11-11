@@ -13,8 +13,13 @@ user acceptance. Existing phase/precision/Additive/Physics/suffix limitations an
 the failed separate Save-only probe remain recorded below and in final-pass task
 rows. No further Physics/Match reference work is active at this milestone.
 
-Current active work: close actual native0.9.5→0.9.6 upgrade acceptance on Windows,
-macOS. Debian and AppImage full upgrade and separate persistence are already
+Current active work: close actual native0.9.5→0.9.6 **clean-upgrade core90** on
+Windows/macOS: stock signed Install, old normal0, unique automatic installed
+0.9.6/current version/normal0, then separate fresh installed renderer-ready
+0.9.6/current version/normal0, plus independently decoded unchanged own binary
+checkpoint on disk. Native project Open/reopen, New/edit/dirtyCancel/Save UX on
+these two systems is deferred to final100%; do not call a fresh startup or disk
+hash proof native project persistence. No more dialog refinements at90%. Debian and AppImage full upgrade and separate persistence are already
 accepted; reuse that evidence. Three agents own DATA, UI and tooling preparation;
 root integrates and alone operates shared tests/CI/target processes. Capacity is
 four agents total. Release0.9.6 and the accepted0.9.5 local delivery stay immutable.
