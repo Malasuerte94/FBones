@@ -138,6 +138,11 @@
       "sha256": "ae3e75283dbea253f23530e145fdb7037d4597dc8eab1a04f88abe3f22a4735d"
     },
     {
+      "path": ".github/workflows/native-macos-picker.yml",
+      "bytes": 1617,
+      "sha256": "ea72d1cf8b7b670e1ab4c37a8ddc4683f68e0b4f74c8ee7f4ff36674af70f853"
+    },
+    {
       "path": ".github/workflows/native-windows-pointer.yml",
       "bytes": 2007,
       "sha256": "893ae827806c08cab1c49327f0fb4495914dd40b649faf71101ced130ae6aa1f"
@@ -2313,6 +2318,56 @@
       "sha256": "7b8ff922010bf6e346e5f5dc0129e590fe7a96504e71f82e7cf7ac5377f37d96"
     },
     {
+      "path": "scripts/native-mac-picker/assets.json",
+      "bytes": 4025,
+      "sha256": "d749af846f064141c976a304ad9d52f09eca8e9205177642fcf90f81ffb9c0ce"
+    },
+    {
+      "path": "scripts/native-mac-picker/assets.py",
+      "bytes": 3919,
+      "sha256": "d5a0700c7b00e1a1074644b66c767498b1c2d2dfe1cfa2da278c36e2ce314b81"
+    },
+    {
+      "path": "scripts/native-mac-picker/mac.sh",
+      "bytes": 2505,
+      "sha256": "0b5bfa794d600bb51700231ef1bc67bc49d8b68514756d5769850f84436131fb"
+    },
+    {
+      "path": "scripts/native-mac-picker/mac.swift",
+      "bytes": 39925,
+      "sha256": "f563810cbf5a7be3c3e7885dd60566438f4c78a4b669f0485fe277a94639b5e3"
+    },
+    {
+      "path": "scripts/native-mac-picker/own-minimal-checkpoint.py",
+      "bytes": 5057,
+      "sha256": "d823a5f32f013bd4c17adb13fe44b8babde452356205268ab3a35c5d38a3d6da"
+    },
+    {
+      "path": "scripts/native-mac-picker/own-process-identity.c",
+      "bytes": 1918,
+      "sha256": "1972ebd78b06c493e2c0e2828f3b32556b1b00052b406f198b00163892d1b0b1"
+    },
+    {
+      "path": "scripts/native-mac-picker/own-process-identity.h",
+      "bytes": 767,
+      "sha256": "64ca55a26b2fce5fdc6d60948c57050e6ecfc52e7aa52950cc4b2feac7e348ed"
+    },
+    {
+      "path": "scripts/native-mac-picker/parse-project.py",
+      "bytes": 5391,
+      "sha256": "59f49f8a6b09d01aaf02a55f26caad923368c6d41a9357ca44ebf56c66f85284"
+    },
+    {
+      "path": "scripts/native-mac-picker/picker-child.c",
+      "bytes": 3913,
+      "sha256": "45c84d764b13fd33fc0135ab39359719052d6117d32d05075a1a0289a3b351c2"
+    },
+    {
+      "path": "scripts/native-mac-picker/picker-child.h",
+      "bytes": 590,
+      "sha256": "5c0447536df1132d50edc27d254a346a3c469a8f53f032386bb5d979b475b855"
+    },
+    {
       "path": "scripts/native-picker/assets.json",
       "bytes": 4025,
       "sha256": "d749af846f064141c976a304ad9d52f09eca8e9205177642fcf90f81ffb9c0ce"
@@ -2354,8 +2409,8 @@
     },
     {
       "path": "scripts/prepare-public-release.py",
-      "bytes": 8316,
-      "sha256": "440344951d109cb84da7a7d5ae0910bbc7db9c450d233bb6e366f87a736949cc"
+      "bytes": 8567,
+      "sha256": "e48888684f19fd13f56f9b5b0c74cc696a481c1011229fc3be2c9ad6cfeb787c"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -3368,6 +3423,11 @@
       "sha256": "1023ca1da3777e70ef194090dbc987b71dd49d92e5a6687eebe3da26fd8e0cea"
     },
     {
+      "path": "docs/research/NATIVE-MACOS-UPGRADE-SUCCESSOR-DATA-PLAN-2026-11-11.md",
+      "bytes": 4127,
+      "sha256": "075465c2a14b9672d75424daa2aa61c11ba05d63152e3faadca790f03e39c44c"
+    },
+    {
       "path": "docs/research/NATIVE-NEXT-PICKER-AND-LAUNCH-DATA-GATE-2026-11-09.md",
       "bytes": 5841,
       "sha256": "efee44ba4f18c6ec654610afa8b9343e31b46a96302031dfa583177e6728f250"
@@ -3396,6 +3456,16 @@
       "path": "docs/research/NATIVE-WINDOWS-CAPABILITY-V6-UI-GATE-2026-11-09.md",
       "bytes": 1775,
       "sha256": "2f883aa20754e27784bc3cb47f281d1df3b7413ba719f085c1c072971a458875"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-CORE-UPGRADE-90-DATA-ADDENDUM-2026-11-11.md",
+      "bytes": 3317,
+      "sha256": "8708fa630a696a7effd57a6b08966f4540cbdd355fe8bd2e8fa61591a60d393c"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-CORE90-UPGRADE-UI-ADDENDUM-2026-11-11.md",
+      "bytes": 3130,
+      "sha256": "dc1e7561b5bbfa1c318918512fb9a55a4c07d4c9f31646908c2a6e8963c129a3"
     },
     {
       "path": "docs/research/NATIVE-WINDOWS-LEGACY-METADATA-V7-UI-GATE-2026-11-09.md",
@@ -3428,6 +3498,11 @@
       "sha256": "8730668eaa248abad03a755b9198c8e83bba004da6bd1bc4da4119f3bb6888cc"
     },
     {
+      "path": "docs/research/NATIVE-WINDOWS-OWNED-RECT-CLICK-RESULT-2026-11-11.md",
+      "bytes": 3127,
+      "sha256": "394a89574a8a6ffe3a9de0f7cec8e3fd3368dcaa7c17a340b56d41ee8253111c"
+    },
+    {
       "path": "docs/research/NATIVE-WINDOWS-OWNED-RECT-CLICK-UI-GATE-2026-11-11.md",
       "bytes": 3511,
       "sha256": "0810e91d8c5639d2f355badbf470403269f45c019a01a0ac5dbe831c742ca909"
@@ -3441,6 +3516,11 @@
       "path": "docs/research/NATIVE-WINDOWS-READY-PANEL-PRESS-V8-UI-ADDENDUM-2026-11-09.md",
       "bytes": 1797,
       "sha256": "a5e43a908ef2823d2606580bfc801d90e9faeff092aadd6ce08ac0480a89bfe0"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-UPGRADE-CLOSEOUT-DATA-PLAN-2026-11-11.md",
+      "bytes": 5097,
+      "sha256": "7d8b783bdd18c4d0f2bbf4f81ed9164b9b93f2249eb32392d2c4a97c1cfb90ea"
     },
     {
       "path": "docs/research/PHYSICS-BATCH-AUTHORING-POLICY.md",
