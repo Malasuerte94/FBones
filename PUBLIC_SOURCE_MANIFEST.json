@@ -9,8 +9,8 @@
     },
     {
       "path": "AGENTS.md",
-      "bytes": 17994,
-      "sha256": "b9b93467a84f7c0a9d368f3c0bcf2c4c4b14d86cef4e288b40556303a9f91b76"
+      "bytes": 18295,
+      "sha256": "cbcfbdfdce93369daf89a300bfb40199b4f068c982a103bd3c54857b84614b63"
     },
     {
       "path": "README.md",
@@ -2754,13 +2754,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 31170,
-      "sha256": "7dc0504c1c9d38e346d37a942d447f9826798b3f9ab64aebbdbf27b39938c431"
+      "bytes": 31458,
+      "sha256": "65334a4966e70437686c8717ddfc26c961cc458aa776be9def51d76e1c2bf80f"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 22560,
-      "sha256": "3ab18a227ac3fa1db21b6cd39a5fff79a50bd68133b83fd268ea2078cad35512"
+      "bytes": 23141,
+      "sha256": "61cd65395ab61789cda062c7977cd4c5103e32b9b9c0569530e61e51d8793597"
     },
     {
       "path": "docs/TESTING.md",
@@ -3746,6 +3746,11 @@
       "path": "docs/research/NATIVE-WINDOWS-CAPABILITY-V6-UI-GATE-2026-11-09.md",
       "bytes": 1775,
       "sha256": "2f883aa20754e27784bc3cb47f281d1df3b7413ba719f085c1c072971a458875"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-CLEAN-UPGRADE-90-RESULT-2026-11-11.md",
+      "bytes": 4624,
+      "sha256": "8e133d6969113edffd1af0c2dd4a6e3bfac7d8721ccf47e30c3209298df26998"
     },
     {
       "path": "docs/research/NATIVE-WINDOWS-CORE-FOREGROUND-DATA-ADDENDUM-2026-11-11.md",

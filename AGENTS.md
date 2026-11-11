@@ -31,17 +31,21 @@ safe persistence, existing acceptance evidence and honest evidence limits.
 
 Physics F307 and both Transform Match actions F308 are **READY90**. Their known
 phase/precision/Additive/Physics/suffix gaps are deferred to the final 100% pass;
-do not resume their original probes now. Current priority: finish actual native
-Windows0.9.5→0.9.6 clean-upgrade90 acceptance. Debian/AppImage full profiles and
-macOS ARM64 clean-upgrade90 are accepted; reuse those results and distinct
-diagnosed observations. At90%, Windows/macOS
-acceptance is actual clean signed upgrade/automatic restart/current0.9.6/normal0,
-then fresh installed renderer-ready/current0.9.6/normal0 and unchanged independently
-decoded own file bytes on disk. Native project Open/reopen/New/edit/dirtyCancel/Save
-UX there belongs to final100%; never label fresh startup/disk checks project
-persistence. Preserve existing Animate
-work and verify its integration when affected. Skins remain at the end. Reuse
-accepted evidence; never repeat completed batches or unchanged failed routes.
+do not resume their original probes now. Native0.9.5→0.9.6 upgrade closeout is
+accepted: Debian/AppImage full profiles, Windows x64/macOS ARM64 clean-upgrade90.
+Reuse accepted results rather than rerun the completed cases.
+
+At90%, Windows/macOS acceptance covers actual signed stock replacement, genuine
+automatic new native identity and normal0, then a fresh installed renderer-ready
+0.9.6 start/normal0 and unchanged independently decoded own bytes on disk.
+Windows corroborates the exact bundled UI footer with the premeasured native hash
+and installed registry version; its automatic/fresh Updates Current-panel gesture
+is untested. macOS additionally proves the actual Current0.9.6 panel and registered
+SDK exit status. Native project Open/reopen/New/edit/dirtyCancel/Save UX on those
+two platforms belongs to final100%; never label startup/disk checks project
+persistence. Preserve existing Animate work and verify integration when affected.
+Continue unclosed roadmap slices toward90%; final10% tasks stay deferred until
+the final pass. Skins remain at the end. Never repeat unchanged failed routes.
 
 Animation UI must follow the supplied `animare/` screenshots very closely:
 Spine-like panel placement, density, Graph/Dopesheet, toolbar, tracks/ruler,

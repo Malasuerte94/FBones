@@ -13,16 +13,17 @@ user acceptance. Existing phase/precision/Additive/Physics/suffix limitations an
 the failed separate Save-only probe remain recorded below and in final-pass task
 rows. No further Physics/Match reference work is active at this milestone.
 
-Current active work: finish Windows actual0.9.5→0.9.6 **clean-upgrade core90**;
-macOS clean90 is accepted43015214283. The Windows/macOS profile requires: stock signed Install, old normal0, unique automatic installed
-0.9.6/current version/normal0, then separate fresh installed renderer-ready
-0.9.6/current version/normal0, plus independently decoded unchanged own binary
-checkpoint on disk. Native project Open/reopen, New/edit/dirtyCancel/Save UX on
-these two systems is deferred to final100%; do not call a fresh startup or disk
-hash proof native project persistence. No more dialog refinements at90%. Debian and AppImage full upgrade and separate persistence are already
-accepted; reuse that evidence. Three agents own DATA, UI and tooling preparation;
-root integrates and alone operates shared tests/CI/target processes. Capacity is
-four agents total. Release0.9.6 and the accepted0.9.5 local delivery stay immutable.
+The requested closeout is complete at the agreed90% milestone. Actual stock
+0.9.5→0.9.6 is accepted on Debian/AppImage (full native project flows), macOS
+ARM64 (clean upgrade/Current panel/fresh startup) and Windows x64 (clean upgrade,
+exact installed native/registry plus bundled footer/fresh startup). All three
+native app stages exit0 on both remaining platforms; Windows also proves the
+actual inherited installer exit0. Disk checks preserve the same own binary.
+Windows automatic/fresh Current-panel gestures and Windows/macOS native project
+Open/reopen/New/edit/dirtyCancel/Save remain final100%; startup/disk checks are
+never labeled project persistence. Three agents supplied DATA/UI/tooling reviews;
+root alone operated shared CI/native cases. No original Physics/Match probe was
+resumed. Release0.9.6 and the selected0.9.5 local delivery stay immutable.
 
 ## Current release publication
 
@@ -38,14 +39,14 @@ runtime archive equality covers 32 files. No original/private
 assets are included. The [release notes](releases/v0.9.6-beta.1.md) retain the
 verification scope and limits.
 
-The current follow-up branch contains QA tools and aggregate findings; it does
-not move the release tag, rebuild or replace published archives. Prior local Windows QA
-belongs to the retained 0.9.5 image 54e27667, never relabeled as 0.9.6. Debian installed0.9.5→0.9.6 acceptance now passes42679060912, including the
-automatic successor and separate native Open/persistence session. AppImage installed upgrade/persistence now also passes43001332547. macOS clean-upgrade90 passes43015214283; Windows clean90 remains active. Physics
-moving-parent phase, World shear precision and full compatibility remain open.
-F307/F308 fidelity is deferred to the final100% pass; installed-update
-acceptance is ACTIVE on disposable hosted native VMs. Fresh ownership/source
-guards still apply.
+The follow-up integrates QA tools, scoped acceptance findings and the90% policy;
+product source files are unchanged against the immutable release. No release tag
+or asset is rebuilt/replaced. Prior local Windows QA/selection still belongs to
+0.9.5 image54e27667, never relabeled0.9.6. Installed-upgrade acceptance is now
+closed at90%: Debian42679060912, AppImage43001332547, macOS43015214283 and
+Windows43022013711. Their different native project/current-panel scopes are
+retained below. Physics moving-parent phase, World shear precision and broader
+compatibility remain explicitly deferred/open for final100%.
 
 ## New exact4.3.26 observations
 
@@ -278,8 +279,8 @@ The current runtime remains independent MIT0.1.0-beta.1, published40,803-byte/
 32file archive SHA5f8e171bff34384e7219e8adfe345ea49e92632962bf1965b95b644d49954544.
 Game JSON export is separate from binary .fbones; mixing/directbinary/npm/full
 parity are open. Debian installed0.9.5→0.9.6 upgrade/persistence now passes;
-AppImage full upgrade and macOS clean90 are also accepted; Windows clean90 is
-active. Native Windows/macOS project Open/reopen and publisher signing/notarization
+AppImage full upgrade and Windows/macOS clean90 are also accepted. Native
+Windows/macOS project Open/reopen and publisher signing/notarization
 remain in the final100% plan.
 
 Real-source profile remains4editable/4guarded plus editable mascot125bones/
@@ -348,9 +349,9 @@ to intended control; retain the failed route and do not replay it unchanged.
 
 ## Current native installation work
 
-QA branch work/native-install-upgrade-0.9.6 contains reviewed tools, scoped
-acceptance findings and the90% policy. Product Rust/Vue/runtime sources remain
-unchanged against main1888c2a; release439062261/tagcfc60a4 and its immutable
+Reviewed tools, scoped acceptance findings and the90% policy were prepared on
+QA branch work/native-install-upgrade-0.9.6. Product Rust/Vue/runtime sources
+remain unchanged against the original main baseline1888c2a; release439062261/tagcfc60a4 and its immutable
 packages are unchanged. Root alone operates hosted native VMs, never a personal
 installation or protected local editor. Current ignored closeout receipts are
 under `.local/native-upgrade-closeout-2026-11-11/`.
@@ -358,12 +359,13 @@ under `.local/native-upgrade-closeout-2026-11-11/`.
 - [Debian full upgrade](research/NATIVE-LINUX-DEBIAN-UPGRADE-AND-PERSISTENCE-V6-RESULT-2026-11-09.md) passes42679060912/b1c8549: actual signedReady, dirtyInstallCancel/nativeSave, old3166/automatic3442/fresh3571 all actualnormal0. Newnative memberd27601e1/current0.9.6 and onlythen separate same-file native GTKTable Open/Upgrade root/X37.5/clean/unchanged binary pass. Immediate creator and automatic project restoration are not claimed.
 - [AppImage full upgrade](research/NATIVE-APPIMAGE-UPGRADE-AND-PERSISTENCE-RESULT-2026-11-11.md) passes43001332547/ea3510e: actual FUSE outer435195ee/member2c6800aa, dirtyCancel/Save, old3246/automatic3575/fresh3721 all actualnormal0, current0.9.6 and separate same-file native GTKTable Open/semantics/unchanged404B checkpoint. No extract-and-run fallback. Independent DATA5c9c82fb/UI12400d9b pass.
 - [macOS clean-upgrade90](research/NATIVE-MACOS-CLEAN-UPGRADE-90-RESULT-2026-11-11.md) passes43015214283/05ce6f1 on ARM64: exact stock0.9.5/current+signedReady, one Install, retainedold2281/1794397866.970383 normal0. Unique own-bundle NSWorkspace automatic2426/1794397875.189430 matches premeasured updater nativeacdc0088/26,357,856B, freshly parsed Info0.9.6 and actualCurrent0.9.6. Successful actual typed SDK kqueue registration precedes one normal close/eventnormal0. Onlythen fresh2442/1794397879.075083 has direct WebGL readiness/current0.9.6/retainednormal0. Five strict405B/e74 CRC/fulltyped disk checkpoints match; finalfile was not separately uploaded, so final identity is runner-receipt based. DATA96e6ddc5/UI26c40fe3 independently verify45 consumed pins/52 raw files. Project Open/reopen/persistence explicitlyfalse; no immediate-parent/automaticWebGL-log/Intel/publisher-notarization claim.
-- Windows remains ACTIVE. [Owned rectangle capability](research/NATIVE-WINDOWS-OWNED-RECT-CLICK-RESULT-2026-11-11.md) passes43001332616, but consumes only its Updates gesture. Corev1 parser source mismatch is fixed by scoped LF checkout with no hash normalization. v3 identifies early changing main HWND; v4 proper rendered startup qualification passes, then native own Open/helper0 occurs but the first project UIA capture is incomplete: no project semantic/reopen acceptance. Clean90 v5 actual43015542644/a359741 passes realstartup/current0.9.5/signedReady/privateJob assignment, then Install pointer planning rejects a foreign hit BEFORE any message/input. Its complete305-row owned inventory independently shows the sole enabled visible Install button supports actual SDK InvokePattern. A [new DATA gate](research/NATIVE-WINDOWS-INSTALL-INVOKE-V6-DATA-GATE-2026-11-11.md)/[UI finding](research/NATIVE-WINDOWS-INSTALL-INVOKE-V6-UI-FINDING-2026-11-11.md) selects one fresh preplanned SDK Invoke on the exact current owned RuntimeID; no pointer fallback/retry. Actual Install/automatic successor/old+new0/fresh health remain mandatory and unproved until the case.
+- [Windows clean-upgrade90](research/NATIVE-WINDOWS-CLEAN-UPGRADE-90-RESULT-2026-11-11.md) passes43022013711/65c74bb: one exact owned SDK Install invocation returns successfully after305-node preflight. Retainedold8268/start134388743051709820, genuine inherited installer5932/start134388743179306030, automatic6984/start134388743212299612 and onlythen fresh5836/start134388743268374049 all have actualexit0. Installerf01215f3/newnativef8d709b8/16,827,904B/file identity/registry0.9.6 match independent premeasurement. Two prior exact default EBWebView absence receipts plus live kernel/parent/Job chains qualify the automatic normal profile; old/fresh use private profiles. Complete owned auto289/fresh122-node UIA trees show the exact bundled Version0.9.6 Text under editor-status; this literal UI label is corroboration, not a live Current-version API. Fresh direct WebGL and strict unchanged405B/e74 CRC/typed disk checkpoint pass. DATAaf7c8478/UIa6e32f87 independently verify29 consumed pins/57 raw files and join the sole public result. Windows automatic/fresh Current-panel, project Open/reopen/persistence explicitlyfalse. Auxiliary WebView entries without observed terminal are not declared normally closed; native app/installer terminals are proven. Earlier parser/startup/SDK/physical-hit/profile failures remain consumed evidence, not active work.
+
 
 The coordinator applies the user's general90% milestone through the paired
 [clean-upgrade DATA policy](research/NATIVE-WINDOWS-MACOS-CLEAN-UPGRADE-90-DATA-GATE-2026-11-11.md)/[UI policy](research/NATIVE-UPGRADE-90-STARTUP-AND-DISK-UI-GATE-2026-11-11.md).
-Windows/macOS native project Open/reopen/New/edit/dirtyCancel/Save UX belongs to
-final100%; fresh startup plus disk hash/parse is never labeled native project
+Windows/macOS native project Open/reopen/New/edit/dirtyCancel/Save UX and
+Windows automatic/fresh Current-panel interactions belong to final100%; fresh startup plus disk hash/parse is never labeled native project
 persistence. Debian/AppImage retain their stronger accepted scope. Mac picker
 v1–v4/New/Save and corev1–v3 negatives remain preserved, including Swift SDK
 availability, one ineffective immediate numeric readback, initial AX startup
@@ -374,16 +376,18 @@ retains consumed negative routes; do not repeat those unchanged.
 
 ## Cleanup, ownership and next reproducible action
 
-All34 user-process ledgers remain protected, including selected54e27667/user
-FBones85172/start11:39:53.7157359Z and its pending launch transport5405/Linux
-556534/556535/556847. Never close/reuse that transport or window. This pass changes
-only research/QA tools and documentation; no product source/build or duplicate
-normal availability launch. The prior0.9.5 handoff is not0.9.6 installer QA.
+All34 historical personal-process ledgers remain protected. They are notices,
+not fresh liveness/ownership receipts: prior protected FBones85172/start
+2026-11-09T11:39:53.7157359Z/image54e27667 and its transport5405/Linux
+556534/556535/556847 are never closed/reused. Former personal Spine87668 and
+Nov9 owned originals are historical/consumed identities; any future original
+operation needs fresh ownership/absence guards, not that old manual-close gate.
 
-User manually closed personal Spine; freshabsence15:09 and16:24 precedes each
-new own observation. Former87668/11:40:56.0253421Z and all earlier personal IDs
-are historical protection, never authority. Own58404,81388,83396,27984,21320 and62568 are terminal and
-consumed; fresh absence/identity/source guards apply to any later original.
+This QA/research/documentation pass changes no product sources and performs no
+local product build or duplicate normal availability launch. All target apps
+were dedicated hosted-VM copies; accepted native instances closed normally.
+Local Windows operations were small C# type compilation/AST and a pure SDK parse
+of retained command-line text, with no local app/window/provider operation.
 No personal project/window input/save/close/attach or global input occurred.
 
 The preceding Nov9 cleanup recovered16,883,658logicalbytes: disposable NSIS member copy,
@@ -395,24 +399,26 @@ debugdeps~7.6GiB mixed/reusable/incrementalempty. No fullcargo clean/user-data
 removal/physical recovery claim. No new localCargo/frontend build or large
 package download. Remote fixtures live only in ephemeral VMs.
 
-Latest actual host check2026-11-11T11:16:40UTC: Ubuntu VHDX is on G:,
-free1,470,808,064B; VHDX224,114,245,632B nonsparse. Linux's~824GiB does not
-establish host safety. Current cleanup removes213,463logicalbytes:10,680B own source-generator/freeze
-scratch,5,078B superseded one-off source/checkpoint helper scripts, and197,705B
-new unpublished archive copies removed before publication (private originals
-preserved);
-small frozen tools/manifests/raw CI negatives remain necessary. No new local
-binary/package/SDK/Cargo/frontend builds or downloads.
-No manualtrim/shutdown/compaction/globalsettings changes. Keep large local
-builds/captures deferred; repeat both disk measurements at session end.
+Latest actual checks2026-11-11T12:44:37UTC: Linux available883,951,112,192B
+(~823GiB); Ubuntu VHDX is on Windows G:, free1,470,742,528B,
+VHDX224,114,245,632B nonsparse. Linux free space does not establish host safety.
+Current cleanup removes233,513logicalbytes:26,326B own generator/freeze caches,
+9,482B obsolete helpers (six duplicate AST validators consolidated into one),
+and197,705B new unpublished archive copies; private originals are preserved.
+Required frozen tools/manifests/raw successes and useful negatives (~42MiB) stay
+ignored for reproduction/final100%. No new local product/package/SDK/Cargo/
+frontend build or large package download. No trim/shutdown/compaction/global
+settings or physical-reclamation claim; retain uncertain old variants and mixed
+reusable dependencies rather than deleting mapped/other-task artifacts.
 
-Next reproducible work: execute the reviewed Windows SDK Invoke clean90 case with
-paired DATA/UI findings and the existing exact package/member/native lifecycle
-and disk-integrity checks. The new Install Invoke route differs from the consumed
-Updates LegacySDKPress negative; do not repeat that old route unchanged.
-Physics/Transform Match remain READY90; remaining caller-timing, exact precision,
-Additive/Physics/suffix and diagnosed fresh Save-only probes belong to the final
-100% pass. Preserve existing evidence and do not reopen these routes now. Current
-ignored receipts/tools remain under `.local/native-install-upgrade-2026-11-09/`
-and `.local/research/finish-three-2026-11-09/`; current closeout is
+Next reproducible action after this closeout: read the full
+[F105 Animate scope](tasks/F105-animation.md) and its existing paired DATA/UI
+findings, then select an unclosed supported vertical slice with satisfied
+dependencies toward90%. Preserve current Animate integration and the complete
+scope; do not automatically reopen F307-final/F308-final/F005-native-final or
+completed native upgrade/provider batches. Remaining caller timing, exact World
+precision/Additive/Physics/suffix/Save-only fidelity and broader platform UX
+return only in final100%; skins remain at the end. Existing evidence remains in
+`.local/native-install-upgrade-2026-11-09/`,
+`.local/research/finish-three-2026-11-09/` and current
 `.local/native-upgrade-closeout-2026-11-11/`.
