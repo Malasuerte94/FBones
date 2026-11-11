@@ -148,6 +148,11 @@
       "sha256": "893ae827806c08cab1c49327f0fb4495914dd40b649faf71101ced130ae6aa1f"
     },
     {
+      "path": ".github/workflows/native-windows-upgrade.yml",
+      "bytes": 1814,
+      "sha256": "01bc4035b980f09938335efe317bbdd86b6171e90059f4a8b44475a2e3cd6d0c"
+    },
+    {
       "path": "src/App.vue",
       "bytes": 42696,
       "sha256": "54a7e8bc5ebfdd22e76305479e3ae481216e81a96855871012d14129c25ec0e0"
@@ -2335,7 +2340,7 @@
     {
       "path": "scripts/native-mac-picker/mac.swift",
       "bytes": 40388,
-      "sha256": "ed124441f69cdb05eef4d7234c32ffbb27f07cfcbfb578214025f11bfd114d3a"
+      "sha256": "bc94558657462e3850f8af60d3d5410f1c780a3348178186816ae7937e2aa80e"
     },
     {
       "path": "scripts/native-mac-picker/own-minimal-checkpoint.py",
@@ -2403,14 +2408,94 @@
       "sha256": "e16b2154535195321518d899b94d7f434b3d6275f6740bd4d684b1564d0ef762"
     },
     {
+      "path": "scripts/native-windows-upgrade/assets.json",
+      "bytes": 4025,
+      "sha256": "d749af846f064141c976a304ad9d52f09eca8e9205177642fcf90f81ffb9c0ce"
+    },
+    {
+      "path": "scripts/native-windows-upgrade/assets.py",
+      "bytes": 3919,
+      "sha256": "d5a0700c7b00e1a1074644b66c767498b1c2d2dfe1cfa2da278c36e2ce314b81"
+    },
+    {
+      "path": "scripts/native-windows-upgrade/file-controls.cs",
+      "bytes": 4197,
+      "sha256": "20c79c255ae2c9015160f0dfce6f3c6b4ac1c87a6d1c17d3a6de1b1a0f6df7b9"
+    },
+    {
+      "path": "scripts/native-windows-upgrade/native-updater-uia.cs",
+      "bytes": 5824,
+      "sha256": "c0bb27ffe71bfded1f04191e93660d2b75ccbb9635e53d0e4db75ac84bea7607"
+    },
+    {
+      "path": "scripts/native-windows-upgrade/nul-gui-launch.cs",
+      "bytes": 6201,
+      "sha256": "c51bcd7509678c33d73958def2cf942d2d319677fec8ec6e208b75a8d8fcbac9"
+    },
+    {
+      "path": "scripts/native-windows-upgrade/open-dialog.ps1",
+      "bytes": 9443,
+      "sha256": "ddf8b6a4b91a21eb9cf27c414649bb1255768440db242b939b27983275221ea4"
+    },
+    {
+      "path": "scripts/native-windows-upgrade/own-existing-project.json",
+      "bytes": 2017,
+      "sha256": "4823f0aee79f762ba66266fbe71d417a639b9ceafc2be05b9e02c6163eaec5b9"
+    },
+    {
+      "path": "scripts/native-windows-upgrade/own-minimal-checkpoint.py",
+      "bytes": 5057,
+      "sha256": "d823a5f32f013bd4c17adb13fe44b8babde452356205268ab3a35c5d38a3d6da"
+    },
+    {
+      "path": "scripts/native-windows-upgrade/owned-job.cs",
+      "bytes": 9068,
+      "sha256": "95eac491aff7e0d19ee1878b1bf977a02591fb6597da8816bf4c758305f87c4c"
+    },
+    {
+      "path": "scripts/native-windows-upgrade/owned-rect-click.cs",
+      "bytes": 13418,
+      "sha256": "dcf777ec214fd5e91456f0e6f27dba094a097b9e9c1d5a5ce392774bb7bd279e"
+    },
+    {
+      "path": "scripts/native-windows-upgrade/parse-project.py",
+      "bytes": 5391,
+      "sha256": "59f49f8a6b09d01aaf02a55f26caad923368c6d41a9357ca44ebf56c66f85284"
+    },
+    {
+      "path": "scripts/native-windows-upgrade/prepare-target.py",
+      "bytes": 6818,
+      "sha256": "76d463eeae0a37c60cc4b25c85890a2e7615678ae01f43ed764612ba577f43ee"
+    },
+    {
+      "path": "scripts/native-windows-upgrade/provider-functions.ps1",
+      "bytes": 1620,
+      "sha256": "59ee1ec1ee39e69c259f947d125eee46f2dcd10ab861ee52fb30e5f20414a907"
+    },
+    {
+      "path": "scripts/native-windows-upgrade/selftest.py",
+      "bytes": 2683,
+      "sha256": "5d0d08e8c32cd0849896b835ff608ac5c8d0baa2f410dca8a2c810096c9e4e80"
+    },
+    {
+      "path": "scripts/native-windows-upgrade/target.json",
+      "bytes": 457,
+      "sha256": "dee6e0f541c21991b7d7a772ff95110b90a3082d130c64f1042eed666fd0b11e"
+    },
+    {
+      "path": "scripts/native-windows-upgrade/windows.ps1",
+      "bytes": 24531,
+      "sha256": "b4c5efe0f960195c303fba466ca6337458ba07386e40676c7f40e36523920e46"
+    },
+    {
       "path": "scripts/prepare-installer-release.py",
       "bytes": 13878,
       "sha256": "f60c96a09e52eb0503f3dde86633727e90379f77a34d3d5372b2e4eaebf9b83b"
     },
     {
       "path": "scripts/prepare-public-release.py",
-      "bytes": 8567,
-      "sha256": "e48888684f19fd13f56f9b5b0c74cc696a481c1011229fc3be2c9ad6cfeb787c"
+      "bytes": 8847,
+      "sha256": "5f9e59178a645710eda3524c1d6ba422ffd5588809c150b4034ab636c3485455"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -3278,6 +3363,11 @@
       "sha256": "fef993cea84c7b40cceac9379518f6c5ed6fd957d3488f8af3aeed4591d0c854"
     },
     {
+      "path": "docs/research/NATIVE-COORDINATE-CAPTION-UI-FINDING-2026-11-11.md",
+      "bytes": 1747,
+      "sha256": "ccec59223b11e8b9f4672335f7bfbeaaf3212016a10da2827ee91861bfed17bc"
+    },
+    {
       "path": "docs/research/NATIVE-FILE-MENU-UI-GATE-2026-11-08.md",
       "bytes": 5520,
       "sha256": "32dd86d23e9b72726bc0a017f8523336df043bdfcedf1e6bd58dc797d4300b1c"
@@ -3473,6 +3563,11 @@
       "sha256": "06cc92dce7a587f4821c3a5e51d4238f71e80d29b2df76dd1cc240805908a770"
     },
     {
+      "path": "docs/research/NATIVE-ROOT-X-ACCESSIBILITY-LABEL-DATA-GATE-2026-11-11.md",
+      "bytes": 2236,
+      "sha256": "87ca93a669a4eed72b585f83f7770364580a39e73d73067efec18d969ce607d1"
+    },
+    {
       "path": "docs/research/NATIVE-TIMER-TEXT-AND-LEGACY-METADATA-DATA-GATE-2026-11-09.md",
       "bytes": 4890,
       "sha256": "f319990d85900d94f1769ee2beaffb247175736823765891790ff7618ee36807"
@@ -3486,6 +3581,16 @@
       "path": "docs/research/NATIVE-WINDOWS-CORE-FOREGROUND-DATA-ADDENDUM-2026-11-11.md",
       "bytes": 2484,
       "sha256": "aea1b4f775a113f2f4e99935eb593484f27affeca76f2a180acd986a6193822f"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-CORE-OLD-UPDATES-DATA-ADDENDUM-2026-11-11.md",
+      "bytes": 1709,
+      "sha256": "8d3114dbdcc01575ef406e7dc09758ea08b93aa04a6b6c14f3044c37380e5708"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-CORE-READY-AND-CLOSE-UI-ADDENDUM-2026-11-11.md",
+      "bytes": 1924,
+      "sha256": "c88df059b6018116cbc2404c32c28851af2ae7fefc244201a12cde01c39007db"
     },
     {
       "path": "docs/research/NATIVE-WINDOWS-CORE-UPGRADE-90-DATA-ADDENDUM-2026-11-11.md",
@@ -3543,6 +3648,11 @@
       "sha256": "0810e91d8c5639d2f355badbf470403269f45c019a01a0ac5dbe831c742ca909"
     },
     {
+      "path": "docs/research/NATIVE-WINDOWS-READONLY-SPINNER-UI-AMENDMENT-2026-11-11.md",
+      "bytes": 1564,
+      "sha256": "67ddde97018151e4f2dc5348ec829a5d4674f52657359d98462284b55871bfa6"
+    },
+    {
       "path": "docs/research/NATIVE-WINDOWS-READY-PANEL-PRESS-V8-DATA-ADDENDUM-2026-11-09.md",
       "bytes": 2259,
       "sha256": "a824ee3ebc24a5c5822e9d8569ce33fa50abb8912a68348fcbb3e891c58f0627"
@@ -3551,6 +3661,11 @@
       "path": "docs/research/NATIVE-WINDOWS-READY-PANEL-PRESS-V8-UI-ADDENDUM-2026-11-09.md",
       "bytes": 1797,
       "sha256": "a5e43a908ef2823d2606580bfc801d90e9faeff092aadd6ce08ac0480a89bfe0"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-ROOT-SPINNER-DATA-ADDENDUM-2026-11-11.md",
+      "bytes": 1945,
+      "sha256": "44d4ab6080428d30fbd14de3ef2fa69437d48283fafe38c7725f2eea44310fef"
     },
     {
       "path": "docs/research/NATIVE-WINDOWS-UPGRADE-CLOSEOUT-DATA-PLAN-2026-11-11.md",

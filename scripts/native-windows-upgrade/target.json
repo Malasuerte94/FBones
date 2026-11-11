@@ -1,0 +1,13 @@
+{
+  "repository": "Malasuerte94/FBones",
+  "tag": "v0.9.6-beta.1",
+  "releaseId": 439062261,
+  "sourceCommit": "cfc60a45b5d73e25f35125f5353da56ff9027236",
+  "asset": {
+    "name": "FBones_0.9.6_x64-setup.exe",
+    "id": 727275976,
+    "bytes": 4489510,
+    "sha256": "f01215f3595bd43236418048b2b10f79d9423969629c18452bd754e7caf55f6a",
+    "assetUrl": "https://github.com/Malasuerte94/FBones/releases/download/v0.9.6-beta.1/FBones_0.9.6_x64-setup.exe"
+  }
+}
