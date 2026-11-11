@@ -2388,14 +2388,24 @@
       "sha256": "d5a0700c7b00e1a1074644b66c767498b1c2d2dfe1cfa2da278c36e2ce314b81"
     },
     {
+      "path": "scripts/native-mac-upgrade/keyboard-bridge.c",
+      "bytes": 1741,
+      "sha256": "1a9c47d58f85d11466c60d66fe42332447c097b5429c7205a4062c34f8aae22d"
+    },
+    {
+      "path": "scripts/native-mac-upgrade/keyboard-bridge.h",
+      "bytes": 763,
+      "sha256": "50dbae73d2bb3d90f1acb3bd17f1dc41b7052ac92e984ee7481b2eb3b824f030"
+    },
+    {
       "path": "scripts/native-mac-upgrade/mac.sh",
-      "bytes": 5000,
-      "sha256": "95f016e3dcdc2c43e2646eff94254752c4fc6c24a90204245693668143eebc73"
+      "bytes": 5495,
+      "sha256": "5ea52bbac1961fdd1ed4d732502a2f9c2734220abc7ca9556d4d220af9e75346"
     },
     {
       "path": "scripts/native-mac-upgrade/mac.swift",
-      "bytes": 52632,
-      "sha256": "7fa6ae838e90b60ae34af6800a3a62fe78f1683434a84af367d4fed19e38673f"
+      "bytes": 53443,
+      "sha256": "f186358318f7f6667745ec41e17c3adfd5eed77159293474cdb4adb177fdfe12"
     },
     {
       "path": "scripts/native-mac-upgrade/native-exit.c",
@@ -2409,8 +2419,8 @@
     },
     {
       "path": "scripts/native-mac-upgrade/own-core.h",
-      "bytes": 96,
-      "sha256": "05a6554dac85d0c8fe91ffbdd499525574de71dcebd0f3d657057e0048ac304e"
+      "bytes": 125,
+      "sha256": "54672b3319ef2dc5f85615c494e5a5a9c826574d8e5d39f8f540943121b1a511"
     },
     {
       "path": "scripts/native-mac-upgrade/own-existing-project.json",
@@ -2584,8 +2594,8 @@
     },
     {
       "path": "scripts/prepare-public-release.py",
-      "bytes": 9297,
-      "sha256": "fe2c2b766923cbfbd297d50790451abd27bf128ac2beee175a8abd936a000bd7"
+      "bytes": 9401,
+      "sha256": "69c3f8f1303b2d43ca608744c208b1429c935a2834bbc5c0bdadf0e6a8c9ea3c"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -2744,8 +2754,8 @@
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 21428,
-      "sha256": "5d7b441770cdcb22398d4af2d71acca0bafeacd31ba03814e006c0f68bcd827a"
+      "bytes": 21817,
+      "sha256": "152758897748a939422a3fdecf72c8a3c724bcef1afc8acfaa82d4aa63840092"
     },
     {
       "path": "docs/TESTING.md",
@@ -3578,6 +3588,11 @@
       "sha256": "c4aabd8e7ee736414b3ef0c8d961a681c8be2a89d98ce18a45ba2f35e2146213"
     },
     {
+      "path": "docs/research/NATIVE-MACOS-CORE-KEYBOARD-C-BRIDGE-V2-UI-FINDING-2026-11-11.md",
+      "bytes": 2146,
+      "sha256": "e0376ea6d79cf111608c7f3ed91f14c86eb6787286919f9f3c170270a6eae920"
+    },
+    {
       "path": "docs/research/NATIVE-MACOS-CORE-OWNED-GOTO-DATA-GATE-2026-11-11.md",
       "bytes": 3884,
       "sha256": "d8b47791dd5bd6c9ea5ea6cf0dd14c50fc8cc9bb73e38df26fb1b1dff3691b28"
@@ -3596,6 +3611,11 @@
       "path": "docs/research/NATIVE-MACOS-CORE90-EXISTING-PROJECT-UI-ADDENDUM-2026-11-11.md",
       "bytes": 2904,
       "sha256": "e55dc00302132a0568e8abf170a1346c4a1fde275b63756c8efd598253fc47f9"
+    },
+    {
+      "path": "docs/research/NATIVE-MACOS-KEYBOARD-C-BRIDGE-V2-DATA-GATE-2026-11-11.md",
+      "bytes": 2252,
+      "sha256": "41e1bf4baa4d451c893439524013e183cd01bfddfa88caa0aa67947e15eb7cee"
     },
     {
       "path": "docs/research/NATIVE-MACOS-NEW-SAVE-CAPABILITY-LIMITS-RESULT-2026-11-11.md",
@@ -3701,6 +3721,11 @@
       "path": "docs/research/NATIVE-WINDOWS-CORE-IDENTITY-DIAGNOSTIC-V3-DATA-GATE-2026-11-11.md",
       "bytes": 2121,
       "sha256": "f17a00726f205ca6c74f10ea31722991491ef6ea45ef4144dea494f1df0c1d6d"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-CORE-IDENTITY-FACETS-V3-UI-FINDING-2026-11-11.md",
+      "bytes": 1978,
+      "sha256": "e3344edf3ad92c2c64b9d664f66b7796c56e83f3165bd407e43fcd2e4f450c57"
     },
     {
       "path": "docs/research/NATIVE-WINDOWS-CORE-OLD-UPDATES-DATA-ADDENDUM-2026-11-11.md",

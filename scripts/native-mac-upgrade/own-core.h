@@ -2,4 +2,5 @@
 #define OWN_CORE_H
 #include "picker-child.h"
 #include "native-exit.h"
+#include "keyboard-bridge.h"
 #endif

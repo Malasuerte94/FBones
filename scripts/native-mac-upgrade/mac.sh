@@ -43,19 +43,23 @@ sdk=Path(sys.argv[1]);paths=[Path(sys.argv[2]),Path(sys.argv[3]),Path('/usr/bin/
 carbon_candidates=[sdk/'System/Library/Frameworks/Carbon.framework/Frameworks/HIToolbox.framework/Headers/Events.h',sdk/'System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Headers/Events.h']
 carbon=sorted({p.resolve()for p in carbon_candidates if p.is_file()})
 paths+=carbon
+ax_header=sdk/'System/Library/Frameworks/ApplicationServices.framework/Frameworks/HIServices.framework/Headers/AXUIElement.h'
+assert ax_header.is_file(),'Actual selected public AXUIElement.h required'
+paths.append(ax_header)
 pins={str(p):{'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}for p in paths}
-with Path(sys.argv[4]).open('x')as out:json.dump({'pins':pins,'source':'Actual xcrun SDK/compiler files; no private layouts','carbonEventsHeaderPins':[str(p)for p in carbon],'carbonHeaderPinAvailability':'selected-header-pinned'if carbon else'not-resolved-by-two-known-SDK-paths; actual typed import/compile remains required'},out,indent=2)
+with Path(sys.argv[4]).open('x')as out:json.dump({'pins':pins,'source':'Actual xcrun SDK/compiler files; no private layouts','deprecatedPublicAXHeader':str(ax_header),'carbonEventsHeaderPins':[str(p)for p in carbon],'carbonHeaderPinAvailability':'selected-header-pinned'if carbon else'not-resolved-by-two-known-SDK-paths; actual typed import/compile remains required'},out,indent=2)
 PYSDK
 python3 - "$own_sdk" "$own_clang" "$own_swift" "$script_dir" "$root" <<'PYCOMMANDS'
 from pathlib import Path
 import json,sys
 sdk,clang,swift,source,run=sys.argv[1:];source=Path(source);run=Path(run)
-commands=[[clang,'-isysroot',sdk,'-std=gnu11','-Wall','-Wextra','-Werror','-c',str(source/name),'-o',str(run/obj)]for name,obj in [('own-process-identity.c','own-process-identity.o'),('picker-child.c','picker-child.o'),('native-exit.c','native-exit.o')]]
-commands.append([swift,'-sdk',sdk,'-swift-version','5','-import-objc-header',str(source/'own-core.h'),str(source/'mac.swift'),str(run/'own-process-identity.o'),str(run/'picker-child.o'),str(run/'native-exit.o'),'-lproc','-o',str(run/'mac-upgrade')])
+commands=[[clang,'-isysroot',sdk,'-std=gnu11','-Wall','-Wextra','-Werror','-c',str(source/name),'-o',str(run/obj)]for name,obj in [('own-process-identity.c','own-process-identity.o'),('picker-child.c','picker-child.o'),('native-exit.c','native-exit.o'),('keyboard-bridge.c','keyboard-bridge.o')]]
+commands.append([swift,'-sdk',sdk,'-swift-version','5','-import-objc-header',str(source/'own-core.h'),str(source/'mac.swift'),str(run/'own-process-identity.o'),str(run/'picker-child.o'),str(run/'native-exit.o'),str(run/'keyboard-bridge.o'),'-lproc','-o',str(run/'mac-upgrade')])
 with(run/'reports/compile-commands.json').open('x')as out:json.dump({'commands':commands,'sameSelectedSDK':sdk},out,indent=2)
 PYCOMMANDS
 "$own_clang" -isysroot "$own_sdk" -std=gnu11 -Wall -Wextra -Werror -c "$script_dir/own-process-identity.c" -o "$root/own-process-identity.o"
 "$own_clang" -isysroot "$own_sdk" -std=gnu11 -Wall -Wextra -Werror -c "$script_dir/picker-child.c" -o "$root/picker-child.o"
 "$own_clang" -isysroot "$own_sdk" -std=gnu11 -Wall -Wextra -Werror -c "$script_dir/native-exit.c" -o "$root/native-exit.o"
-"$own_swift" -sdk "$own_sdk" -swift-version 5 -import-objc-header "$script_dir/own-core.h" "$script_dir/mac.swift" "$root/own-process-identity.o" "$root/picker-child.o" "$root/native-exit.o" -lproc -o "$root/mac-upgrade"
+"$own_clang" -isysroot "$own_sdk" -std=gnu11 -Wall -Wextra -Werror -c "$script_dir/keyboard-bridge.c" -o "$root/keyboard-bridge.o"
+"$own_swift" -sdk "$own_sdk" -swift-version 5 -import-objc-header "$script_dir/own-core.h" "$script_dir/mac.swift" "$root/own-process-identity.o" "$root/picker-child.o" "$root/native-exit.o" "$root/keyboard-bridge.o" -lproc -o "$root/mac-upgrade"
 "$root/mac-upgrade" "$root/Applications/FBones.app" "$root/reports" "$expected" "$script_dir"

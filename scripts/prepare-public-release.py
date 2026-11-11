@@ -19,6 +19,8 @@ FILES = (
 TREES = ('.github', 'src', 'src-tauri', 'crates', 'tests', 'scripts', 'docs', 'packages/runtime')
 SKIP_PARTS = {'gen', '__pycache__', 'node_modules', 'target', 'dist', '.git', '.local', '.tools'}
 OWN_TEXT_FILES = {'packages/runtime/LICENSE',
+    'scripts/native-mac-upgrade/keyboard-bridge.c',
+    'scripts/native-mac-upgrade/keyboard-bridge.h',
     'scripts/native-mac-upgrade/mac.swift',
     'scripts/native-mac-upgrade/native-exit.c',
     'scripts/native-mac-upgrade/native-exit.h',
