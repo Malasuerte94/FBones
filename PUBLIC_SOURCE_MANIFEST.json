@@ -143,6 +143,11 @@
       "sha256": "ea72d1cf8b7b670e1ab4c37a8ddc4683f68e0b4f74c8ee7f4ff36674af70f853"
     },
     {
+      "path": ".github/workflows/native-macos-upgrade.yml",
+      "bytes": 1745,
+      "sha256": "b1e62398ee55715de2b80c06899435b2e50aefecc3c6a793863245f655d1ee41"
+    },
+    {
       "path": ".github/workflows/native-windows-pointer.yml",
       "bytes": 2007,
       "sha256": "893ae827806c08cab1c49327f0fb4495914dd40b649faf71101ced130ae6aa1f"
@@ -2373,6 +2378,86 @@
       "sha256": "202b25c51bda4eaa4c28cedc493fe1b54763ee4587680d8831331a05b88699c0"
     },
     {
+      "path": "scripts/native-mac-upgrade/assets.json",
+      "bytes": 4025,
+      "sha256": "d749af846f064141c976a304ad9d52f09eca8e9205177642fcf90f81ffb9c0ce"
+    },
+    {
+      "path": "scripts/native-mac-upgrade/assets.py",
+      "bytes": 3919,
+      "sha256": "d5a0700c7b00e1a1074644b66c767498b1c2d2dfe1cfa2da278c36e2ce314b81"
+    },
+    {
+      "path": "scripts/native-mac-upgrade/mac.sh",
+      "bytes": 5000,
+      "sha256": "95f016e3dcdc2c43e2646eff94254752c4fc6c24a90204245693668143eebc73"
+    },
+    {
+      "path": "scripts/native-mac-upgrade/mac.swift",
+      "bytes": 52632,
+      "sha256": "7fa6ae838e90b60ae34af6800a3a62fe78f1683434a84af367d4fed19e38673f"
+    },
+    {
+      "path": "scripts/native-mac-upgrade/native-exit.c",
+      "bytes": 5587,
+      "sha256": "24d2328a41a321fcf71732c47cf61b1ce5d3d77065d8e598a14ccccb10e77ec4"
+    },
+    {
+      "path": "scripts/native-mac-upgrade/native-exit.h",
+      "bytes": 1727,
+      "sha256": "3ddd0b178562cdce7f03213b704a8cad0a8e752ca175b4f97ffa6adbfd1911b5"
+    },
+    {
+      "path": "scripts/native-mac-upgrade/own-core.h",
+      "bytes": 96,
+      "sha256": "05a6554dac85d0c8fe91ffbdd499525574de71dcebd0f3d657057e0048ac304e"
+    },
+    {
+      "path": "scripts/native-mac-upgrade/own-existing-project.json",
+      "bytes": 2017,
+      "sha256": "4823f0aee79f762ba66266fbe71d417a639b9ceafc2be05b9e02c6163eaec5b9"
+    },
+    {
+      "path": "scripts/native-mac-upgrade/own-minimal-checkpoint.py",
+      "bytes": 5057,
+      "sha256": "d823a5f32f013bd4c17adb13fe44b8babde452356205268ab3a35c5d38a3d6da"
+    },
+    {
+      "path": "scripts/native-mac-upgrade/own-process-identity.c",
+      "bytes": 1918,
+      "sha256": "1972ebd78b06c493e2c0e2828f3b32556b1b00052b406f198b00163892d1b0b1"
+    },
+    {
+      "path": "scripts/native-mac-upgrade/own-process-identity.h",
+      "bytes": 849,
+      "sha256": "56106729de83fa64b728623ee8eb8990fdc34658539ada214bc5767e1797b1ae"
+    },
+    {
+      "path": "scripts/native-mac-upgrade/parse-project.py",
+      "bytes": 5391,
+      "sha256": "59f49f8a6b09d01aaf02a55f26caad923368c6d41a9357ca44ebf56c66f85284"
+    },
+    {
+      "path": "scripts/native-mac-upgrade/picker-child.c",
+      "bytes": 4224,
+      "sha256": "24dc62d12b7ba9787741a903829f05172620d9be88d10731bc812ed1dd8f0c15"
+    },
+    {
+      "path": "scripts/native-mac-upgrade/picker-child.h",
+      "bytes": 679,
+      "sha256": "202b25c51bda4eaa4c28cedc493fe1b54763ee4587680d8831331a05b88699c0"
+    },
+    {
+      "path": "scripts/native-mac-upgrade/prepare-target.py",
+      "bytes": 7621,
+      "sha256": "4e29838d2d9adeb2735854f6071ce5bc87fcbaedd70d77342a0ac5baa95e6960"
+    },
+    {
+      "path": "scripts/native-mac-upgrade/target.json",
+      "bytes": 1329,
+      "sha256": "f98aeb75408061f6b35215640d4b3e0961d9b3d09059fab5e7c3db9fd2772869"
+    },
+    {
       "path": "scripts/native-picker/assets.json",
       "bytes": 4025,
       "sha256": "d749af846f064141c976a304ad9d52f09eca8e9205177642fcf90f81ffb9c0ce"
@@ -2499,8 +2584,8 @@
     },
     {
       "path": "scripts/prepare-public-release.py",
-      "bytes": 8900,
-      "sha256": "25e17d893f7ce235ba88dbc3f9320ce0c3dbd7cb866990f559057b6783d78b52"
+      "bytes": 9297,
+      "sha256": "fe2c2b766923cbfbd297d50790451abd27bf128ac2beee175a8abd936a000bd7"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -2654,8 +2739,8 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 29803,
-      "sha256": "7f13fc3bb7c08d38067cb3cd3d4d4bc45e13bcf3b321c6501e3b38c1c3e6fd7b"
+      "bytes": 31828,
+      "sha256": "b78e6579887c3a5ae6093e05ed4d0b7d012980ed506861520b554b2ede619714"
     },
     {
       "path": "docs/TASKS.md",
@@ -3611,6 +3696,11 @@
       "path": "docs/research/NATIVE-WINDOWS-CORE-FOREGROUND-DATA-ADDENDUM-2026-11-11.md",
       "bytes": 2484,
       "sha256": "aea1b4f775a113f2f4e99935eb593484f27affeca76f2a180acd986a6193822f"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-CORE-IDENTITY-DIAGNOSTIC-V3-DATA-GATE-2026-11-11.md",
+      "bytes": 2121,
+      "sha256": "f17a00726f205ca6c74f10ea31722991491ef6ea45ef4144dea494f1df0c1d6d"
     },
     {
       "path": "docs/research/NATIVE-WINDOWS-CORE-OLD-UPDATES-DATA-ADDENDUM-2026-11-11.md",

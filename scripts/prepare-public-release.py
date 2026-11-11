@@ -19,6 +19,14 @@ FILES = (
 TREES = ('.github', 'src', 'src-tauri', 'crates', 'tests', 'scripts', 'docs', 'packages/runtime')
 SKIP_PARTS = {'gen', '__pycache__', 'node_modules', 'target', 'dist', '.git', '.local', '.tools'}
 OWN_TEXT_FILES = {'packages/runtime/LICENSE',
+    'scripts/native-mac-upgrade/mac.swift',
+    'scripts/native-mac-upgrade/native-exit.c',
+    'scripts/native-mac-upgrade/native-exit.h',
+    'scripts/native-mac-upgrade/own-core.h',
+    'scripts/native-mac-upgrade/own-process-identity.c',
+    'scripts/native-mac-upgrade/own-process-identity.h',
+    'scripts/native-mac-upgrade/picker-child.c',
+    'scripts/native-mac-upgrade/picker-child.h',
     'scripts/native-windows-upgrade/.gitattributes',
     'scripts/native-windows-upgrade/owned-rect-click.cs',
     'scripts/native-windows-upgrade/owned-job.cs',

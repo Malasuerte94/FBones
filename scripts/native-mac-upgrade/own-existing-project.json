@@ -1,0 +1,44 @@
+{
+  "purpose": "Own portable existing-project fixture for native installed upgrade core; test input only, not a format writer/template strategy",
+  "origin": "Own FBones0.9.5 GTK native Save in accepted Debian CI42679060912; independent full typed/CRC check",
+  "sha256": "e74a15b08b9cbc85f943ddde46c37c5cbceed3eb70968932ccd416697c6ecb5d",
+  "bytes": 405,
+  "projectName": "Own Debian installed upgrade",
+  "boneName": "Upgrade root",
+  "rootX": 37.5,
+  "base64": "bVG7TgJREJ2zy0ueoggosCwPCW8UsDYSCztt/IAlELIJLoZH7IiNX0H8Bqn8Bj/B3mCpFjZUOHc1KIZJ5uzce+ace2fv2VSdqvVyrVx9BP1E+HV0//ySDSASwDelZED+41uinLtEm7llpwgPOQRjIenkg5c+wIVCFXYutuAENEO/0oZ6782KDZLJqWDB4RiCbJB8bCXbu7DJJMlEViGyMKNgPr9beJiuIPuXpiV5gAKFYaV/Uccmd0mIXYC9c1ynOb2cmfU+KeQR4o0E7XetDi5klCt85U578FBaLyEpyMsap2qe4uTqiOJmXW48ERXX65LsrI1a+vue2RoxUTHRwpO7saPAI35mUkziEuAWAFxed/paq632e73PCCAhimbPmMXIK9pJToiPsxEkivOBISHaFbAhQCa/gslkshiz0/mNoZ62m7pmqLoxGGrdbruljkz7mY21h5xR80pjSvOzq8I5T/HVR98m7+pGFikUUKQYS3zmCAKiSKy22VeXcP3WXwAAAAAAAAGBlbY2dhiRMhsCCwIL",
+  "semanticCheckpoint": {
+    "passed": true,
+    "scope": "OWN_ONE_ROOT_NO_ATTACHMENTS_CONSTRAINTS_OR_KEYS_CHECKPOINT_ONLY",
+    "bytes": 405,
+    "sha256": "e74a15b08b9cbc85f943ddde46c37c5cbceed3eb70968932ccd416697c6ecb5d",
+    "decodedBytes": 650,
+    "version": "4.3.26",
+    "envelopeCrc64AndFullTypedParse": true,
+    "exactTrailingCheckpoint": true,
+    "projectName": "Own Debian installed upgrade",
+    "fps": 30,
+    "boneName": "Upgrade root",
+    "boneCount": 1,
+    "rootParent": null,
+    "rootChannelF32Bits": {
+      "9": 0,
+      "10": 1108738048,
+      "11": 0,
+      "12": 0,
+      "13": 1065353216,
+      "14": 1065353216,
+      "23": 0,
+      "25": 0
+    },
+    "animations": [
+      {
+        "name": "animation",
+        "authoredBoneTimelines": 0
+      }
+    ],
+    "parserSha256": "59f49f8a6b09d01aaf02a55f26caad923368c6d41a9357ca44ebf56c66f85284",
+    "targetExecutions": 0,
+    "limitation": "Saved-file semantics only; no original acceptance or app/session/restart evidence"
+  }
+}

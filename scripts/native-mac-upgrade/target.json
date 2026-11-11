@@ -1,0 +1,31 @@
+{
+  "repository": "Malasuerte94/FBones",
+  "tag": "v0.9.6-beta.1",
+  "releaseId": 439062261,
+  "sourceCommit": "cfc60a45b5d73e25f35125f5353da56ff9027236",
+  "asset": {
+    "name": "FBones.app.tar.gz",
+    "id": 727275932,
+    "bytes": 10972434,
+    "sha256": "54c533b5379e42f14861fd66e62f33bbc0ae6d95818a56ae851d1352bc2b3ac9",
+    "route": "mac-updater-app",
+    "assetUrl": "https://github.com/Malasuerte94/FBones/releases/download/v0.9.6-beta.1/FBones.app.tar.gz",
+    "localLargePackageRetained": false,
+    "nativeMemberSelection": "FBones.app/Contents/MacOS/fbones",
+    "nativeMemberSha256": null,
+    "nativeMemberStatus": "UNMEASURED_REQUIRE_EXACT_HASHED_PACKAGE_EXTRACTION_BEFORE_UPGRADE",
+    "matchingReports": [
+      "universal-apple-darwin.json"
+    ],
+    "rawCiExecutableRelationship": "UNKNOWN_OPTIONAL_NOT_NATIVE_IMAGE_PIN",
+    "updaterPlatform": "darwin-aarch64-app",
+    "updaterUrl": "https://github.com/Malasuerte94/FBones/releases/download/v0.9.6-beta.1/FBones.app.tar.gz",
+    "signatureAsset": {
+      "name": "FBones.app.tar.gz.sig",
+      "id": 727275933,
+      "bytes": 424,
+      "sha256": "5eb6ebce733909685897bb5872fecfc8d56438c22e49d7119da82691aa54de89"
+    }
+  },
+  "preparation": "Exact published updater archive metadata; native/plist independently measured on CI BEFORE app launch/install"
+}

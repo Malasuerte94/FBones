@@ -1,0 +1,47 @@
+name: Own macOS CORE90 installed upgrade and persistence
+run-name: Own macOS core upgrade at ${{ github.sha }}
+on:
+  push:
+    branches: [work/native-install-upgrade-0.9.6]
+    paths: ['.github/workflows/native-macos-upgrade.yml', 'scripts/native-mac-upgrade/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mac-upgrade:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Select own fresh root
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']) / ('fbones-mac-upgrade-' + os.environ['GITHUB_RUN_ID'] + '-' + os.environ['GITHUB_RUN_ATTEMPT'])
+          assert not root.exists()
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write('RUN_ROOT=' + str(root) + '\n')
+      - name: Verify and fetch exact published stock0.9.5
+        shell: bash
+        env:
+          FBONES_METADATA_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/native-mac-upgrade/assets.py mac-dmg --root "$RUN_ROOT"
+          python scripts/native-mac-upgrade/prepare-target.py "$RUN_ROOT"
+      - name: Own native Open, actual stock upgrade and separate persistence
+        shell: bash
+        run: bash scripts/native-mac-upgrade/mac.sh "$RUN_ROOT"
+      - name: Preserve native receipts and useful negatives
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-macos-upgrade
+          path: ${{ env.RUN_ROOT }}/reports/
+          retention-days: 7
+          if-no-files-found: warn

@@ -14,7 +14,7 @@ the failed separate Save-only probe remain recorded below and in final-pass task
 rows. No further Physics/Match reference work is active at this milestone.
 
 Current active work: close actual native0.9.5→0.9.6 upgrade acceptance on Windows,
-macOS and AppImage. Debian full upgrade and separate persistence are already
+macOS. Debian and AppImage full upgrade and separate persistence are already
 accepted; reuse that evidence. Three agents own DATA, UI and tooling preparation;
 root integrates and alone operates shared tests/CI/target processes. Capacity is
 four agents total. Release0.9.6 and the accepted0.9.5 local delivery stay immutable.
@@ -342,8 +342,8 @@ to intended control; retain the failed route and do not replay it unchanged.
 
 ## Current native installation work
 
-Latest source-only QA branch is work/native-install-upgrade-0.9.6, with current
-Mac capability source b6bf253. Main1888c2a, release439062261/tagcfc60a4 and all
+Latest QA branch is work/native-install-upgrade-0.9.6; reviewed Windows core
+v2 is cb5c014. Mac core uses a new bounded existing-project scenario. Main1888c2a, release439062261/tagcfc60a4 and all
 published assets are unchanged. Root alone operates fresh hosted VMs; no
 personal-host installation. Reviewed QA sources are mirrored into this workspace;
 product Rust/Vue sources remain unchanged. [Capability findings](research/NATIVE-INSTALL-UPGRADE-CAPABILITY-RESULT-2026-11-09.md)
@@ -372,6 +372,8 @@ preserve consumed failures and narrower accepted facets.
   typedSDKDoDefaultAction/S_OK0, but complete fresh15s UIA observation retains
   the same Current0.9.5 panel. Exact normal0 follows; updaterControl=false and
   upgradeAttempted=false remain negatives. No unchanged action/timing retry.
+- [Windows owned rectangle capability](research/NATIVE-WINDOWS-OWNED-RECT-CLICK-RESULT-2026-11-11.md) passes43001332616/ea3510e: exact UIA physical rectangle/FromPoint/root+child association, ONE targeted mouse-message sequence, actual panel transition and normal0. No global input/focus repair. Full core43007410854 stops before installation/app at strict parser-source mismatch; diagnosed per-file LF checkout correction preserves the strict reader hash. Corev2 actual43009824406 then passes parser/fixture/target premeasure and stock installation0, binds own1708/start134388690973486172/window196770, but stops at the next full identity assertion before any action. Exact mismatched facet remains unknown; retain raw and add bounded facet diagnostics before a new case. This is no upgrade/persistence pass.
+- [macOS New/Save limits](research/NATIVE-MACOS-NEW-SAVE-CAPABILITY-LIMITS-RESULT-2026-11-11.md) retain four distinct diagnosed failures: SDK selection, bounded C-array importer, actual lowercase x selector, then one AX0 setter with immediate readback0. No native Save was reached; asynchronous versus no-op setter behavior is unknown. Do not retry this authoring route at90%. The paired [existing-project DATA gate](research/NATIVE-MACOS-CORE90-EXISTING-PROJECT-DATA-GATE-2026-11-11.md)/[UI scope](research/NATIVE-MACOS-CORE90-EXISTING-PROJECT-UI-ADDENDUM-2026-11-11.md) instead uses the unchanged own405B/e74a checkpoint, ordinary native Open, real signed Install/restart/Current0.9.6, registered automatic terminal0, then separate fresh same-file Open/semantic/normal0. Native New/edit/dirtyCancel/Save remain final100% on Windows/macOS; these limits do not reduce accepted full Debian/AppImage flows.
 - Mac arm64 stock0.9.5 v5 proves Aqua/AX/nativeReady, ONE AXPress/current0.9.5
   panel transition and normal0, independently of the failed old Viewport-label
   predicate. Exact Tauri2.12.5 .app restart uses open -n/LaunchServices. New [OWN SDK nonchild capability](research/NATIVE-MACOS-OWN-NONCHILD-EXIT-RESULT-2026-11-09.md)
@@ -405,7 +407,7 @@ are historical protection, never authority. Own58404,81388,83396,27984,21320 and
 consumed; fresh absence/identity/source guards apply to any later original.
 No personal project/window input/save/close/attach or global input occurred.
 
-Current own cleanup removes16,883,658logicalbytes: disposable NSIS member copy,
+The preceding Nov9 cleanup recovered16,883,658logicalbytes: disposable NSIS member copy,
 own native-test audio/object/cache categories and a stale unpublished
 991B checker receipt. Source packages/extractors/scripts/final manifests/raw
 observations/failed diagnostics/saved native outputs remain. Nine uncertain old
@@ -414,16 +416,20 @@ debugdeps~7.6GiB mixed/reusable/incrementalempty. No fullcargo clean/user-data
 removal/physical recovery claim. No new localCargo/frontend build or large
 package download. Remote fixtures live only in ephemeral VMs.
 
-Latest actual host check19:10:21UTC: Ubuntu VHDX is on G:, free2,524,676,096B;
-VHDX224,135,217,152B nonsparse. Linux's~825GiB does not establish host safety.
+Latest actual host check2026-11-11T11:16:40UTC: Ubuntu VHDX is on G:,
+free1,470,808,064B; VHDX224,114,245,632B nonsparse. Linux's~824GiB does not
+establish host safety. Current own source-generator scratch cleanup removes6,962B;
+small frozen tools/manifests/raw CI negatives remain necessary. No new local
+binary/package/SDK/Cargo/frontend builds or downloads.
 No manualtrim/shutdown/compaction/globalsettings changes. Keep large local
 builds/captures deferred; repeat both disk measurements at session end.
 
-Next reproducible work: finish Windows/macOS/AppImage upgrade scenarios with
+Next reproducible work: finish Windows/macOS core upgrade scenarios with
 paired DATA/UI findings and the existing exact package/member/native lifecycle
 and persistence checks. Do not repeat the ineffective Windows SDKPress unchanged.
 Physics/Transform Match remain READY90; remaining caller-timing, exact precision,
 Additive/Physics/suffix and diagnosed fresh Save-only probes belong to the final
 100% pass. Preserve existing evidence and do not reopen these routes now. Current
 ignored receipts/tools remain under `.local/native-install-upgrade-2026-11-09/`
-and `.local/research/finish-three-2026-11-09/`.
+and `.local/research/finish-three-2026-11-09/`; current closeout is
+`.local/native-upgrade-closeout-2026-11-11/`.
