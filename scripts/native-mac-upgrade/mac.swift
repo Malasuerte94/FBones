@@ -89,7 +89,7 @@ func updatesNameVariant(_ value:String)->String?{
 }
 struct AXControlSnapshot {
  var rows:[[String:Any]]=[];var nodes:[AXUIElement]=[];var window:AXUIElement?
- var complete=true;var flags:[String]=[];var rootRows:[[String:Any]]=[];var bytes=0
+ var complete=true;var flags:[String]=[];var rootRows:[[String:Any]]=[];var bytes=0;var loopSeconds:Double=15
  var texts:[String]{return rows.flatMap{r in ["title","value","description"].compactMap{r[$0]as?String}}}
  var visibleText:String{return texts.joined(separator:"\n")}
  var updates:[Int]{return rows.indices.filter{i in let r=rows[i];return r["role"]as?String=="AXButton" && r["ownerMatches"]as?Bool==true && r["enabled"]as?Bool==true && ["title","value","description"].contains{updatesNameVariant((r[$0]as?String) ?? "") != nil} && (r["actions"]as?[String] ?? []).contains("AXPress")}}
@@ -97,9 +97,11 @@ struct AXControlSnapshot {
 func readAX(_ e:AXUIElement,_ name:String)->(CFTypeRef?,AXError){var value:CFTypeRef?;let error=AXUIElementCopyAttributeValue(e,name as CFString,&value);return(value,error)}
 func axOwner(_ e:AXUIElement)->(pid_t,AXError){var pid:pid_t=0;let error=AXUIElementGetPid(e,&pid);return(pid,error)}
 func expectedAbsent(_ error:AXError)->Bool{return error == .attributeUnsupported || error == .noValue || error == .actionUnsupported}
-func inventoryControls(_ root:AXUIElement,_ pid:pid_t)->AXControlSnapshot{
- var s=AXControlSnapshot();let began=Date();let end=Date(timeIntervalSinceNow:15)
+func inventoryControls(_ root:AXUIElement,_ pid:pid_t,seconds:Double=15)->AXControlSnapshot{
+ var s=AXControlSnapshot();s.loopSeconds=max(0,min(15,seconds));let began=Date();let end=Date(timeIntervalSinceNow:s.loopSeconds)
+ let rootOwner=axOwner(root),rootRole=readAX(root,kAXRoleAttribute);var attributeNames:CFArray?;let attributeError=AXUIElementCopyAttributeNames(root,&attributeNames);let names=(attributeNames as?[String]) ?? []
  let windowsResult=readAX(root,kAXWindowsAttribute)
+ s.rootRows.append(["kind":"raw-application-AXWindows","requestedPid":pid,"rootPid":rootOwner.0,"rootPidError":rootOwner.1.rawValue,"rootRole":(rootRole.0 as?String) ?? "missing","rootRoleError":rootRole.1.rawValue,"attributeNamesError":attributeError.rawValue,"attributeNamesCount":names.count,"attributeNames":names.prefix(64).map{String($0.prefix(128))},"attributeNamesTruncated":names.count>64 || names.contains{$0.count>128},"axWindowsError":windowsResult.1.rawValue,"axWindowsValuePresent":windowsResult.0 != nil,"axWindowsValueType":windowsResult.0.map{UInt64(CFGetTypeID($0))} ?? 0,"axWindowsTypedCount":(windowsResult.0 as?[AXUIElement])?.count ?? -1])
  guard windowsResult.1 == .success,let windows=windowsResult.0 as?[AXUIElement],windows.count<=16 else{s.complete=false;s.flags.append("own-AXWindows-unavailable-or-count-cap");return s}
  var candidates:[(AXUIElement,Int)]=[]
  for(i,w)in windows.enumerated(){let owner=axOwner(w),role=readAX(w,kAXRoleAttribute),title=readAX(w,kAXTitleAttribute),minimized=readAX(w,kAXMinimizedAttribute);let titleText=(title.0 as?String) ?? "";s.rootRows.append(["windowIndex":i,"pid":owner.0,"pidError":owner.1.rawValue,"role":(role.0 as?String) ?? "missing","title":String(titleText.prefix(1024)),"minimized":(minimized.0 as?Bool) ?? true,"titleError":title.1.rawValue,"minimizedError":minimized.1.rawValue]);let acceptedWindow = chooserScope ? (role.0 as?String=="AXWindow" && (minimized.0 as?Bool==false || expectedAbsent(minimized.1))) : (role.0 as?String=="AXWindow" && minimized.0 as?Bool==false && (scopedAXWindow.map{CFEqual($0,w)} ?? (titleText=="FBones")))
@@ -137,7 +139,7 @@ func inventoryControls(_ root:AXUIElement,_ pid:pid_t)->AXControlSnapshot{
  s.rootRows.append(["elapsedSeconds":Date().timeIntervalSince(began),"queuedNodesRemaining":queue.count]);if !queue.isEmpty{s.complete=false};return s
 }
 func saveAX(_ snapshot:AXControlSnapshot,_ name:String)throws{
- let value:[String:Any]=["scope":"unique nonminimized own FBones AXWindow from exact app AXWindows; complete relevant owned subtree","complete":snapshot.complete,"flags":Array(Set(snapshot.flags)).sorted(),"rootWindows":snapshot.rootRows,"rows":snapshot.rows,"nodeCap":1024,"depthCap":32,"stringCharCap":1024,"byteCap":524288,"loopSeconds":15]
+ let value:[String:Any]=["scope":"unique nonminimized own FBones AXWindow from exact app AXWindows; complete relevant owned subtree","complete":snapshot.complete,"flags":Array(Set(snapshot.flags)).sorted(),"rootWindows":snapshot.rootRows,"rows":snapshot.rows,"nodeCap":1024,"depthCap":32,"stringCharCap":1024,"byteCap":524288,"loopSeconds":snapshot.loopSeconds]
  let data=try JSONSerialization.data(withJSONObject:value,options:[.sortedKeys]);guard data.count<=524288 else{throw NSError(domain:"AX diagnostic byte cap",code:30)};try data.write(to:reports.appendingPathComponent(name),options:.withoutOverwriting)
 }
 func nativeRendererReady()->Bool{guard let url=nativeLogURL,let handle=try? FileHandle(forReadingFrom:url)else{return false};defer{try? handle.close()};let data=(try? handle.read(upToCount:65536)) ?? Data();return String(decoding:data,as:UTF8.self).contains("FBones UI ready; renderer=webgl")}
@@ -219,9 +221,31 @@ func pickerPress(_ c:OwnPickerChild,_ app:AXUIElement,_ window:AXUIElement,_ bef
  guard let w=current.window,CFEqual(w,window),let i=current.nodes.firstIndex(where:{CFEqual($0,before.nodes[index])}),current.rows[i]["role"]as?String=="AXButton",current.rows[i]["enabled"]as?Bool==true,visibleInWindow(current.rows[i],current),(current.rows[i]["actions"]as?[String] ?? []).contains("AXPress"),current.rows[i]["title"]as?String==before.rows[index]["title"]as?String else{throw error("Current native picker button association changed")}
  try receipt(label+"-intent.json",["maximumActions":1,"child":try childTuple(c),"selected":current.rows[i],"noFallback":true]);let r=AXUIElementPerformAction(current.nodes[i],kAXPressAction as CFString);try receipt(label+"-result.json",["attempted":true,"apiError":r.rawValue,"returned":r == .success]);guard r == .success else{throw error("One native picker press failed")}
 }
+func chooserReadinessMetadata(_ c:OwnPickerChild,_ app:AXUIElement)->[String:Any]{
+ let focused=readAX(app,kAXFocusedWindowAttribute);var focusedOwner:pid_t=0;var focusedOwnerError=AXError.noValue;var focusedRole="missing";var focusedRoleError=AXError.noValue
+ if let raw=focused.0,CFGetTypeID(raw)==AXUIElementGetTypeID(){let element=raw as! AXUIElement;let o=axOwner(element),role=readAX(element,kAXRoleAttribute);focusedOwner=o.0;focusedOwnerError=o.1;focusedRole=(role.0 as?String) ?? "missing";focusedRoleError=role.1}
+ let rawWindows=CGWindowListCopyWindowInfo([.optionAll,.excludeDesktopElements],kCGNullWindowID)as?[[String:Any]]
+ let own=(rawWindows ?? []).filter{($0[kCGWindowOwnerPID as String]as?Int)==Int(c.childPid)}
+ let front=NSWorkspace.shared.frontmostApplication
+ return ["childPid":c.childPid,"focusedWindowError":focused.1.rawValue,"focusedWindowPresent":focused.0 != nil,"focusedWindowPid":focusedOwner,"focusedWindowPidError":focusedOwnerError.rawValue,"focusedWindowRole":focusedRole,"focusedWindowRoleError":focusedRoleError.rawValue,"cgWindowListAvailable":rawWindows != nil,"ownNativeWindowCount":own.count,"ownNativeWindowsTruncated":own.count>16,"ownNativeWindows":own.prefix(16).map{["windowId":$0[kCGWindowNumber as String] ?? "missing","ownerPid":$0[kCGWindowOwnerPID as String] ?? "missing","layer":$0[kCGWindowLayer as String] ?? "missing","onScreen":$0[kCGWindowIsOnscreen as String] ?? "missing","bounds":$0[kCGWindowBounds as String] ?? "missing"]},"frontmostPid":front?.processIdentifier ?? 0,"frontmostBundleIdentifier":front?.bundleIdentifier ?? "missing","frontmostBundleURL":front?.bundleURL?.absoluteString ?? "missing","frontmostExecutableURL":front?.executableURL?.absoluteString ?? "missing","scope":"read-only metadata; only exact child native windows retained; no host selection or focus repair"]
+}
+func waitOpenChooser(_ c:OwnPickerChild,_ app:AXUIElement)throws->AXControlSnapshot{
+ let began=Date(),deadline=Date(timeIntervalSinceNow:10);var attempts:[[String:Any]]=[]
+ for index in 1...10{
+  if Date()>=deadline{break};try sameChild(c)
+  let remaining=deadline.timeIntervalSinceNow;let current=inventoryControls(app,c.childPid,seconds:min(2,remaining));let label=String(format:"open-picker-readiness-%02d",index)
+  try saveAX(current,label+".json");try sameChild(c);let metadata=chooserReadinessMetadata(c,app)
+  let qualified=current.complete && current.window != nil && current.texts.contains("Open a project") && (current.window.map{readAX($0,kAXModalAttribute).0 as?Bool==true} ?? false)
+  try receipt(label+"-metadata.json",metadata);attempts.append(["attempt":index,"elapsedSeconds":Date().timeIntervalSince(began),"treeComplete":current.complete,"flags":current.flags,"rawApplicationAX":current.rootRows.first ?? [:],"sameChildModalPromptQualified":qualified])
+  if current.rows.contains(where:{($0["pid"]as?pid_t ?? 0)>0 && ($0["pid"]as?pid_t ?? 0) != c.childPid}){try receipt("open-picker-readiness.json",["attempts":attempts,"maximumAttempts":10,"deadlineSeconds":10,"passed":false,"stop":"foreign owner observed; no retry/input"]);throw error("Chooser ownership changed during read-only readiness")}
+  if qualified && Date()<deadline{try receipt("open-picker-readiness.json",["attempts":attempts,"maximumAttempts":10,"deadlineSeconds":10,"passed":true,"sameChildOnly":true,"noInputPerformedByPoll":true]);try saveAX(current,"open-picker-inventory.json");return current}
+  if index<10 && Date()<deadline{pump(min(1,deadline.timeIntervalSinceNow))}
+ }
+ try receipt("open-picker-readiness.json",["attempts":attempts,"maximumAttempts":10,"deadlineSeconds":10,"passed":false,"sameChildOnly":true,"noInputPerformedByPoll":true,"elapsedSeconds":Date().timeIntervalSince(began)]);throw error("Same-child complete owned Open chooser unavailable after bounded read-only readiness; no fallback")
+}
 func openPicker(_ c:OwnPickerChild)throws{
  chooserScope=true;defer{chooserScope=false};let app=AXUIElementCreateApplication(c.childPid)
- let initial=try snapshot("open-picker-inventory",app,c.childPid)
+ let initial=try waitOpenChooser(c,app)
  guard let window=initial.window,initial.texts.contains("Open a project"),readAX(window,kAXModalAttribute).0 as?Bool==true else{throw error("Exact Open helper/chooser host/modal/prompt unknown")}
  try focusChooser(c,app,window);try recheckFile()
  let sequence:[(CGKeyCode,Bool,String)]=[(CGKeyCode(kVK_Command),true,"Command-down"),(CGKeyCode(kVK_Shift),true,"Shift-down"),(CGKeyCode(kVK_ANSI_G),true,"G-down"),(CGKeyCode(kVK_ANSI_G),false,"G-up"),(CGKeyCode(kVK_Shift),false,"Shift-up"),(CGKeyCode(kVK_Command),false,"Command-up")]

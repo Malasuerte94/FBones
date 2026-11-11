@@ -2404,8 +2404,8 @@
     },
     {
       "path": "scripts/native-mac-upgrade/mac.swift",
-      "bytes": 53443,
-      "sha256": "f186358318f7f6667745ec41e17c3adfd5eed77159293474cdb4adb177fdfe12"
+      "bytes": 58251,
+      "sha256": "743e09f6607eca37ed58f2c0f7c93e49dbd1371ba40bd790fd8db6a959c7c231"
     },
     {
       "path": "scripts/native-mac-upgrade/native-exit.c",
@@ -2749,8 +2749,8 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 31828,
-      "sha256": "b78e6579887c3a5ae6093e05ed4d0b7d012980ed506861520b554b2ede619714"
+      "bytes": 33007,
+      "sha256": "9954248495f6100160008ce6d1a1eafbaf0cea70f7db0e469dddf3b5c8e3523f"
     },
     {
       "path": "docs/TASKS.md",
@@ -3623,6 +3623,16 @@
       "sha256": "679dadb6458c7fa79d037686fd9069633f317237dd01580378c8d197bf79c4e0"
     },
     {
+      "path": "docs/research/NATIVE-MACOS-OPEN-CHILD-AX-READINESS-V3-DATA-GATE-2026-11-11.md",
+      "bytes": 2370,
+      "sha256": "f8e269ace31412e26857415e3f4a57f7c6c3f00996824d19e24b53e9f2ce2078"
+    },
+    {
+      "path": "docs/research/NATIVE-MACOS-OPEN-CHILD-AX-READINESS-V3-UI-FINDING-2026-11-11.md",
+      "bytes": 1946,
+      "sha256": "a777ea983b3016c59d567473d0efcd94f52b238343bb0625a984c498e57c4e5d"
+    },
+    {
       "path": "docs/research/NATIVE-MACOS-OWN-NONCHILD-EXIT-DATA-GATE-2026-11-09.md",
       "bytes": 3740,
       "sha256": "971fad8eab51de56dfaaffb688357779cf6f6d651efb66e6c843bc1a4d3914ba"
@@ -3753,6 +3763,11 @@
       "sha256": "dc1e7561b5bbfa1c318918512fb9a55a4c07d4c9f31646908c2a6e8963c129a3"
     },
     {
+      "path": "docs/research/NATIVE-WINDOWS-INITIAL-WINDOW-BIND-V4-DATA-GATE-2026-11-11.md",
+      "bytes": 2325,
+      "sha256": "c6cc429c6f74b4323f714bc2e574178286d2ebe2356192e20ea3319ba810d302"
+    },
+    {
       "path": "docs/research/NATIVE-WINDOWS-LEGACY-METADATA-V7-UI-GATE-2026-11-09.md",
       "bytes": 2926,
       "sha256": "31bbe9f28914abe9821b3ef04fc249e2f2a374aa92aad5c151a69ef9e00ea434"
@@ -3816,6 +3831,11 @@
       "path": "docs/research/NATIVE-WINDOWS-READY-PANEL-PRESS-V8-UI-ADDENDUM-2026-11-09.md",
       "bytes": 1797,
       "sha256": "a5e43a908ef2823d2606580bfc801d90e9faeff092aadd6ce08ac0480a89bfe0"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-REAL-WINDOW-BIND-V4-UI-FINDING-2026-11-11.md",
+      "bytes": 1664,
+      "sha256": "2c22333019d00a0c85d2017703a170a956f82803cc29e4c4c79353de1fd9df08"
     },
     {
       "path": "docs/research/NATIVE-WINDOWS-ROOT-SPINNER-DATA-ADDENDUM-2026-11-11.md",
