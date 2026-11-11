@@ -9,8 +9,8 @@
     },
     {
       "path": "AGENTS.md",
-      "bytes": 17946,
-      "sha256": "2250abb1e7cbe431e3521de0a8369f61d8378050fffcbd3fc2a13714635f0784"
+      "bytes": 17994,
+      "sha256": "b9b93467a84f7c0a9d368f3c0bcf2c4c4b14d86cef4e288b40556303a9f91b76"
     },
     {
       "path": "README.md",
@@ -2523,6 +2523,11 @@
       "sha256": "20c79c255ae2c9015160f0dfce6f3c6b4ac1c87a6d1c17d3a6de1b1a0f6df7b9"
     },
     {
+      "path": "scripts/native-windows-upgrade/install-invoke.cs",
+      "bytes": 7433,
+      "sha256": "14e030c4ca0dacb3a9775cbddd19c279a97a28addf41c6c619cf2edb0fefc85c"
+    },
+    {
       "path": "scripts/native-windows-upgrade/native-updater-uia.cs",
       "bytes": 5824,
       "sha256": "c0bb27ffe71bfded1f04191e93660d2b75ccbb9635e53d0e4db75ac84bea7607"
@@ -2584,8 +2589,8 @@
     },
     {
       "path": "scripts/native-windows-upgrade/windows.ps1",
-      "bytes": 34001,
-      "sha256": "047827c99927d64949003ca83ae020d323182af7fd8bcc511f38a5e26f966004"
+      "bytes": 38084,
+      "sha256": "8c24bda775a2e905b9e65440ef17fe3ad3dae36c8dc511531d4122315a6a0197"
     },
     {
       "path": "scripts/prepare-installer-release.py",
@@ -2594,8 +2599,8 @@
     },
     {
       "path": "scripts/prepare-public-release.py",
-      "bytes": 9401,
-      "sha256": "69c3f8f1303b2d43ca608744c208b1429c935a2834bbc5c0bdadf0e6a8c9ea3c"
+      "bytes": 9457,
+      "sha256": "c2c2f31bb0af29d47847725717917da8a5a472165ec457058c14238751119b01"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -2749,13 +2754,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 33462,
-      "sha256": "c1c3425b77f3a7d857caae64ca06a3ff13e8c751915b0e6c224285d47f3e2b59"
+      "bytes": 31170,
+      "sha256": "7dc0504c1c9d38e346d37a942d447f9826798b3f9ab64aebbdbf27b39938c431"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 21837,
-      "sha256": "34a2e8fb770d6b204203d0c46793a6f08e415d1d5aa1181e978debf1a5975e3e"
+      "bytes": 22560,
+      "sha256": "3ab18a227ac3fa1db21b6cd39a5fff79a50bd68133b83fd268ea2078cad35512"
     },
     {
       "path": "docs/TESTING.md",
@@ -3588,6 +3593,11 @@
       "sha256": "c4aabd8e7ee736414b3ef0c8d961a681c8be2a89d98ce18a45ba2f35e2146213"
     },
     {
+      "path": "docs/research/NATIVE-MACOS-CLEAN-UPGRADE-90-RESULT-2026-11-11.md",
+      "bytes": 3865,
+      "sha256": "6a03bece89cfebe6bc4d622368e46e0ddd85eaffeace5604c55a4a2902dc48cf"
+    },
+    {
       "path": "docs/research/NATIVE-MACOS-CORE-KEYBOARD-C-BRIDGE-V2-UI-FINDING-2026-11-11.md",
       "bytes": 2146,
       "sha256": "e0376ea6d79cf111608c7f3ed91f14c86eb6787286919f9f3c170270a6eae920"
@@ -3771,6 +3781,16 @@
       "path": "docs/research/NATIVE-WINDOWS-INITIAL-WINDOW-BIND-V4-DATA-GATE-2026-11-11.md",
       "bytes": 2325,
       "sha256": "c6cc429c6f74b4323f714bc2e574178286d2ebe2356192e20ea3319ba810d302"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-INSTALL-INVOKE-V6-DATA-GATE-2026-11-11.md",
+      "bytes": 3178,
+      "sha256": "4de4b2568b54dba22aa2cbc404b566ceff0d4580c9987baf154b2938e57f5a75"
+    },
+    {
+      "path": "docs/research/NATIVE-WINDOWS-INSTALL-INVOKE-V6-UI-FINDING-2026-11-11.md",
+      "bytes": 2513,
+      "sha256": "bfb3e516a21870569c528f806cafdbf6fd4ee4a7d8fe677ada01fa828239e63c"
     },
     {
       "path": "docs/research/NATIVE-WINDOWS-LEGACY-METADATA-V7-UI-GATE-2026-11-09.md",
