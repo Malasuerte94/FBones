@@ -36,8 +36,8 @@ verification scope and limits.
 The current follow-up branch contains QA tools and aggregate findings; it does
 not move the release tag, rebuild or replace published archives. Prior local Windows QA
 belongs to the retained 0.9.5 image 54e27667, never relabeled as 0.9.6. Debian installed0.9.5→0.9.6 acceptance now passes42679060912, including the
-automatic successor and separate native Open/persistence session. Other native
-upgrade profiles remain open. Physics
+automatic successor and separate native Open/persistence session. AppImage installed upgrade/persistence now also passes43001332547. Windows and
+macOS core upgrade profiles remain active. Physics
 moving-parent phase, World shear precision and full compatibility remain open.
 F307/F308 fidelity is deferred to the final100% pass; installed-update
 acceptance is ACTIVE on disposable hosted native VMs. Fresh ownership/source
@@ -349,6 +349,7 @@ personal-host installation. Reviewed QA sources are mirrored into this workspace
 product Rust/Vue sources remain unchanged. [Capability findings](research/NATIVE-INSTALL-UPGRADE-CAPABILITY-RESULT-2026-11-09.md)
 preserve consumed failures and narrower accepted facets.
 
+- [AppImage full upgrade](research/NATIVE-APPIMAGE-UPGRADE-AND-PERSISTENCE-RESULT-2026-11-11.md) now passes43001332547/ea3510e: exact published0.9.6 outer435195ee/member2c6800aa measured beforeinstall; old3246, adopted automatic3575 and separate fresh3721 all actualnormal0. Native CURRENT0.9.6 and same-file GTKTable Open/Upgrade root/X37.5/clean/unchanged404B checkpoint pass independent DATA5c9c82fb/UI12400d9b. Full dirtyCancel+Save flow retained; no AppImage extract-and-run fallback.
 - Stock0.9.5 Linux Debian/AppImage native install/FUSE/GTKwindow/realwebview/
   Updates/retained normal0 pass42645345499. Debian nativeSave plus independent
   CRC64/typedfields pass42649490682; own subreaper passes42649610363.
@@ -386,7 +387,8 @@ Primary status operational18:43UTC allowed reviewed dispatches; the new Mac
 workflow first returned unregistered/default-branch404 without execution. A
 reviewed workflow-only SHA run-name delta triggered its own branch-push job;
 source/protocol stayed unchanged. No billing/security/global-settings edits.
-Windows/macOS/AppImage actual installed upgrades, publisher signing/notarization,
+Windows/macOS core installed upgrades remain active. AppImage and Debian are
+accepted. Publisher signing/notarization,
 macOS Intel and physical OS-mouse routing remain unproved.
 
 ## Cleanup, ownership and next reproducible action

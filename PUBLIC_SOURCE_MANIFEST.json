@@ -2329,8 +2329,8 @@
     },
     {
       "path": "scripts/native-mac-picker/mac.sh",
-      "bytes": 2505,
-      "sha256": "0b5bfa794d600bb51700231ef1bc67bc49d8b68514756d5769850f84436131fb"
+      "bytes": 3400,
+      "sha256": "08376aad5223db2d8a9a1976630e95efd8687e32fe4cd7bfc9c4ab6875da2d23"
     },
     {
       "path": "scripts/native-mac-picker/mac.swift",
@@ -2564,13 +2564,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 29197,
-      "sha256": "4c8d84bcf53a99de8e8da1df91ad6cd1be6392b451972f0171f9c3306600377d"
+      "bytes": 29803,
+      "sha256": "7f13fc3bb7c08d38067cb3cd3d4d4bc45e13bcf3b321c6501e3b38c1c3e6fd7b"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 21074,
-      "sha256": "a9da4f3cca97caf6dbe83ad5b1450b224b36b3e7fb5e07a0ce795748a8b49a19"
+      "bytes": 21428,
+      "sha256": "5d7b441770cdcb22398d4af2d71acca0bafeacd31ba03814e006c0f68bcd827a"
     },
     {
       "path": "docs/TESTING.md",
@@ -3263,6 +3263,11 @@
       "sha256": "b45ad6223351d7dc4c8173434c8d371feec0989b21279f284907427aa81dd0b4"
     },
     {
+      "path": "docs/research/NATIVE-APPIMAGE-UPGRADE-AND-PERSISTENCE-RESULT-2026-11-11.md",
+      "bytes": 4495,
+      "sha256": "807043de2313d22db3473800cda7c27dd065b26e970b3d8a7bd4d090b54740de"
+    },
+    {
       "path": "docs/research/NATIVE-APPIMAGE-UPGRADE-CLOSEOUT-DATA-GATE-2026-11-11.md",
       "bytes": 4145,
       "sha256": "a4fc0f621708a2b5e82a1bb6ac586e88e9b29f0696b6b6799176084264141c81"
@@ -3421,6 +3426,16 @@
       "path": "docs/research/NATIVE-MACOS-PICKER-CHILD-DATA-ADDENDUM-2026-11-11.md",
       "bytes": 2691,
       "sha256": "1023ca1da3777e70ef194090dbc987b71dd49d92e5a6687eebe3da26fd8e0cea"
+    },
+    {
+      "path": "docs/research/NATIVE-MACOS-PICKER-SDK-ROOT-UI-FINDING-2026-11-11.md",
+      "bytes": 1793,
+      "sha256": "4ade12c9571a6efb76143a93f7046737d16907e89cbbb68195948638037b5643"
+    },
+    {
+      "path": "docs/research/NATIVE-MACOS-PICKER-SDK-V2-DATA-GATE-2026-11-11.md",
+      "bytes": 1876,
+      "sha256": "ad6a8e18b596076f969c1fe3109f0c7db1b8c1ec000205d8d5ec2061e7fa399a"
     },
     {
       "path": "docs/research/NATIVE-MACOS-UPGRADE-SUCCESSOR-DATA-PLAN-2026-11-11.md",
