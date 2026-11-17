@@ -2864,13 +2864,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 44818,
-      "sha256": "c7367bfa37719d19006ec169ebd1c4acf5db0263df680b3f00ac930d27332e13"
+      "bytes": 49155,
+      "sha256": "6d5aa9286539bca30bbf5184afd40f33879cf760c66e5a73bbbeb98c868ecba6"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 24819,
-      "sha256": "6fc41d50065097903343c6decf6b1ce74e67687919256df2aea8546c9a4b9836"
+      "bytes": 25118,
+      "sha256": "4363473b790f807fefb4742c325b06fd4fd2c625c6de9927422bce5b842167a4"
     },
     {
       "path": "docs/TESTING.md",
@@ -3576,6 +3576,16 @@
       "path": "docs/research/MCP-ACCEPTANCE-CHECKLIST-2026-11-17.md",
       "bytes": 16953,
       "sha256": "a889dde8cbbab40e54fe058965fa39e3262a5ffa609b9f18fb602e5b529c047e"
+    },
+    {
+      "path": "docs/research/MCP-BETA2-MAC-RETRY-DATA-GATE-2026-11-17.md",
+      "bytes": 4935,
+      "sha256": "407d4b98bfdeaf75152f88cd71707b3927faed22587cdbb18aa991a25270ab3f"
+    },
+    {
+      "path": "docs/research/MCP-BETA2-SCOPED-RETRY-UI-GATE-2026-11-17.md",
+      "bytes": 5099,
+      "sha256": "dd68b5506944280bc25ae6b1ee322c81099bae8ca5a63e4d5e9f9731db5e4e0c"
     },
     {
       "path": "docs/research/MCP-DATA-GATE-2026-11-17.md",
@@ -4959,8 +4969,8 @@
     },
     {
       "path": "docs/tasks/F313-mcp.md",
-      "bytes": 2275,
-      "sha256": "5b13613c1343ac425c96a156f6de0d6f66e7340459c96a1e09170630d3dd19e1"
+      "bytes": 2924,
+      "sha256": "9ef4b732b888c9d73793877946e79a84c8c22fa414ca69f70bc6962b7bb36cf5"
     },
     {
       "path": "packages/runtime/LICENSE",

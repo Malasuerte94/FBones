@@ -1,11 +1,11 @@
 # Current state — 2026-11-17
 
-## Current work — MCP first,0.10 release candidate (F313 ACTIVE)
+## Current work — MCP first,0.10 delivered (F313 DONE)
 
 User authorizes commit, push and a new release after finishing MCP, public/developer
 MCP-first documentation and three real-project GitHub screenshots. Implementation
-and local acceptance are complete; publication/hosted CI verification remain active.
-Package/Tauri/Cargo version0.10.0 agree; immutable tagv0.10.0-beta.1 was pushed, and beta2 is now being prepared. Never replace existing0.9.6 release assets or selected Windows images.
+and local acceptance, hosted CI, publication and independent asset checks are complete.
+Package/Tauri/Cargo version0.10.0 agree; immutable beta1 is retained failed, and v0.10.0-beta.2 is now pushed. Never replace existing0.9.6 release assets or selected Windows images.
 
 Current MCP:23 tools/86 native edit variants/36 nested inputs, actual visible
 Session, authenticated IPv4 loopback HTTP, remembered per-profile address/token,
@@ -63,18 +63,61 @@ hashes remain unchanged; raw project/JSON/PNGs and credentials stay private.
 Only authorized editor screenshots enter Git/source archives.
 
 Commit7eb094ff471e5b584762811762e5f6fe32093a7d and immutable beta1 tag were
-atomically pushed. Public README/AI guide/3PNGs independently match reviewed bytes.
-Tag run44108608053 and main44108611085 have actual hosted jobs; Windows failed
-at JS schema drift verification (CRLF checkout versus LF), before native tests.
-Job134127709364 raw log retained; other Linux/Mac jobs remain independently live.
-Do not retag/delete beta1 or relabel its failures. No release/assets published yet.
-Paired DATA/UI audit and regression now normalize only CRLFpairs for the exact
-comparison. Canonical JSON is unchanged; relocated full-CRLF checkout passes and
-semantic drift/loneCR/otherformatting still reject.6schema checks pass. Prepare
-new immutable v0.10.0-beta.2 with the same plain application version0.10.0; hosted
-CI/publication/checksum/signature verification remain required before goal closure.
-Export1001file/1002member ece96f19 matched the pushed beta1 snapshot, not the later
-checker fix; regenerate reviewed source/manifest before beta2 commit.
+atomically pushed. Beta1 Windows job134127709364 failed JS schema comparison
+because checkoutCRLF differed from canonicalLF; retained raw log proves it failed
+before native tests. Beta1 remains immutable/unpublished. Paired DATA/UI gate and
+six regression checks normalize only CRLFpairs, retaining strict semantic/loneCR/
+formatting rejection. Checker-only44fa099220c753f593220e0d4d74757de91554e7 and new
+immutable v0.10.0-beta.2 are atomically pushed; application remains0.10.0. FullJS
+464pass/1skip. Final reviewed beta2 export1003files/1004manifest members, archive
+7566c1e9, matches that exact Git snapshot. Native/UI/images remain unchanged.
+
+Main44111143311 completes all4required jobs SUCCESS. Beta2 tag44111143281
+attempt1 has Linux/Windows/UI+actual nativeSDK SUCCESS; macOS134136759209 was
+CANCELLED before acquiring any runner (runner0, steps[]). GitHub annotations
+explicitly report hostedARM64 capacity/unassigned runner, not a compiler/test
+failure. Dependent publisher skipped; release-by-tag404 at retry preflight.
+Connector rerun returns403 (integration lacks Actionswrite), so reviewed temporary
+branch ops/retry-mcp-beta2/f5e97e680143a829d613fd04a7b5f2617d62e2bd contains only a
+one-purpose Actionswrite helper. Fresh exact run/job/sibling/tag/release-absence
+guards precede one POST for the unassigned macOS job and dependent publication.
+Helper44119538509/job134166784985 SUCCESS, actual POST201 retained in private
+ops-helper-success.log. Its exact own branch is now deleted locally/remotely with
+expected-tip lease; main/tag remained44fa099 during cleanup; helper/receipt are private.
+No merge or application/tag change. Original release SHA/tag are unchanged. Paired retry DATA/UI
+records classify this infrastructure action and its strict guards.
+
+Actual tag run44111143281 attempt2 completes SUCCESS. macOS134166879302 passes
+all tests, signed updater packaging and architecture/package checks. GitHub
+represents the three reused green siblings with attempt2 job IDs134166881792
+(Linux),134166979083(Windows),134166882898(UI), retaining original timestamps.
+No repeat of those accepted jobs. Dependent publisher134179759374 succeeds,
+verifies published application version0.9.6→0.10.0 and publishes release448882264 at16:13:40Z.
+[Latest v0.10.0-beta.2](https://github.com/Malasuerte94/FBones/releases/tag/v0.10.0-beta.2)
+is immutable44fa099/tag source, app0.10.0/runtime0.1.0-beta.1. Historical beta1
+failure and attempt1 capacity cancellation remain preserved, never relabeled.
+
+Independent root-run postrelease verification PASS:
+`.local/mcp-postrelease-tools/results/verification-1/result.json` checks all16
+uploaded assets against streamed SHA256/BLAKE2b and GitHub digests, all15aggregate
+checksums, three exact-source/version/architecture reports, four cryptographic
+updater signatures with signed filenames/app0.10.0 and five exact platform routes.
+Actual public Latest endpoint returns the exact verified manifest. Source archive
+matches all1003reviewed files+manifest and public Git commit/tree. Published runtime
+matches all32members of the independent local prepack (55current runtime/domain
+sources match). Large packages are streamed/discarded; retained small assets
+3,474,029B. Existing frozen Node crypto verifier is reused; independent Rust crypto
+is explicitly unperformed. Neither metadata/package verification nor Linux native
+acceptance establishes0.10installed upgrades or Windows/macOS MCP gestures.
+
+Final independent public UI/docs review passes: MCP-first contract and native
+scope honest; all3screenshots visually inspected and exact hashes/links match.
+Private result mcp-ui-delivery-audit-2026-11-17.md. Frozen read-only postrelease
+verifier tooling.json a1b88f43 passed source/runtime/pin preflight; its root-run
+receipt above is actual publication proof, not merely helper/CI acceptance.
+All requested MCP implementation/docs/real-project captures/commit/push/release
+work is complete within existing supported profiles. No new full Spine-parity,
+platform-native installation/gesture or deferred final10% claim.
 
 Prior protected user normal164d057d executable was preserved at immutable
 `.local/mcp-2026-11-17/builds/<sha>/FBones`; its ownership receipt is updated. Own
@@ -82,15 +125,30 @@ acceptance processes all have retained terminal receipts; do not operate user
 windows. Normal current-source0.10 build8f00 is now handed to user as own210243/
 start2423656, separate profile, renderer=webgl, protected immutable executable;
 normal-0.10-launch.json binds it. No availability failure or OS-gesture claim.
-End-of-session cleanup/disk remeasure remain due. Private Xvfb92 via exec54345 and extracted local tools (~6.5MiB) remain
-needed until final native checks; installed pinned SDK is retained for reproduction.
+Continuation cleanup removes325,825,737logical bytes (118completed own
+Nov17 headless workspaces, obsolete own0.9.6test binary/depfile, superseded exported
+source directories, terminal ops-helper Python cache and superseded docs review). Compressed cited source snapshots, final beta2 export/Git
+clone, exact source/art, raw successful+negative evidence and current builds remain.
+No preexisting workspace or selected/mapped app removed. Private X92 had0windows
+and its retained own provider handle was stopped (exit143); no global display or
+user window operation. Final Linux~815GiB/hostG~3.6GiB; no physical recovery claim. Private Xvfb92 is now stopped; extracted local tools (~6.5MiB) remain
+needed for any CI reproduction; installed pinned SDK is retained for reproduction.
 Earlier cleanup234,303,008B plus agent-owned24,014,436B npm scratch and42,808,901B
-isolated diagnostic target retain their scopes. Final disk remeasure/own disposable
-workspace and old snapshot cleanup remain due; last Linux~814GiB/hostG~3.6GiB.
+isolated diagnostic target retain their scopes. Final remeasure: Linux815GiB,
+hostG3.6GiB; no physical-recovery attribution. Total scoped cleanup626,952,082
+logical bytes (~598MiB). No new large build/capture artifacts during publication.
+Mixed shared target/debug/deps (~9.5GiB) and uncertain old native variants
+(~1.074GiB) remain; ownership/relevance prevents blind deletion. Cited snapshots,
+current deliveries and accepted/negative evidence remain.
 No original operation, global package/settings change or physical-recovery claim.
 
-Next: beta2 privacy/export review and authorized commit/push/newtag; retain live CI
-IDs/terminal outcomes, verify actual publication and then update this checkpoint.
+Next: F313 is complete. Continue the next unclosed roadmap slice toward90%,
+retaining explicit final100% fidelity/platform-native gaps; no accepted native or
+original reruns without relevant product changes. Protect the0.10 handed-over
+window. Preserve immutable44fa099/tag release source, beta1 failures, retry and
+publication/asset receipts. Current operator checkpoint records the actual
+published result. Documentation-only main follow-up records this closeout and
+retry gates; product files, immutable release tag and assets remain unchanged.
 Preserve accepted90% Physics/Match/native-upgrade evidence; no old probes resumed.
 [Task](tasks/F313-mcp.md), [AI guide](MCP.md), [acceptance checklist](research/MCP-ACCEPTANCE-CHECKLIST-2026-11-17.md).
 
