@@ -28,6 +28,19 @@ pub struct SceneFocus {
     pub animation: Option<u64>,
     pub event: Option<u64>,
 }
+/// One decoded PSD raster in destination-bone local coordinates. PNG resources
+/// are validated/staged by Session before this single scene transaction.
+#[derive(Clone, Debug)]
+pub struct PsdLayerPlacement {
+    pub name: String,
+    pub path: String,
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
+    pub visible: bool,
+    pub opacity: u8,
+}
 #[derive(Clone, Debug)]
 pub struct SceneFrame {
     pub project: SceneProject,
@@ -84,6 +97,10 @@ pub enum SceneEdit {
         bone: u64,
         slot: Option<u64>,
         images: Vec<ImagePlacement>,
+    },
+    ImportPsd {
+        bone: u64,
+        layers: Vec<PsdLayerPlacement>,
     },
     InsertAttachment {
         slot: u64,
@@ -669,6 +686,79 @@ impl SceneHistory {
                         vertex: None,
                         animation: next.focus.animation,
                         event: next.focus.event,
+                    };
+                }
+            }
+            SceneEdit::ImportPsd { bone, layers } => {
+                if layers.is_empty()
+                    || layers.len() > 128
+                    || next.project.slots.len() + layers.len()
+                        > fbones_format::minimal::scene::MAX_SCENE_SLOTS
+                {
+                    return Err(invalid(
+                        "Import 1–128 PSD layers within the project slot limit.",
+                    ));
+                }
+                let bone_index = next.bone_index(bone)?;
+                before.focus = SceneFocus {
+                    bone,
+                    ..SceneFocus::default()
+                };
+                for layer in layers {
+                    if layer.name.is_empty()
+                        || layer.name.len() > 1000
+                        || layer.name.chars().any(char::is_control)
+                        || !valid_image_stem(&layer.path)
+                        || [layer.x, layer.y, layer.width, layer.height]
+                            .iter()
+                            .any(|v| !v.is_finite() || v.abs() > 1_000_000.0)
+                        || layer.width <= 0.0
+                        || layer.height <= 0.0
+                    {
+                        return Err(invalid(
+                            "Use supported PSD layer names, sizes and positions.",
+                        ));
+                    }
+                    let name = unique_name(
+                        &layer.name,
+                        next.project.slots.iter().map(|s| s.name.as_str()),
+                    );
+                    let slot = next.project.slots.len();
+                    let slot_id = allocate(&mut ids.slot)?;
+                    let attachment_id = allocate(&mut ids.attachment)?;
+                    next.project.slots.push(SceneSlot {
+                        name: name.clone(),
+                        bone: bone_index,
+                        color: [255, 255, 255, layer.opacity],
+                        blend: BlendMode::Normal,
+                        active_attachment: layer.visible.then_some(0),
+                        attachments: vec![SceneAttachment::Region(Region {
+                            name: name.clone(),
+                            path: if name == layer.path {
+                                String::new()
+                            } else {
+                                layer.path
+                            },
+                            x: layer.x,
+                            y: layer.y,
+                            rotation: 0.0,
+                            scale_x: 1.0,
+                            scale_y: 1.0,
+                            width: layer.width,
+                            height: layer.height,
+                        })],
+                    });
+                    next.slot_ids.push(slot_id);
+                    next.attachment_ids.push(vec![attachment_id]);
+                    next.project.attachment_order.push(AttachmentAddress {
+                        slot,
+                        attachment: 0,
+                    });
+                    next.focus = SceneFocus {
+                        bone,
+                        slot: Some(slot_id),
+                        attachment: Some(attachment_id),
+                        ..next.focus
                     };
                 }
             }

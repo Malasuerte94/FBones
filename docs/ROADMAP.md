@@ -1,6 +1,6 @@
 # Implementation status and roadmap
 
-This is the public overview for the **0.9.6 beta**. FBones is an offline desktop
+This is the public overview for the **0.10.0 beta**. FBones is an offline desktop
 2D skeletal animation editor under active development. The implemented workflows
 below cover tested profiles; they do not establish full Spine compatibility.
 
@@ -8,6 +8,7 @@ below cover tested profiles; they do not establish full Spine compatibility.
 
 | Area | Implemented scope |
 | --- | --- |
+| AI / MCP | Built-in opt-in local server, typed tools for the current native authoring surface, remembered connection settings, viewport PNG capture and AI documentation. New supported features follow the MCP-first shared-Session workflow. |
 | Project lifecycle | New, Open, Save/Save As, resource copying, dirty-state guards, native Undo/Redo and supported binary project persistence. |
 | Bones and hierarchy | Create, select, rename and reparent; Translate, Rotate, Scale, Shear, Pose and Length tools; group transforms and viewport gizmos. |
 | Images and slots | Folder-backed PNG library, multiple alternative attachments per slot, nullable active attachment, draw order, colors and supported blend modes. |
@@ -43,18 +44,20 @@ Animate. Structural edits stay in Setup.
   Animation mixing, direct binary-project loading, texture atlases and full
   Spine numerical/feature compatibility are not established. The archive can be
   installed as a file; npm registry publication is separate.
-- The desktop is designed for Windows, Linux and macOS. Windows native workflows
-  have been observed; Ubuntu browser regression and an earlier native Linux
-  startup have been observed. Current packaged Linux lifecycle and macOS native
-  acceptance remain open. A browser test does not prove native OS behavior.
+- The desktop is designed for Windows, Linux and macOS. Actual0.9.5→0.9.6
+  upgrades are accepted at the recorded90% scopes: full Debian/AppImage native
+  project flows, Windows x64/macOS ARM64 clean upgrades and fresh WebGL startup.
+  Broader Windows/macOS project UX and Intel execution remain final-pass work.
+  A browser test does not prove native OS behavior.
 
 ## Next milestones
 
-1. **Finish and stabilize existing Physics and Transform Match.** Preserve live
-   Setup, explicit Simulate Off, scratch preview state, pending-field handling,
-   Undo/Redo and binary Save/Close/Open. Resolve unanswered original numerical
-   questions with discriminating evidence; preserve the existing Animate work
-   before adding features. Earlier deferrals are superseded.
+1. **Deliver usable features to the agreed90% milestone.** Physics and both
+   Transform Match actions are READY90; their remaining phase/precision and
+   broader fidelity questions return in the final100% pass. Native upgrades are
+   accepted at their explicit Linux-full/Windows-macOS-clean90 scopes. The0.10 feature set includes [PSD layer import](tasks/F312-psd-import.md),
+   preserving layer positions and stacking order in its supported raster profile.
+   Native picker/platform and broader compositing limits remain explicit.
 2. **Complete animation coverage.** Expand global Physics targets/reset-all,
    separate RGB and alpha timelines and broader two-color interpolation, advanced timing and Graph tools,
    animation mixing and onion skin. Preserve native history, save/reopen and
@@ -80,7 +83,19 @@ There are no promised dates for these milestones. A feature appearing in a
 screenshot or an inspector is not evidence that its full behavior or persistence
 is implemented.
 
-## Current stabilization evidence
+## Current verification and earlier stabilization evidence
+
+The0.10 local integration passes127 production-CSP UI cases,370 native checks
+(with2 existing ignored),463 JavaScript tests (with1 existing skip),105 Scene/
+16 default format checks and103 legacy checks (with1 existing ignored). The
+independent official MCP client operates an actual dedicated Linux editor,
+including real Copy/GTK clipboard read, all23 tools, viewport images, portable
+binary/resources, StopStart configuration reuse and explicit Reset/token revocation.
+This does not substitute for hosted release CI or Windows/macOS native gestures.
+
+New supported operations follow [MCP first](../CONTRIBUTING.md#mcp-first): the
+native Session serves both the editor and AI clients, with typed discovery,
+revision/pose guards, history/persistence and agent documentation kept together.
 
 Before the 0.9.6 version bump, the stabilization checkpoint reports 123 passing
 Ubuntu Chromium/real-Rust UI cases, 443 JavaScript checks with one existing

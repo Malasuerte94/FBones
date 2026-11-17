@@ -272,6 +272,9 @@ fn read_graph(payload: &[u8]) -> Result<(Reader<'_>, Reference, [u8; 16])> {
         deform_coordinates: 0,
         string_fields: vec![],
         mesh_uv_limit: MAX_SCENE_MESH_VERTICES * 2,
+        mesh_vertex_limit: MAX_SCENE_MESH_VERTICES,
+        mesh_triangle_limit: MAX_SCENE_MESH_TRIANGLE_INDICES,
+        mesh_edge_limit: MAX_SCENE_MESH_EDGE_INDICES,
         draw_order_limit: MAX_SCENE_SLOTS,
         string_encodings: HashMap::new(),
     };

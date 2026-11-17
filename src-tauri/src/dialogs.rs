@@ -1,14 +1,23 @@
 use crate::project::AppError;
 use std::path::PathBuf;
 
+#[derive(Clone, Copy, PartialEq)]
+enum ImportKind {
+    Project,
+    Png,
+    Psd,
+}
+
 pub async fn pick(
     app: tauri::AppHandle,
     save: bool,
     name: String,
 ) -> Result<Option<PathBuf>, AppError> {
-    tauri::async_runtime::spawn_blocking(move || platform_pick(app, save, name, false))
-        .await
-        .map_err(|_| AppError::new("Dialog", "The file dialog could not be opened."))?
+    tauri::async_runtime::spawn_blocking(move || {
+        platform_pick(app, save, name, ImportKind::Project)
+    })
+    .await
+    .map_err(|_| AppError::new("Dialog", "The file dialog could not be opened."))?
 }
 
 #[cfg(target_os = "linux")]
@@ -16,7 +25,7 @@ fn platform_pick(
     app: tauri::AppHandle,
     save: bool,
     name: String,
-    image: bool,
+    kind: ImportKind,
 ) -> Result<Option<PathBuf>, AppError> {
     use gtk::prelude::*;
     use tauri::Manager;
@@ -27,7 +36,9 @@ fn platform_pick(
             .get_webview_window("main")
             .and_then(|w| w.gtk_window().ok());
         let dialog = gtk::FileChooserNative::new(
-            Some(if image {
+            Some(if kind == ImportKind::Psd {
+                "Import Photoshop PSD"
+            } else if kind == ImportKind::Png {
                 "Import PNG image"
             } else if save {
                 "Save a project"
@@ -45,14 +56,19 @@ fn platform_pick(
         );
         dialog.set_modal(true);
         let filter = gtk::FileFilter::new();
-        filter.set_name(Some(if image {
+        filter.set_name(Some(if kind == ImportKind::Psd {
+            "Photoshop PSD"
+        } else if kind == ImportKind::Png {
             "PNG image"
         } else if save {
             "FBones project"
         } else {
             "FBones / Spine project"
         }));
-        if image {
+        if kind == ImportKind::Psd {
+            filter.add_pattern("*.psd");
+            filter.add_pattern("*.PSD");
+        } else if kind == ImportKind::Png {
             filter.add_pattern("*.png");
             filter.add_pattern("*.PNG");
         } else {
@@ -84,10 +100,12 @@ fn platform_pick(
     _app: tauri::AppHandle,
     save: bool,
     name: String,
-    image: bool,
+    kind: ImportKind,
 ) -> Result<Option<PathBuf>, AppError> {
     use std::os::windows::process::CommandExt;
-    let script = if image {
+    let script = if kind == ImportKind::Psd {
+        "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new(); Add-Type -AssemblyName System.Windows.Forms; $d=[System.Windows.Forms.OpenFileDialog]::new(); $d.Title='Import Photoshop PSD'; $d.Filter='Photoshop PSD|*.psd'; if($d.ShowDialog() -eq 'OK'){[Console]::Write($d.FileName)}"
+    } else if kind == ImportKind::Png {
         "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new(); Add-Type -AssemblyName System.Windows.Forms; $d=[System.Windows.Forms.OpenFileDialog]::new(); $d.Filter='PNG image|*.png'; if($d.ShowDialog() -eq 'OK'){[Console]::Write($d.FileName)}"
     } else if save {
         "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new(); Add-Type -AssemblyName System.Windows.Forms; $d=[System.Windows.Forms.SaveFileDialog]::new(); $d.Filter='FBones project|*.fbones'; $d.DefaultExt='fbones'; $d.AddExtension=$true; $d.FileName=$env:FBONES_DIALOG_NAME; if($d.ShowDialog() -eq 'OK'){[Console]::Write($d.FileName)}"
@@ -114,11 +132,14 @@ fn platform_pick(
     _app: tauri::AppHandle,
     save: bool,
     name: String,
-    image: bool,
+    kind: ImportKind,
 ) -> Result<Option<PathBuf>, AppError> {
-    let _ = image; // Native PNG validation follows selection on macOS too.
     let script = if save {
         "on run argv\nreturn POSIX path of (choose file name with prompt \"Save a project\" default name (item 1 of argv))\nend run"
+    } else if kind == ImportKind::Psd {
+        "on run argv\nreturn POSIX path of (choose file with prompt \"Import Photoshop PSD\" of type {\"com.adobe.photoshop-image\", \"psd\"})\nend run"
+    } else if kind == ImportKind::Png {
+        "on run argv\nreturn POSIX path of (choose file with prompt \"Import PNG image\" of type {\"public.png\"})\nend run"
     } else {
         "on run argv\nreturn POSIX path of (choose file with prompt \"Open a project\")\nend run"
     };
@@ -139,9 +160,19 @@ fn platform_pick(
 }
 
 pub async fn pick_image(app: tauri::AppHandle) -> Result<Option<PathBuf>, AppError> {
-    tauri::async_runtime::spawn_blocking(move || platform_pick(app, false, String::new(), true))
-        .await
-        .map_err(|_| AppError::new("Dialog", "The image dialog could not be opened."))?
+    tauri::async_runtime::spawn_blocking(move || {
+        platform_pick(app, false, String::new(), ImportKind::Png)
+    })
+    .await
+    .map_err(|_| AppError::new("Dialog", "The image dialog could not be opened."))?
+}
+
+pub async fn pick_psd(app: tauri::AppHandle) -> Result<Option<PathBuf>, AppError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        platform_pick(app, false, String::new(), ImportKind::Psd)
+    })
+    .await
+    .map_err(|_| AppError::new("Dialog", "The PSD dialog could not be opened."))?
 }
 
 pub async fn pick_folder(app: tauri::AppHandle) -> Result<Option<PathBuf>, AppError> {

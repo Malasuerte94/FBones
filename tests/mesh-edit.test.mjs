@@ -2,7 +2,8 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {previewMeshEdit,retriangulate} from '../src/domain/meshEdit.ts';
-import {meshPoints} from '../src/domain/meshes.ts';
+import {meshPoints,nearestVertex,meshContains} from '../src/domain/meshes.ts';
+import {emptyWeightSelection,withWeightVertices} from '../src/domain/weightSelection.ts';
 const bones=[{id:0,parent:null,name:'root',x:0,y:0,rotation:0,length:0}];
 const quad={weighted:false,bones:[0],uvs:[0,0,1,0,1,1,0,1],triangles:[0,1,2,2,3,0],edges:[0,1,1,2,2,3,3,0],hull:4,vertices:[[-50,50],[50,50],[50,-50],[-50,-50]].map(p=>({weights:[1],positions:p}))};
 const edgeSet=triangles=>new Set(triangles.flatMap((_,i)=>i%3?[]:[0,1,2].map(j=>{const a=triangles[i+j],b=triangles[i+(j+1)%3];return`${Math.min(a,b)}:${Math.max(a,b)}`;})));
@@ -59,9 +60,22 @@ test('live edge priority retains exact old 256-vertex convex and grid topology',
  }
 });
 
-test('large convex and jittered surfaces use every high-index vertex with complete positive-area coverage through 512',()=>{
- for(const count of [257,301,308,512])for(const shape of [grid(count),convex(count)]){const before=structuredClone(shape),triangles=retriangulate(shape.uvs,shape.hull,[],shape.world);verifySurface(shape,triangles);assert.ok(triangles.includes(count-1));assert.deepEqual(shape,before);assert.ok(triangles.length<=3072);}
- const tooLarge=grid(513);assert.throws(()=>retriangulate(tooLarge.uvs,tooLarge.hull,[],tooLarge.world),/Invalid mesh/);
+test('large convex and jittered surfaces use every high-index vertex with complete positive-area coverage through 1024',()=>{
+ for(const count of [257,301,308,512,513,654,893,1024])for(const shape of [grid(count),convex(count)]){const before=structuredClone(shape),triangles=retriangulate(shape.uvs,shape.hull,[],shape.world);verifySurface(shape,triangles);assert.ok(triangles.includes(count-1));assert.deepEqual(shape,before);assert.ok(triangles.length<=(count<=512?3072:6144));}
+ const tooLarge=grid(1025),before=structuredClone(tooLarge);assert.throws(()=>retriangulate(tooLarge.uvs,tooLarge.hull,[],tooLarge.world),/Invalid mesh/);assert.deepEqual(tooLarge,before);
+});
+
+test('1024-row weighted preview and high-index picking preserve dense rows, UV policy and source',()=>{
+ const count=1024,shape=grid(count),mesh={weighted:true,bones:[0,1],uvs:shape.uvs,triangles:retriangulate(shape.uvs,4,[]),edges:[],hull:4,vertices:Array.from({length:count},(_,i)=>({weights:[.25,.75],positions:[shape.uvs[i*2]*100,shape.uvs[i*2+1]*100,shape.uvs[i*2]*100-20,shape.uvs[i*2+1]*100-7]}))};
+ const poses=[{...bones[0],x:10,y:5,rotation:15,scaleX:1.2,scaleY:.8,shearX:5,shearY:-7},{id:1,parent:0,name:'Own child',x:20,y:7,length:10,rotation:-10,scaleX:.9,scaleY:1.1,shearX:0,shearY:2}],before=structuredClone(mesh),points=meshPoints(poses,mesh);
+ for(const index of [512,892,1023]){assert.equal(nearestVertex(points,points[index],.00001),index);assert.equal(meshContains(poses,mesh,points[index]),true);}
+ const selected=withWeightVertices(emptyWeightSelection(count),[892,1023,1024,892],1023,count);assert.deepEqual(selected.vertices,[892,1023]);assert.equal(selected.active,1023);
+ const last=1023,target={x:points[last].x*.999+points[0].x*.001,y:points[last].y*.999+points[0].y*.001};
+ const modified=previewMeshEdit(poses,mesh,[{vertex:last,...target}]);assert.notEqual(modified,mesh);near(meshPoints(poses,modified)[last].x,target.x);near(meshPoints(poses,modified)[last].y,target.y);assert.notDeepEqual(modified.uvs.slice(last*2,last*2+2),mesh.uvs.slice(last*2,last*2+2));verifySurface({...shape,uvs:modified.uvs},modified.triangles);
+ for(let i=0;i<count;i++){assert.deepEqual(modified.vertices[i].weights,mesh.vertices[i].weights);if(i!==last)assert.deepEqual(modified.vertices[i],mesh.vertices[i]);}
+ const moved=previewMeshEdit(poses,mesh,points.map((point,vertex)=>({vertex,x:point.x+2,y:point.y-3})),false),world=meshPoints(poses,moved);
+ for(let i=0;i<count;i++){near(world[i].x,points[i].x+2);near(world[i].y,points[i].y-3);assert.deepEqual(moved.vertices[i].weights,mesh.vertices[i].weights);}
+ assert.deepEqual(moved.uvs,mesh.uvs);assert.deepEqual(moved.triangles,mesh.triangles);assert.deepEqual(mesh,before);
 });
 
 test('distinct high-index constrained edges survive quality improvement without the old radix collision',()=>{

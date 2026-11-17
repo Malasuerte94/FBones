@@ -498,3 +498,16 @@ copies validated resources and rebases the audio root, or rejects missing/unsafe
 colliding resources before writing project bytes. Native history retains caches
 and raw metadata. Frontend WebAudio playback is a separate tested integration;
 frontend Animate Physics motion is a later profile, with exact F307 phase pending.
+
+## Current FBones mesh capacity
+
+The0.10 source raises only the typed Scene mesh profile to1024vertices,6144
+triangle indices and8192 edge indices, with8192 aggregate scene vertices.
+Independent generic object/byte budgets still apply and can bind before every
+semantic maximum is reached. Reader expansions are field-context-specific,
+including cached-reference rechecks; ordinary and legacy contexts are unchanged.
+Clip and auto-trace limits are unchanged. This is an FBones resource policy, not
+a measured original-editor limit or an expansion of reference compatibility
+claims. Paired [DATA](research/MCP-PRESENTATION-IMPORT-DATA-GATE-2026-11-17.md)/
+[UI](research/MCP-MASCOT-MESH-CAPACITY-UI-GATE-2026-11-17.md) findings preserve the
+real source's complete payload equality and the1024/1025 boundary regressions.

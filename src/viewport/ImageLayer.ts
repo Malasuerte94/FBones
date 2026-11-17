@@ -22,6 +22,9 @@ export class ImageLayer {
   private clippingIssue='';
   private documentId = -1;
   private epoch = 0;
+  ready(documentId:number,bones:readonly BoneView[],slots:readonly SlotView[]):boolean {
+    return this.documentId===documentId&&worldRegions(bones,slots).every(slot=>!slot.visible||this.textures.has(slot.region.image));
+  }
   constructor(private load: (documentId: number, name: string) => Promise<string>, private invalidate: () => void,
     private onError?: (message: string) => void) {}
   private dispose(node: Sprite | Mesh<MeshGeometry>,id:number) { node.mask=null;node.filters=[];this.darkFilters.get(id)?.destroy();this.darkFilters.delete(id);if(node instanceof Mesh) node.geometry.destroy(); node.destroy(); }

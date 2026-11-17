@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n';
 import { useWorkspace, type Intent } from './stores/workspace';
 import { desktop } from './services/desktop';
-import { onEditorCommand, nativeWindow } from './services/bridge';
+import { onEditorCommand, onMcpProjectChanged, nativeWindow } from './services/bridge';
 import { validProjectName, type EditMode } from './domain/project';
 import AppButton from './components/atoms/AppButton.vue';
 import AppIcon from './components/atoms/AppIcon.vue';
@@ -24,6 +24,8 @@ import BoneInspector from './components/organisms/BoneInspector.vue';
 import {useBoneFieldEditor} from './composables/useBoneFieldEditor';
 import {useAppUpdater} from './composables/useAppUpdater';
 import UpdateNotice from './components/organisms/UpdateNotice.vue';
+import McpControl from './components/organisms/McpControl.vue';
+import {useMcp} from './composables/useMcp';
 
 import SlotInspector from './components/organisms/SlotInspector.vue';
 import AttachmentInspector from './components/organisms/AttachmentInspector.vue';
@@ -37,6 +39,12 @@ import { toolEditMode } from './domain/toolMode';
 
 const { t } = useI18n();
 const w = useWorkspace();
+const mcp=useMcp({beforeUnlock:()=>w.refreshFromMcp(),beforeStart:async()=>{
+ if(constraintCreator.value||clippingCreator.value||eventCreator.value)throw Error(t('mcpFinishFirst'));
+ if(!await w.prepareForMcp())throw Error(w.notice||t('mcpFinishFirst'));
+ return true;
+}});
+watch(()=>mcp.state.value.enabled,enabled=>{if(enabled)w.suspendSimulation('mcp');else w.resumeSimulation('mcp');},{flush:'sync'});
 const timelineSlots=computed(()=>(w.project?.slots??[]).map(slot=>({id:slot.id,boneId:slot.bone,name:slot.name,tintBlack:slot.tintBlack,attachments:slot.attachments?.map(attachment=>({id:attachment.id,name:attachment.name,sequence:attachment.sequence}))??(slot.region?[{id:slot.id,name:slot.region.name}]:[])})));
 const timelineSelectedConstraints=computed(()=>w.selectedConstraintIds);
 const timelineInterpolations:Array<'linear'|'stepped'|'bezier'>=['linear','stepped','bezier'];
@@ -106,15 +114,17 @@ let disposed = false;
 
 function command(id: string) {
   if(updater.installing.value)return;
+  if(id==='mcp'){mcp.visible.value=true;return;}
+  if(mcp.state.value.enabled||mcp.visible.value)return;
   if(id==='check-updates'){void updater.checkNow();return;}
   if(w.parentPicking)w.cancelParentPick();
-  if(constraintCreator.value||clippingCreator.value||eventCreator.value){if(['save','copy','export-runtime','undo','redo','import'].includes(id))return;constraintCreator.value=null;clippingCreator.value=false;eventCreator.value=false;}
-  if(w.clippingDraft){if(['save','copy','undo','redo','import'].includes(id)){w.showNotice(t('clippingFinishFirst'));return;}if(['new','open','close','quit'].includes(id))w.cancelClipping();}
+  if(constraintCreator.value||clippingCreator.value||eventCreator.value){if(['save','copy','export-runtime','undo','redo','import', 'import-psd'].includes(id))return;constraintCreator.value=null;clippingCreator.value=false;eventCreator.value=false;}
+  if(w.clippingDraft){if(['save','copy','undo','redo','import', 'import-psd'].includes(id)){w.showNotice(t('clippingFinishFirst'));return;}if(['new','open','close','quit'].includes(id))w.cancelClipping();}
   document.querySelectorAll<HTMLDetailsElement>('details.editor-menu[open]').forEach(el=>{el.open=false;});
-  if(w.traceOpen){if(['save','copy','undo','redo','import'].includes(id)){w.showNotice(t('traceFinishFirst'));return;}if(['new','open','close','quit'].includes(id))w.cancelTrace();}
-  if (w.newDialog && ['save', 'copy', 'undo', 'redo', 'import'].includes(id)) return;
-  if (w.discardDialog && ['undo', 'redo', 'import'].includes(id)) return;
-  if (['save', 'copy', 'export-runtime', 'undo', 'redo', 'import'].includes(id)) (document.activeElement as HTMLElement | null)?.blur();
+  if(w.traceOpen){if(['save','copy','undo','redo','import', 'import-psd'].includes(id)){w.showNotice(t('traceFinishFirst'));return;}if(['new','open','close','quit'].includes(id))w.cancelTrace();}
+  if (w.newDialog && ['save', 'copy', 'undo', 'redo', 'import', 'import-psd'].includes(id)) return;
+  if (w.discardDialog && ['undo', 'redo', 'import', 'import-psd'].includes(id)) return;
+  if (['save', 'copy', 'export-runtime', 'undo', 'redo', 'import', 'import-psd'].includes(id)) (document.activeElement as HTMLElement | null)?.blur();
   if (id === 'undo' || id === 'redo') void w.editRig({ type: id });
   if(id==='new')openNew();
   if (['open', 'close', 'quit'].includes(id)) void w.request(id as Intent);
@@ -122,8 +132,10 @@ function command(id: string) {
   if (id === 'save') void w.save();
   if (id === 'export-runtime') void w.exportRuntime();
   if (id === 'import') void w.chooseImagesFolder();
+  if (id === 'import-psd') void w.importPsd();
 }
 function keyboard(event: KeyboardEvent) {
+  if(mcp.state.value.enabled||mcp.visible.value)return;
   if(updater.installing.value){event.preventDefault();return;}
   if(event.defaultPrevented)return;
   if(w.parentPicking){if(event.key==='Escape'){event.preventDefault();event.stopPropagation();w.cancelParentPick();}return;}
@@ -170,6 +182,7 @@ onMounted(async () => {
   if (desktop) {
     const handlers = await Promise.all([
       onEditorCommand(command),
+      onMcpProjectChanged(()=>{void w.refreshFromMcp().catch(()=>{});}),
       nativeWindow().onCloseRequested((event) => { event.preventDefault(); command('quit'); }),
     ]);
     if (disposed) handlers.forEach((stop) => stop()); else cleanup = handlers;
@@ -177,16 +190,17 @@ onMounted(async () => {
 });
 onBeforeUnmount(() => {
   stopTimelineResize?.();
-  w.resumeSimulation('creator-modal');w.stopAnimationAudio(); disposed = true; document.removeEventListener('keydown', keyboard); cleanup.forEach((stop) => stop()); });
+  w.resumeSimulation('mcp');w.resumeSimulation('creator-modal');w.stopAnimationAudio(); disposed = true; document.removeEventListener('keydown', keyboard); cleanup.forEach((stop) => stop()); });
 </script>
 
 <template>
-  <main class="flex h-full min-h-0 flex-col select-none" :inert="updater.installing.value" :aria-busy="w.busy||updater.installing.value">
+  <main class="flex h-full min-h-0 flex-col select-none" :inert="updater.installing.value||mcp.state.value.enabled" :aria-busy="w.busy||updater.installing.value">
     <header class="editor-header">
       <div class="mr-2 flex items-center gap-1.5 text-accent"><AppIcon name="logo" class="!size-5"/><span class="font-semibold tracking-wide text-ink">{{ t('appName') }}</span></div>
       <details class="editor-menu"><summary>{{ t('fileMenu') }}</summary><div class="menu-popover">
-        <button @click="openNew">{{ t('newProject') }}<span>Ctrl+N</span></button><button @click="command('open')">{{ t('openProject') }}<span>Ctrl+O</span></button><button :disabled="!w.project?.canSave" @click="command('save')">{{ t('save') }}<span>Ctrl+S</span></button><button :disabled="!w.project?.canCopy" @click="command('copy')">{{ t('saveAs') }}<span>Ctrl+Shift+S</span></button><button data-testid="export-runtime" :disabled="!desktop||!w.canEdit||!w.sceneEditing||w.busy||!!w.inspectorError||!!w.animationKeyError||!!w.eventKeyError||!!w.sequenceFieldError||!!w.attachmentColorError||w.traceOpen||!!w.clippingDraft" @click="command('export-runtime')">{{ t('exportRuntime') }}</button><hr/><button :disabled="!w.project" @click="command('close')">{{ t('closeProject') }}<span>Ctrl+W</span></button>
+        <button @click="openNew">{{ t('newProject') }}<span>Ctrl+N</span></button><button @click="command('open')">{{ t('openProject') }}<span>Ctrl+O</span></button><button :disabled="!w.project?.canSave" @click="command('save')">{{ t('save') }}<span>Ctrl+S</span></button><button :disabled="!w.project?.canCopy" @click="command('copy')">{{ t('saveAs') }}<span>Ctrl+Shift+S</span></button><button data-testid="import-psd" :disabled="!w.canImportPsd" :title="t('importPsdHint')" @click="command('import-psd')">{{ t('importPsd') }}</button><button data-testid="export-runtime" :disabled="!desktop||!w.canEdit||!w.sceneEditing||w.busy||!!w.inspectorError||!!w.animationKeyError||!!w.eventKeyError||!!w.sequenceFieldError||!!w.attachmentColorError||w.traceOpen||!!w.clippingDraft" @click="command('export-runtime')">{{ t('exportRuntime') }}</button><hr/><button :disabled="!w.project" @click="command('close')">{{ t('closeProject') }}<span>Ctrl+W</span></button>
       </div></details>
+      <McpControl :controller="mcp"/>
       <AppButton variant="ghost" :disabled="w.busy" :aria-label="t('newProject')" :title="t('newProject')" @click="openNew"><AppIcon name="plus"/></AppButton>
       <AppButton variant="ghost" :disabled="w.busy" :aria-label="t('openProject')" :title="t('openProject')" @click="command('open')"><AppIcon name="folder"/></AppButton>
       <AppButton variant="ghost" :disabled="w.traceOpen||(w.busy&&!w.editing)||!(w.project?.canSave||w.project?.canCopy)" :aria-label="t('save')" :title="t('save')" @click="command(w.project?.canSave?'save':'copy')"><AppIcon name="save"/></AppButton>

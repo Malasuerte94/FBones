@@ -4,6 +4,20 @@ FBones is an early desktop animation editor. Contributions from animators,
 designers, testers, writers and developers are welcome. You can help without
 owning Spine or working on its file format.
 
+## MCP first
+
+FBones serves animators and AI clients through one native Session. Implement new
+authoring capabilities in that shared API, then connect both the editor controls
+and MCP tools. Keep revision checks, pose epochs, Undo/Redo, resource safety and
+binary persistence in the native operation; do not recreate them in a client.
+
+For each feature, update typed MCP discovery and the [AI guide](docs/MCP.md),
+regenerate/check schemas, and verify the operation through the protocol as well
+as its UI. Document intentionally UI-only actions explicitly. The current local
+MCP server is opt-in, with authenticated HTTP, remembered connection settings,
+viewport images and an optional stdio bridge. MCP-first means new supported
+capabilities remain usable without automating mouse gestures.
+
 ## Pick a contribution
 
 Read the [roadmap](docs/ROADMAP.md) for what works and what remains open. Open an

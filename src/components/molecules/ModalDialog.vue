@@ -7,7 +7,7 @@ let previousFocus: HTMLElement | null = null;
 function keydown(event: KeyboardEvent) {
   if (event.key === 'Escape') { event.preventDefault(); if (!props.busy) emit('cancel'); }
   if (event.key !== 'Tab' || !panel.value) return;
-  const items = Array.from(panel.value.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex="0"]'));
+  const items = Array.from(panel.value.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), a[href], [tabindex="0"]'));
   const first = items[0], last = items[items.length - 1];
   if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
   else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }

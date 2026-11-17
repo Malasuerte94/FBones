@@ -270,3 +270,12 @@ Delivery regression checks:
 `python3 scripts/test-windows-delivery.py` and
 `rustc --edition=2021 --test scripts/windows-bootstrap.rs -o .local/bootstrap-tests`
 then `.local/bootstrap-tests`. Native Windows launch still needs observation.
+
+## MCP first authoring
+
+Expose new supported operations through the native Session for both the UI and
+MCP. See [the contributor contract](../CONTRIBUTING.md#mcp-first) and
+[AI workflows](MCP.md). Regenerate and check schemas with
+`node scripts/generate-mcp-schema.mjs` and `--check`; keep typed discovery and
+protocol verification with the feature. The optional official-client acceptance
+uses a separately supplied pinned SDK and a dedicated owned native instance.

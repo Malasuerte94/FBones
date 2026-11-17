@@ -1,5 +1,5 @@
 {
-  "release": "v0.9.6-beta.1",
+  "release": "v0.10.0-beta.1",
   "kind": "source-only",
   "files": [
     {
@@ -14,13 +14,13 @@
     },
     {
       "path": "README.md",
-      "bytes": 13019,
-      "sha256": "71ca329776f49d7d8ea542debd8668291f5f221460c2649d155e044592da75ea"
+      "bytes": 13587,
+      "sha256": "4ad79da6db1468d3437a9543a1f28abb9ea4cbf57c075054d9890c16f1b12a36"
     },
     {
       "path": "CONTRIBUTING.md",
-      "bytes": 7772,
-      "sha256": "0b9158e38db687ab975009954f3a4ada36060af7e068b1997ce90d3601ec94a5"
+      "bytes": 8564,
+      "sha256": "df19c271c35f631a03bf9c0e73228d964c94372b2cdbbcbbcac0bd9dcd8ce595"
     },
     {
       "path": "LICENSE",
@@ -34,18 +34,18 @@
     },
     {
       "path": "Cargo.toml",
-      "bytes": 258,
-      "sha256": "9c932523f0833688a29bc4d7b4b0f0f6b9fefcec7b6d43e4a6c392b257a08867"
+      "bytes": 259,
+      "sha256": "4201a9e20f8d69991497676765b747a4421bb919110615b8a781b8fbeb396a7d"
     },
     {
       "path": "Cargo.lock",
-      "bytes": 116290,
-      "sha256": "624066cf1e3c8bb333a5caa659490aaec83d580c3e2c8af4dab3713f06f1595a"
+      "bytes": 116313,
+      "sha256": "6540dcf9f0ee132dd3b484cad9de4191b45ffd65e8a7a9576c78b369c94da723"
     },
     {
       "path": "package.json",
-      "bytes": 1294,
-      "sha256": "c7550695b2fa4ba284d61d707a911867eb61892f06bf62b18be8dad0aa93a508"
+      "bytes": 1295,
+      "sha256": "54d56b44dca92138d8c0709c3d3970b76198be7768e6c79c6f4514e1f4530c65"
     },
     {
       "path": "pnpm-lock.yaml",
@@ -104,8 +104,8 @@
     },
     {
       "path": ".github/workflows/desktop.yml",
-      "bytes": 7402,
-      "sha256": "68120cc83bd5462ba7957ce03ac0abfe24f0816e2620b485af2fa99f90048007"
+      "bytes": 8420,
+      "sha256": "a5322ca714f7c4e04c00d6667d3dddbb23d449b4a3e17763bf03d903f852ac4e"
     },
     {
       "path": ".github/workflows/native-descendant-lifecycle.yml",
@@ -159,8 +159,8 @@
     },
     {
       "path": "src/App.vue",
-      "bytes": 42696,
-      "sha256": "54a7e8bc5ebfdd22e76305479e3ae481216e81a96855871012d14129c25ec0e0"
+      "bytes": 43835,
+      "sha256": "7eb9de10429c3cfc4ce38c171ad92b565fbb2f579e2e0b9a66a9480def7a7d90"
     },
     {
       "path": "src/animationTimeline.css",
@@ -184,8 +184,8 @@
     },
     {
       "path": "src/components/molecules/ModalDialog.vue",
-      "bytes": 1656,
-      "sha256": "704fad0a9161cf8eabb0f05d2a682b758a128cd1d40eba4ff07bba6c85d5977b"
+      "bytes": 1713,
+      "sha256": "e5d188840d9eb8b4f6baf3ee5eba70496389333fbdf8c8f960c338e101824789"
     },
     {
       "path": "src/components/molecules/NumericSliderRow.vue",
@@ -288,14 +288,19 @@
       "sha256": "19891c3ec2075d59ed974297e1ac27defa7fabf7c8628c8f200d93e81a03e126"
     },
     {
+      "path": "src/components/organisms/McpControl.vue",
+      "bytes": 2859,
+      "sha256": "abed5ab3bb6727c75e5d7b74bcea288dc99ca431d5aed33cb72baec9e59708e6"
+    },
+    {
       "path": "src/components/organisms/MeshTools.vue",
       "bytes": 8053,
       "sha256": "755b66ffb46c34138660467b115f6e1b4053ab244c75a1171881b0ad9b40377e"
     },
     {
       "path": "src/components/organisms/ProjectViewport.vue",
-      "bytes": 8563,
-      "sha256": "e5577f809a78ce6a06304f140c01fb2afd2cf47b9ee7449b24011f42f88d6f95"
+      "bytes": 9758,
+      "sha256": "405eb235d20f7e70d636fb6613d4896a86ace862520527ebfef2869e277aba5e"
     },
     {
       "path": "src/components/organisms/SceneTree.vue",
@@ -376,6 +381,11 @@
       "path": "src/composables/useGeometryAnimationWorkspace.ts",
       "bytes": 12039,
       "sha256": "067a636675f97102d836201fa5e068b895abb84f93c47c2de6a6e0e8ec793b50"
+    },
+    {
+      "path": "src/composables/useMcp.ts",
+      "bytes": 2680,
+      "sha256": "cdab40085b1fe7376cdc5b8e14bcce9e34e21c9d7eea0eaa0727e6d9814c1026"
     },
     {
       "path": "src/composables/useSceneFieldEditor.ts",
@@ -524,8 +534,8 @@
     },
     {
       "path": "src/domain/meshEdit.ts",
-      "bytes": 13791,
-      "sha256": "38f008dba1f26b8a724129fb97030b31646a3513d9bf32287ff13c6fab2b48d1"
+      "bytes": 13792,
+      "sha256": "3e8a7785e5e3bdccb848c017be67f715538404a9aa8fbbe6856f046e79cdb5af"
     },
     {
       "path": "src/domain/meshes.ts",
@@ -624,8 +634,8 @@
     },
     {
       "path": "src/i18n.ts",
-      "bytes": 27029,
-      "sha256": "1483477c528263003b9b5ef0695b5f56d84dbe6c7de1660613c0f8dab933dd33"
+      "bytes": 29718,
+      "sha256": "65236551ac4b7834f029fa7ed2e0532ae2aed3dc10008cbfd233fd067bcbf61e"
     },
     {
       "path": "src/main.ts",
@@ -634,18 +644,18 @@
     },
     {
       "path": "src/services/bridge.ts",
-      "bytes": 1397,
-      "sha256": "1a7e3a32de3547f34f0a91912d870a81d87448b9122397bc72dfdb9f01a13ea7"
+      "bytes": 1837,
+      "sha256": "b3a9026417d6c667e96fdc3aec9051198548d267246322d615d77ede09b712aa"
     },
     {
       "path": "src/services/desktop.ts",
-      "bytes": 6803,
-      "sha256": "3702dce5094d33d70f238059c8c1e328cd7a2db01c280e53e60ceab18a6804f9"
+      "bytes": 7058,
+      "sha256": "2edd854f5d762d447f42fa7b4c3a081a62d9325e63a7dfd81c5d9b5b1b9240e6"
     },
     {
       "path": "src/stores/workspace.ts",
-      "bytes": 83812,
-      "sha256": "2e72040197ef355066602385c2102a263a8ec8eb1d7609733b565aa6fde82173"
+      "bytes": 87728,
+      "sha256": "14dda6aab2fd135c2c9dde1f7c0cd1c942f3f916c04d2d65fa73be4a0e7d1229"
     },
     {
       "path": "src/styles.css",
@@ -659,13 +669,13 @@
     },
     {
       "path": "src/viewport/ImageLayer.ts",
-      "bytes": 11959,
-      "sha256": "f6e55e0d6b4ceec0bd9f37940967c7ad157c254b188534d8ab24b532c064c499"
+      "bytes": 12185,
+      "sha256": "f3b3146f2aad949e8911e3e2f697d646dc8ab31d4b759701ee3b30a3a9a70f5e"
     },
     {
       "path": "src/viewport/createViewport.ts",
-      "bytes": 55759,
-      "sha256": "314cd148576a76f793a80a6de3d29ddd99c0b1b4601868e74094777ab6489e8e"
+      "bytes": 57140,
+      "sha256": "0a3f09c73d49c311ff5f7f7f943076d5ed2ecbd981399b0c542318cdd5aeca88"
     },
     {
       "path": "src/viewport/transformGizmo.ts",
@@ -679,8 +689,8 @@
     },
     {
       "path": "src-tauri/Cargo.toml",
-      "bytes": 965,
-      "sha256": "5db2c0ee2f1c6ae594c6e37b45a858aa4ed79d506692c2f51310103eb5f3b117"
+      "bytes": 986,
+      "sha256": "fa3e120046eecfaedbd12e1ddabfb716f2593eca0de000509f7129d978a963d5"
     },
     {
       "path": "src-tauri/build.rs",
@@ -829,13 +839,13 @@
     },
     {
       "path": "src-tauri/src/dialogs.rs",
-      "bytes": 8839,
-      "sha256": "207675721dd57e33420a275952ede36dd90347a8aea8fa0abfd545ed0d38e091"
+      "bytes": 10255,
+      "sha256": "08e5344cbdcac227e43091402da94c3a59b948fd289beed8926ad6d23442c46b"
     },
     {
       "path": "src-tauri/src/e2e_host.rs",
-      "bytes": 48173,
-      "sha256": "c238c5a350554a0074450731aa9a13fb397c425de0dca91849f2b8590e5513c5"
+      "bytes": 48321,
+      "sha256": "ea708c6c884083b1fdd2fd8f09a65c8dafd325d9d39da29b117c89802f3181a9"
     },
     {
       "path": "src-tauri/src/e2e_host_main.rs",
@@ -859,13 +869,13 @@
     },
     {
       "path": "src-tauri/src/large_mesh_core_tests.rs",
-      "bytes": 6437,
-      "sha256": "29ffbb589afc797def72b8e1d838ecb23fd9a4c6fecebf9c9f8bd8d4d9787787"
+      "bytes": 7495,
+      "sha256": "f9db23d2ef917b6f9860dde19d3e592b1a22668c3615d327eac80ed90787429a"
     },
     {
       "path": "src-tauri/src/lib.rs",
-      "bytes": 21338,
-      "sha256": "801e3ea6571ff04620a921cb3dad108d37f86fef91549de84690af6229f0bb73"
+      "bytes": 23285,
+      "sha256": "086a20e59de95126f3e981686db900dca2be166409aa32cc01e9df3d3df5033f"
     },
     {
       "path": "src-tauri/src/library.rs",
@@ -876,6 +886,26 @@
       "path": "src-tauri/src/main.rs",
       "bytes": 108,
       "sha256": "5d89bb543ae77fff41aa082b64e61f7119fe770da08dba8db838d46f1eb56869"
+    },
+    {
+      "path": "src-tauri/src/mcp.rs",
+      "bytes": 51417,
+      "sha256": "8ab59d17cee218d567182c4d6df9bc7527436d2ac9332707c493be47ab1fd93a"
+    },
+    {
+      "path": "src-tauri/src/mcp_capture.rs",
+      "bytes": 5345,
+      "sha256": "d40567ebda3c8245917c0648ff573a85c292e19fe341121304a38c23f58a8ed2"
+    },
+    {
+      "path": "src-tauri/src/mcp_catalog.json",
+      "bytes": 145221,
+      "sha256": "0dc1fbc71a4c490eef34266c415714f556814f43ddde1335ca8b1688d4f6d1aa"
+    },
+    {
+      "path": "src-tauri/src/mcp_edits.json",
+      "bytes": 107932,
+      "sha256": "2d2ada15db70fe9316c8f61d5c665b87a4b9805a8f881ee2c97c79374d89f46c"
     },
     {
       "path": "src-tauri/src/mesh.rs",
@@ -894,8 +924,23 @@
     },
     {
       "path": "src-tauri/src/project.rs",
-      "bytes": 131213,
-      "sha256": "58b2e9ce25d0100c24a2ed034c264474c1a26f15ace41071ef8f83ea5ca6d9a2"
+      "bytes": 139652,
+      "sha256": "ab1017acd598a1cb429d5889c4e1e86a712187ce367243b408e394a388c70588"
+    },
+    {
+      "path": "src-tauri/src/psd.rs",
+      "bytes": 19223,
+      "sha256": "96a350980bbaa1ab898e88194ed0dc4ccf934c27ddda14121841535762fbf1be"
+    },
+    {
+      "path": "src-tauri/src/psd_fixtures.rs",
+      "bytes": 12039,
+      "sha256": "324a900179c288c0f59f71f1d07d4dfaed15936a8dbe88e6c405c34379d8ce0e"
+    },
+    {
+      "path": "src-tauri/src/psd_import_tests.rs",
+      "bytes": 12114,
+      "sha256": "713a4fd22332b1e31ae06f33d0bfb0f001ede23dc3ff1552636fc10aafbd31d3"
     },
     {
       "path": "src-tauri/src/rig.rs",
@@ -954,8 +999,8 @@
     },
     {
       "path": "src-tauri/src/scene_edit.rs",
-      "bytes": 44727,
-      "sha256": "3af758bc6d02e4199b93f639c8b81809812fd31cca1f135266b1c6db2d91efc0"
+      "bytes": 48509,
+      "sha256": "d222da8d63ccdd611eb7f87bdb36180dcd167ee6d129f81694ff09e55b94db4b"
     },
     {
       "path": "src-tauri/src/scene_image_path_tests.rs",
@@ -974,8 +1019,8 @@
     },
     {
       "path": "src-tauri/src/scene_large_mesh_tests.rs",
-      "bytes": 10123,
-      "sha256": "c1d4587a552e9fe8ae6b527ec238c78aecd893f6352c259a6cc1d56539eb2fd4"
+      "bytes": 14342,
+      "sha256": "2dd5fd3f302b2cc8b1130c9e3f028c7980bae3e2c2ec343ffcb39425c342b6b0"
     },
     {
       "path": "src-tauri/src/scene_live_physics_tests.rs",
@@ -1194,8 +1239,8 @@
     },
     {
       "path": "src-tauri/tauri.conf.json",
-      "bytes": 1805,
-      "sha256": "0a43956f3ba9f0f5d660fff03bb7031ea907057f468b1637f863df0507e08438"
+      "bytes": 1806,
+      "sha256": "88e5a2ce05e82c2e34381682d00fe1564e1c60c1b51b90ae4b0e5553255cf6c2"
     },
     {
       "path": "src-tauri/tauri.updater.conf.json",
@@ -1224,8 +1269,8 @@
     },
     {
       "path": "crates/fbones-format/src/minimal/meshes.rs",
-      "bytes": 8757,
-      "sha256": "78017a3d5795603995afc90f87c72e52a383f8c06463c84e90d413357e3a4cd3"
+      "bytes": 8855,
+      "sha256": "cd1467a9073aac751a21680da6a7ace70e7a75bc5544b62974dbed2bafd828c5"
     },
     {
       "path": "crates/fbones-format/src/minimal/reader/constraint_events.rs",
@@ -1244,8 +1289,8 @@
     },
     {
       "path": "crates/fbones-format/src/minimal/reader.rs",
-      "bytes": 62898,
-      "sha256": "7861775ae4a7d2d0fb8251148b70b7d15a0f5a14eb4b664d50c5c212b603d305"
+      "bytes": 67815,
+      "sha256": "5700981f48ccba656e38e1f3512e272307b7ea70a726b51df24a098dda955f6c"
     },
     {
       "path": "crates/fbones-format/src/minimal/regions.rs",
@@ -1309,8 +1354,8 @@
     },
     {
       "path": "crates/fbones-format/src/minimal/scene/large_mesh_tests.rs",
-      "bytes": 8302,
-      "sha256": "5a15717db5f4350d7f2bc23bcd6530537c62075d0dfdcae2181a59800102a607"
+      "bytes": 10982,
+      "sha256": "4c46857eeb3991f5961b5c1fc2364e65e29d085977f56ded51e39ddb9bc52d7d"
     },
     {
       "path": "crates/fbones-format/src/minimal/scene/ranges.rs",
@@ -1369,8 +1414,8 @@
     },
     {
       "path": "crates/fbones-format/src/minimal/scene/validate.rs",
-      "bytes": 24251,
-      "sha256": "27b552cff865d69a6c1e0080c9645563d34b4c47c46be2b1249f214df940a0d3"
+      "bytes": 24265,
+      "sha256": "1f84909719de90654015acbfb9c33567ea33f5496bb956014434d7a204ec5478"
     },
     {
       "path": "crates/fbones-format/src/minimal/scene/wire.rs",
@@ -1384,13 +1429,13 @@
     },
     {
       "path": "crates/fbones-format/src/minimal/scene.rs",
-      "bytes": 27293,
-      "sha256": "edfee92984635f17ad7caea86809774adff62ba1b9dd36f2634e184c67716a28"
+      "bytes": 27391,
+      "sha256": "7760258451deac16d8644ffd3fd5cef7150d6a756ae51af7ce7e60c947b588d1"
     },
     {
       "path": "crates/fbones-format/src/minimal/scene_reader.rs",
-      "bytes": 37197,
-      "sha256": "3645e66425c48e3fb5e6c7810376e29b47914f53f30e6e7287791c73d04c1e2b"
+      "bytes": 37365,
+      "sha256": "e8645f324e75f4c0e5d479d73cb71a5c19ca21a5cbc2fa8d4d4501efafe55aea"
     },
     {
       "path": "crates/fbones-format/src/minimal.rs",
@@ -1464,8 +1509,8 @@
     },
     {
       "path": "tests/animation-keyboard-drafts.test.mjs",
-      "bytes": 21248,
-      "sha256": "b2952d2533be523d1e125f65bb072aa230759b5b184ed5fa5f5db06503e0f2ee"
+      "bytes": 21308,
+      "sha256": "e8e8059c80129d5319e2df127b3ede0fde6ef59ff490b5d7011912cc28af0bcd"
     },
     {
       "path": "tests/animation-physics-preview.test.mjs",
@@ -1768,6 +1813,11 @@
       "sha256": "5a987c1f6b75114bda011b3bbde20d8914e25685daecccd9b1d69614ea376c7f"
     },
     {
+      "path": "tests/e2e/mcp-control.spec.ts",
+      "bytes": 4299,
+      "sha256": "e22c719d0f119e0f9a976e14399b180950486d2ea350fd56e230446a654d3089"
+    },
+    {
       "path": "tests/e2e/native-authoring.spec.ts",
       "bytes": 7912,
       "sha256": "6032e815f3a6665b90f811c78dfa042f0a843a7e0368d84f9d7846deb24ff6aa"
@@ -1791,6 +1841,11 @@
       "path": "tests/e2e/probes/runtime-pixi.mjs",
       "bytes": 5354,
       "sha256": "78cde7f1864be8d00d42d4c1936cf34c4a92fb7e0a7e5c87c08a3469ad278e88"
+    },
+    {
+      "path": "tests/e2e/psd-import.native.spec.ts",
+      "bytes": 6369,
+      "sha256": "4676242b14892099d260b2c1b0d443f9591f0d5ca861723dbe21306a0c228632"
     },
     {
       "path": "tests/e2e/readonly-scene.spec.ts",
@@ -1903,9 +1958,24 @@
       "sha256": "954c9167cde977f108608f933be9fb017a22494cda2e03c0496f30040b751047"
     },
     {
+      "path": "tests/mcp-controller.test.mjs",
+      "bytes": 3969,
+      "sha256": "cba6456d14eb90db9aba81eb50b74cf97336a5bdaddb0bdb331869e44965be14"
+    },
+    {
+      "path": "tests/mcp-schema.test.mjs",
+      "bytes": 5794,
+      "sha256": "6af78ede2f96202c56c07b19b921af19671eb309862714d3a0cf9eeea8a6a689"
+    },
+    {
+      "path": "tests/mcp-stdio.test.mjs",
+      "bytes": 1855,
+      "sha256": "62cf5748f4840ff1f838ca7e91b19d6642fafafb3c3154d11f6875e528ce8023"
+    },
+    {
       "path": "tests/mesh-edit.test.mjs",
-      "bytes": 8553,
-      "sha256": "003b34e0075cf2ead98f969e431ea809bfecfb8c0476096246527fd84f69255b"
+      "bytes": 10820,
+      "sha256": "15bd50c6585dc64e196809038352e161b00008b3708542e423bee19b757a1a47"
     },
     {
       "path": "tests/mesh-zero-image-controls.test.mjs",
@@ -2034,8 +2104,13 @@
     },
     {
       "path": "tests/workspace-loading.test.mjs",
-      "bytes": 10549,
-      "sha256": "1677be5ed9f3b5fe0ef4a9b62c2997bac36c58651c1826739838484ed0b74fc3"
+      "bytes": 10609,
+      "sha256": "421592ddfd8f12301a3e24f90a6e37a03a650af43cc8081e20abb6af7c877842"
+    },
+    {
+      "path": "tests/workspace-psd.test.mjs",
+      "bytes": 6139,
+      "sha256": "b24727149468a65c435f3a284774295a90360dfc8bce790b5062290e6066dd41"
     },
     {
       "path": "tests/workspace.test.mjs",
@@ -2051,6 +2126,11 @@
       "path": "scripts/build-windows-test.sh",
       "bytes": 4134,
       "sha256": "abe9c1083c0b56ac5d7ad345c9d0b4881731bf215f920f8e87a94f892cb670f2"
+    },
+    {
+      "path": "scripts/capture-readme-project.mjs",
+      "bytes": 10642,
+      "sha256": "e7ea8562dda6d06e733de341715ca1c2c7ed058ed1212807fbfb2217447a6e92"
     },
     {
       "path": "scripts/check-public-readme.py",
@@ -2079,8 +2159,8 @@
     },
     {
       "path": "scripts/e2e/native-host.mjs",
-      "bytes": 4696,
-      "sha256": "3c1af6c564e749f12db98beae4d8ec77b7a9042d0b612a60218bdc300a6edf9d"
+      "bytes": 4882,
+      "sha256": "80998dd4a8f9a3fbb41722314dcd630cd18575c5866270060815ab92a32e2729"
     },
     {
       "path": "scripts/e2e/native-response.d.mts",
@@ -2093,6 +2173,16 @@
       "sha256": "ffe5fc88a0d22b18376f68c8dce2b009ba0c558b1a2132a1fcbda7862e43266e"
     },
     {
+      "path": "scripts/e2e/psd-fixture.mjs",
+      "bytes": 2623,
+      "sha256": "77db1e27d611014c945c4512b73c9c7dce8a4ee57e37c91757fccda9eaab4d2f"
+    },
+    {
+      "path": "scripts/generate-mcp-schema.mjs",
+      "bytes": 12039,
+      "sha256": "e637582dc9c54c8ab63877cf6cf48740fbf7a25780d2405af7a645c9a4e6c060"
+    },
+    {
       "path": "scripts/import-windows-results.py",
       "bytes": 2788,
       "sha256": "0ff2393bd4629251289510a043a302ea393decbc9d99726e7f005dcd0c6e9a9d"
@@ -2101,6 +2191,21 @@
       "path": "scripts/inspect-spine.py",
       "bytes": 2998,
       "sha256": "93e2370ad15b26a92a33c7557992cac0adfe462d97d5210ff5877bae36de2d30"
+    },
+    {
+      "path": "scripts/mcp-client-acceptance.mjs",
+      "bytes": 18371,
+      "sha256": "a846d69e1bf147cb12633cd058fa24f480a6e7091662404a11ef7eadaff67b25"
+    },
+    {
+      "path": "scripts/mcp-native-acceptance.py",
+      "bytes": 27276,
+      "sha256": "d275594e4c38ff5fb616e16523cf5c53a1bb95754052d6bd7772843a1e22a6d6"
+    },
+    {
+      "path": "scripts/mcp-stdio.mjs",
+      "bytes": 2004,
+      "sha256": "c97dd74156fb5b394ca11e6300ec127528b7a622ae773f7dc6fa0923cdbc3ba4"
     },
     {
       "path": "scripts/native-acceptance/assets.json",
@@ -2599,8 +2704,8 @@
     },
     {
       "path": "scripts/prepare-public-release.py",
-      "bytes": 9457,
-      "sha256": "c2c2f31bb0af29d47847725717917da8a5a472165ec457058c14238751119b01"
+      "bytes": 9458,
+      "sha256": "a670fe69a877c1cec9cb6ff5723dad9f7422c715060070302ad0cf2e4edc234b"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -2689,8 +2794,8 @@
     },
     {
       "path": "docs/DEVELOPMENT.md",
-      "bytes": 15613,
-      "sha256": "4d2973ae58b2137ca3831fad522f88fb295fdcab35b34f1c6d4e0b6321282234"
+      "bytes": 16081,
+      "sha256": "e41b73386a6f51fb806553d807626ac90f608e693f759dfbdc509af15b9bb172"
     },
     {
       "path": "docs/FBONES-ANNOUNCEMENT.md",
@@ -2719,13 +2824,18 @@
     },
     {
       "path": "docs/FORMAT-SCENE-4.3.26.md",
-      "bytes": 31171,
-      "sha256": "8fed5ee6a9b184845b65c82320d4ac61b04c5de826fb70abaf706afaafb244fb"
+      "bytes": 31990,
+      "sha256": "89a95a48e053db6d47a8a0c418a8a6a6b6d73fec220c8c20d02877e418722505"
     },
     {
       "path": "docs/FORMAT-SLOT-BLENDING-4.3.26.md",
       "bytes": 6860,
       "sha256": "3087a5a10b81e51ee042f29aabcbff69e57c8207b3b02ae52902c23e285e8cec"
+    },
+    {
+      "path": "docs/MCP.md",
+      "bytes": 7024,
+      "sha256": "d5aeb03df5275413e591729d4cfd1850a21b3aebdf0015c7cdb8543bbf3c88af"
     },
     {
       "path": "docs/NATIVE-SCENE-BRIDGE.md",
@@ -2744,8 +2854,8 @@
     },
     {
       "path": "docs/ROADMAP.md",
-      "bytes": 7704,
-      "sha256": "9ee35aeec83ef4e0fb690f6619f630c8b659d0673ce85e2a27501d1b85242adc"
+      "bytes": 8974,
+      "sha256": "9b0d46441e1ff3b2508b54763c0f65448052c22a64228be91af8bef57b96b637"
     },
     {
       "path": "docs/SLOT-ATTACHMENTS-4.3.26.md",
@@ -2754,13 +2864,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 31458,
-      "sha256": "65334a4966e70437686c8717ddfc26c961cc458aa776be9def51d76e1c2bf80f"
+      "bytes": 44042,
+      "sha256": "40beec64d2255d4b17880cb809ad9df3fc203d2d738accc40d62a623ceead394"
     },
     {
       "path": "docs/TASKS.md",
-      "bytes": 23141,
-      "sha256": "61cd65395ab61789cda062c7977cd4c5103e32b9b9c0569530e61e51d8793597"
+      "bytes": 24819,
+      "sha256": "11592421f3481a2c0ddc7cfffb3960032bbded4594d2da5ced0eafd7a43170b9"
     },
     {
       "path": "docs/TESTING.md",
@@ -2786,6 +2896,11 @@
       "path": "docs/UPDATES.md",
       "bytes": 3302,
       "sha256": "eda882f90622e920eacd053897505111eed32204557f65ba2af4ce5bf5c36f7d"
+    },
+    {
+      "path": "docs/releases/v0.10.0-beta.1.md",
+      "bytes": 3072,
+      "sha256": "93238bcc10ce4d6928548c5ddcb1b1b43ecb9aeb2b9ba3240d150da36975f1c3"
     },
     {
       "path": "docs/releases/v0.9.4-beta.1.md",
@@ -3451,6 +3566,41 @@
       "path": "docs/research/MASCOT-SUPPORT-UI-GATE-2026-11-08.md",
       "bytes": 28444,
       "sha256": "b45ad6223351d7dc4c8173434c8d371feec0989b21279f284907427aa81dd0b4"
+    },
+    {
+      "path": "docs/research/MCP-ACCEPTANCE-CHECKLIST-2026-11-17.md",
+      "bytes": 14658,
+      "sha256": "86cfb0e8f60d2fa3f3ffac05d343c27929b6c1afc1d274591ed140fa0233d6bc"
+    },
+    {
+      "path": "docs/research/MCP-DATA-GATE-2026-11-17.md",
+      "bytes": 13133,
+      "sha256": "3e40fa9ac5f33c89ecc0a2ea0d3b3fed7f9c56cd0f6fca363d85dd3c31a3fd18"
+    },
+    {
+      "path": "docs/research/MCP-MASCOT-MESH-CAPACITY-UI-GATE-2026-11-17.md",
+      "bytes": 5704,
+      "sha256": "c56a8a7039887a4b7e1acc45eb7503e12168651b936d619c1aaa9816ceb12d8c"
+    },
+    {
+      "path": "docs/research/MCP-PRESENTATION-IMPORT-DATA-GATE-2026-11-17.md",
+      "bytes": 5317,
+      "sha256": "6e5e25004f75ca945b714a69fbb56f500933c016c8ee759d4880e2e001c6ceda"
+    },
+    {
+      "path": "docs/research/MCP-RELEASE-VERSION-UI-GATE-2026-11-17.md",
+      "bytes": 2020,
+      "sha256": "b460e7a700f7d691bd0795f21aa1bc2f02f4f0ef721dab282cdb06076440296f"
+    },
+    {
+      "path": "docs/research/MCP-RESET-REJECTION-UI-GATE-2026-11-17.md",
+      "bytes": 2331,
+      "sha256": "355768af2f48a812aa8cc6c6c4167dd02744600512cebf78b706026bf009e6ca"
+    },
+    {
+      "path": "docs/research/MCP-UI-GATE-2026-11-17.md",
+      "bytes": 9394,
+      "sha256": "da7906c8afa76b4f63390450c0d186e91fbfba71bb04a07d51d7e75faac858c2"
     },
     {
       "path": "docs/research/NATIVE-APPIMAGE-UPGRADE-AND-PERSISTENCE-RESULT-2026-11-11.md",
@@ -4143,6 +4293,26 @@
       "sha256": "5cd4bf01cc8d09a24b213bd7e05edd4066b06aec75d86be35224a8c32d35b858"
     },
     {
+      "path": "docs/research/PSD-IMPORT-DATA-GATE-2026-11-11.md",
+      "bytes": 6945,
+      "sha256": "95aaca5617b2aed826c91f34257601b0877a2fb43f75004a20c4f036acc7c4ce"
+    },
+    {
+      "path": "docs/research/PSD-IMPORT-IMPLEMENTATION-GATE-2026-11-11.md",
+      "bytes": 1425,
+      "sha256": "54532724f2917f0a8575ffbd6a9fec20802e34bc1564b89c7ee677c4de3bd2ae"
+    },
+    {
+      "path": "docs/research/PSD-IMPORT-PARSER-AUDIT-2026-11-11.md",
+      "bytes": 8766,
+      "sha256": "d5c74224717bfebbc564e14c299f22305cc5d1742d9e72b67178c40010b44065"
+    },
+    {
+      "path": "docs/research/PSD-IMPORT-UI-GATE-2026-11-11.md",
+      "bytes": 4415,
+      "sha256": "57ea0c121e233c0d73ed0be610fb3fd601fc330b921df390d009e75956b1fa46"
+    },
+    {
       "path": "docs/research/PUBLIC-BETA-CI-DATA.md",
       "bytes": 7615,
       "sha256": "27aa9532c32cc099c3c73ad428efd477e5307449f7e2ffd1d14c2dd30c2f8dff"
@@ -4679,23 +4849,23 @@
     },
     {
       "path": "docs/screenshots/README.md",
-      "bytes": 1848,
-      "sha256": "5c448a84a842958887288d065ff0eb690044018fdf3fdd1fb78ac6ca19295ce1"
+      "bytes": 1991,
+      "sha256": "0b705918212cbb34cd136bf042672999bb0ff101377f7f9703dd89a82ee9d135"
     },
     {
       "path": "docs/screenshots/animate-dopesheet.png",
-      "bytes": 144625,
-      "sha256": "77918fcf9e7ee8358758e01ab07431d1f62615c528284f75660b8b654cea6926"
+      "bytes": 235508,
+      "sha256": "f2b806184d078a9f323a84d8a6d1bf5ba3a0f80290b5af8434b641453f928e16"
     },
     {
       "path": "docs/screenshots/animate-graph.png",
-      "bytes": 123020,
-      "sha256": "5748490f3bf8713e84bffa2f8010ab1718c280f7d586891933894c773d557f20"
+      "bytes": 231892,
+      "sha256": "0ba6d36ecb25180e4dacba02b1b50d8b8c8ed13f0339363f3c31003ff0fd326b"
     },
     {
       "path": "docs/screenshots/setup.png",
-      "bytes": 114394,
-      "sha256": "ee2e43f98943def77e3c9825e063159882565afa9ac8614bb21c9b3d1cf8bbfa"
+      "bytes": 390194,
+      "sha256": "ed3a3dceb4a5529de3d9cbbc023175c1c82241b3a8236ae1591024a69c56e787"
     },
     {
       "path": "docs/tasks/F004-import-feedback.md",
@@ -4771,6 +4941,16 @@
       "path": "docs/tasks/F310-physics-authoring.md",
       "bytes": 7455,
       "sha256": "147383ab67e1d2efe6d0fc37accb811caefb837817ad4eb1fbc0d216c338c528"
+    },
+    {
+      "path": "docs/tasks/F312-psd-import.md",
+      "bytes": 3832,
+      "sha256": "4701625e2ab11811b98e66f3f5c4ca31f34002c735dd3ffa7bc94c46ff556994"
+    },
+    {
+      "path": "docs/tasks/F313-mcp.md",
+      "bytes": 2275,
+      "sha256": "5b13613c1343ac425c96a156f6de0d6f66e7340459c96a1e09170630d3dd19e1"
     },
     {
       "path": "packages/runtime/LICENSE",

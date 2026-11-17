@@ -27,9 +27,15 @@ pub mod e2e_host;
 mod evaluation;
 pub mod images;
 mod library;
+#[cfg(feature = "scene-editing")]
+mod mcp;
+#[cfg(feature = "scene-editing")]
+mod mcp_capture;
 mod mesh;
 mod mesh_edit;
 mod project;
+#[cfg(feature = "scene-editing")]
+mod psd;
 mod rig;
 #[cfg(feature = "scene-editing")]
 mod runtime_export;
@@ -234,6 +240,27 @@ async fn import_image(
     })
     .await
     .map_err(|_| AppError::new("Internal", "The image could not be imported."))??;
+    update_menu(&app, Some(&summary));
+    Ok(Some(summary))
+}
+
+#[tauri::command]
+async fn import_psd(
+    app: tauri::AppHandle,
+    expected_revision: u64,
+    bone: u64,
+) -> Result<Option<ProjectSummary>, AppError> {
+    let Some(path) = dialogs::pick_psd(app.clone()).await? else {
+        return Ok(None);
+    };
+    let handle = app.clone();
+    let summary = tauri::async_runtime::spawn_blocking(move || {
+        handle
+            .state::<Session>()
+            .import_psd(expected_revision, bone, &path)
+    })
+    .await
+    .map_err(|_| AppError::new("Internal", "The PSD could not be imported."))??;
     update_menu(&app, Some(&summary));
     Ok(Some(summary))
 }
@@ -503,6 +530,10 @@ fn update_menu(app: &tauri::AppHandle, project: Option<&ProjectSummary>) {
             ),
             ("close", project.is_some()),
             ("import", project.is_some_and(|p| !p.inspection_only)),
+            (
+                "import-psd",
+                cfg!(feature = "scene-editing") && project.is_some_and(|p| !p.inspection_only),
+            ),
             ("undo", project.is_some_and(|p| p.can_undo)),
             ("redo", project.is_some_and(|p| p.can_redo)),
         ] {
@@ -541,8 +572,12 @@ fn frontend_ready(renderer: String, app: tauri::AppHandle) {
 }
 
 pub fn run() {
-    tauri::Builder::default()
-        .manage(Session::default())
+    let builder = tauri::Builder::default().manage(Session::default());
+    #[cfg(feature = "scene-editing")]
+    let builder = builder
+        .manage(mcp::McpState::default())
+        .manage(mcp_capture::CaptureState::default());
+    builder
         .plugin(updater::plugin())
         .manage(updater::UpdateState::default())
         .invoke_handler(tauri::generate_handler![
@@ -550,6 +585,18 @@ pub fn run() {
             updater::check_app_update,
             updater::download_app_update,
             updater::install_app_update,
+            #[cfg(feature = "scene-editing")]
+            mcp::mcp_status,
+            #[cfg(feature = "scene-editing")]
+            mcp::mcp_start,
+            #[cfg(feature = "scene-editing")]
+            mcp::mcp_stop,
+            #[cfg(feature = "scene-editing")]
+            mcp::mcp_reset,
+            #[cfg(feature = "scene-editing")]
+            mcp_capture::mcp_capture_reply,
+            #[cfg(feature = "scene-editing")]
+            mcp::mcp_set_ready,
             get_project,
             create_project,
             open_project,
@@ -560,6 +607,7 @@ pub fn run() {
             #[cfg(feature = "scene-editing")]
             evaluate_project,
             import_image,
+            import_psd,
             choose_images_folder,
             refresh_images_folder,
             place_image,
@@ -601,10 +649,13 @@ pub fn run() {
                 .accelerator("CmdOrCtrl+I")
                 .enabled(false)
                 .build(app)?;
+            let import_psd = MenuItemBuilder::with_id("import-psd", "Import PSD…")
+                .enabled(false)
+                .build(app)?;
             let file = SubmenuBuilder::new(app, "File")
                 .items(&[&new, &open])
                 .separator()
-                .item(&import)
+                .items(&[&import, &import_psd])
                 .separator()
                 .items(&[&save, &copy])
                 .item(&runtime)
@@ -624,6 +675,7 @@ pub fn run() {
             let updates =
                 MenuItemBuilder::with_id("check-updates", "Check for Updates…").build(app)?;
             let help = SubmenuBuilder::new(app, "Help").item(&updates).build()?;
+            let mcp = MenuItemBuilder::with_id("mcp", "MCP / AI…").build(app)?;
             #[cfg(target_os = "macos")]
             let menu = menu.item(
                 &SubmenuBuilder::new(app, "FBones")
@@ -632,7 +684,13 @@ pub fn run() {
                     .quit()
                     .build()?,
             );
-            app.set_menu(menu.item(&file).item(&edit).item(&help).build()?)?;
+            app.set_menu(
+                menu.item(&file)
+                    .item(&mcp)
+                    .item(&edit)
+                    .item(&help)
+                    .build()?,
+            )?;
             app.on_menu_event(|app, event| {
                 let _ = app.emit("editor-command", event.id().as_ref());
             });

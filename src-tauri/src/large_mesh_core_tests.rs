@@ -34,7 +34,9 @@ fn large_mesh_dense_weight_edits_preserve_every_position_and_reject_overflow() {
         .vertices
         .iter()
         .all(|v| (v.weights[0] - 0.6).abs() < 1e-6));
-    surface.vertices.push(surface.vertices[511].clone());
+    surface
+        .vertices
+        .resize(mesh::MAX_VERTICES + 1, surface.vertices[511].clone());
     let oversized = surface.clone();
     assert!(binding::set_weight_locked(
         binding::DenseBindingMut {
@@ -134,7 +136,10 @@ fn large_mesh_full_deformed_move_keeps_uv_topology_and_rejects_duplicate_targets
         mesh_edit::move_vertices(&mut surface, &[targets[511], targets[511]], &poses, false)
             .is_err()
     );
-    assert!(mesh::add_vertex(&mut surface, [0., 0.], None, &poses).is_err());
+    let mut full = scene_large_mesh_fixture::mesh(32, 32, true);
+    let full_before = full.clone();
+    assert!(mesh::add_vertex(&mut full, [0., 0.], None, &poses).is_err());
+    assert_eq!(full, full_before);
     assert_eq!(surface, before);
     // Internal Scene stroke sample budget remains128 even with a large mesh.
     assert!(mesh_edit::stroke(&mut surface, None, &[[0., 0.]; 129], &poses, false).is_err());
@@ -142,7 +147,7 @@ fn large_mesh_full_deformed_move_keeps_uv_topology_and_rejects_duplicate_targets
 }
 
 #[test]
-fn large_mesh_triangulation_keeps_high_constraints_area_and_513_guard() {
+fn large_mesh_triangulation_keeps_high_constraints_area_and_profile_guard() {
     let surface = scene_large_mesh_fixture::mesh(32, 16, false);
     let triangles = triangulation::triangulate(&surface.uvs, surface.hull, &surface.edges).unwrap();
     assert_eq!(triangles.len(), (2 * 512 - surface.hull - 2) * 3);
@@ -174,6 +179,31 @@ fn large_mesh_triangulation_keeps_high_constraints_area_and_513_guard() {
         )));
     }
     let mut excessive = surface.uvs.clone();
-    excessive.extend([0.3, 0.4]);
+    excessive.resize((mesh::MAX_VERTICES + 1) * 2, 0.3);
     assert!(triangulation::triangulate(&excessive, surface.hull, &surface.edges).is_err());
+}
+
+#[test]
+fn scene_1024_triangulation_and_high_weight_row_preserve_geometry() {
+    let mut surface = scene_large_mesh_fixture::mesh(32, 32, true);
+    let before = positions(&surface.vertices);
+    let poses = vec![rig::zero(); 3];
+    binding::set_weight_locked(
+        binding::DenseBindingMut {
+            weighted: &mut surface.weighted,
+            bones: &mut surface.bones,
+            vertices: &mut surface.vertices,
+        },
+        1023,
+        1,
+        0.375,
+        &poses,
+        &[],
+    )
+    .unwrap();
+    assert_eq!(positions(&surface.vertices), before);
+    let triangles = triangulation::triangulate(&surface.uvs, surface.hull, &surface.edges).unwrap();
+    assert_eq!(triangles.len(), (2 * 1024 - surface.hull - 2) * 3);
+    assert!(triangles.contains(&1023));
+    assert!(triangles.len() <= mesh::MAX_TRIANGLE_INDICES);
 }

@@ -43,8 +43,10 @@ pub use source_state::*;
 /// Measured FBones aggregate budgets, not original format limits.
 pub const MAX_SCENE_BONES: usize = 256;
 pub const MAX_SCENE_SLOTS: usize = 512;
-pub const MAX_SCENE_MESH_VERTICES: usize = 512;
-pub const MAX_SCENE_MESH_TRIANGLE_INDICES: usize = 3072;
+pub const MAX_SCENE_MESH_VERTICES: usize = 1024;
+pub const MAX_SCENE_MESH_TRIANGLE_INDICES: usize = 6144;
+pub const MAX_SCENE_MESH_EDGE_INDICES: usize = 8192;
+pub const MAX_SCENE_VERTICES: usize = 8192;
 pub const MAX_SCENE_TRACKS: usize = 4096;
 pub const MAX_SCENE_KEYS: usize = 8192;
 pub const MAX_SCENE_DOMAINS: usize = 16384;

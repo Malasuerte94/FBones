@@ -49,6 +49,10 @@ export async function importImage(bone: number, expectedRevision: number): Promi
   if (!desktop) throw new Error('Image import is available in the desktop application.');
   return invoke('import_image', { bone, expectedRevision });
 }
+export async function importPsd(bone: number, expectedRevision: number): Promise<ProjectSummary | null> {
+  if (!desktop) throw new Error('PSD import is available in the desktop application.');
+  return invoke('import_psd', { bone, expectedRevision });
+}
 export async function imageData(documentId: number, name: string): Promise<string> {
   if (!desktop) throw new Error('Image resources are available in the desktop application.');
   return invoke('get_image_data', { documentId, name });

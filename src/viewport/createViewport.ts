@@ -56,6 +56,7 @@ interface Options {
   onCommit(edit: RigEdit, revision: number,poseEpoch?:number): Promise<boolean>;
 }
 export interface ViewportController {
+  capture():Promise<{dataUrl:string;width:number;height:number;zoom:number;panX:number;panY:number}>;
   setGrid(visible: boolean): void;
   setScene(scene: ViewportScene): void;
   reset(): void; resize(): void; destroy(): void;
@@ -685,6 +686,21 @@ export async function createViewport(host: HTMLElement, onZoom: (zoom: number) =
   canvas.addEventListener('dragover',dragover);canvas.addEventListener('drop',drop);
   canvas.addEventListener('wheel', wheel, { passive: false }); canvas.addEventListener('contextmenu', context);
   return {
+    async capture() {
+      const revision=scene.revision,documentId=scene.documentId,deadline=performance.now()+6000;
+      while(imageLayer&&!imageLayer.ready(documentId??-1,scene.bones,scene.slots??[])){
+        if(destroyed||scene.revision!==revision||scene.documentId!==documentId)throw Error('The viewport changed during capture.');
+        if(performance.now()>deadline)throw Error('Visible image resources are not ready.');
+        await new Promise(resolve=>setTimeout(resolve,25));
+      }
+      if(destroyed||gesture||pending||preparingPointer!==null||scene.revision!==revision||scene.documentId!==documentId)throw Error('The viewport is busy or changed.');
+      const scale=Math.min(1,1024/Math.max(canvas.width,canvas.height));
+      const output=document.createElement('canvas');output.width=Math.max(1,Math.round(canvas.width*scale));output.height=Math.max(1,Math.round(canvas.height*scale));
+      const context=output.getContext('2d');if(!context)throw Error('Capture canvas is unavailable.');
+      // Read the WebGL drawing buffer synchronously in the same task as render.
+      draw();context.drawImage(canvas,0,0,output.width,output.height);
+      return{dataUrl:output.toDataURL('image/png'),width:output.width,height:output.height,zoom,panX,panY};
+    },
     setGrid(visible) { grid = visible; drawGrid(); draw(); },
     setScene(value) {
       if(value.documentId!==scene.documentId||!value.bones.some(b=>b.id===viewportHoveredBone))reportBoneHover(null);

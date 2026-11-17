@@ -25,4 +25,7 @@ export function invokeNative<T>(command: string, args?: Record<string, unknown>)
 export function onEditorCommand(handler: (id: string) => void): Promise<() => void> {
   return requiredBridge().event.listen<string>('editor-command', (event) => handler(event.payload));
 }
+export function onMcpProjectChanged(handler:()=>void):Promise<()=>void>{return requiredBridge().event.listen('mcp-project-changed',handler);}
+export interface McpCaptureRequest {requestId:number;expectedRevision:number;documentId:number}
+export function onMcpCapture(handler:(request:McpCaptureRequest)=>void):Promise<()=>void>{return requiredBridge().event.listen<McpCaptureRequest>('mcp-capture-viewport',event=>handler(event.payload));}
 export function nativeWindow(): NativeWindow { return requiredBridge().window.getCurrentWindow(); }

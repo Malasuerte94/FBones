@@ -9,7 +9,7 @@ import shutil
 import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_TAG = 'v0.9.6-beta.1'
+DEFAULT_TAG = 'v0.10.0-beta.1'
 FILES = (
     '.gitignore', 'AGENTS.md', 'README.md', 'CONTRIBUTING.md', 'LICENSE',
     'THIRD_PARTY_NOTICES.md', 'Cargo.toml', 'Cargo.lock', 'package.json',

@@ -5,8 +5,12 @@ use crate::minimal::{
     Bone, MinimalProject,
 };
 fn mesh(n: usize, columns: usize) -> Mesh {
-    let (points, hull, triangles) = if n == 512 {
-        let (w, h) = (32usize, 16usize);
+    let (points, hull, triangles) = if n == 512 || n == 1024 {
+        let (w, h) = if n == 1024 {
+            (32usize, 32usize)
+        } else {
+            (32usize, 16usize)
+        };
         let mut points = vec![];
         points.extend((0..w).map(|x| (x, 0)));
         points.extend((1..h).map(|y| (w - 1, y)));
@@ -136,7 +140,7 @@ fn surface(p: &mut SceneProject) -> &mut Mesh {
 }
 #[test]
 fn scene_large_meshes_roundtrip_whole_shape_bits_and_legacy_stays_256() {
-    for n in [256, 257, 301, 308, 512] {
+    for n in [256, 257, 301, 308, 512, 654, 893, 1024] {
         for columns in [1, 2] {
             let p = project(mesh(n, columns));
             let bytes = roundtrip(&p);
@@ -167,7 +171,7 @@ fn scene_large_meshes_roundtrip_whole_shape_bits_and_legacy_stays_256() {
 fn scene_mesh_capacity_keeps_indices_columns_clip_and_aggregate_separate() {
     let p = project(mesh(512, 2));
     assert!(surface(&mut p.clone()).triangles.len() > 1536);
-    let mut bad = project(mesh(513, 1));
+    let mut bad = project(mesh(1025, 1));
     assert!(encode_scene_payload(&bad).is_err());
     bad = p.clone();
     surface(&mut bad).triangles = [0, 1, 2].repeat(MAX_SCENE_MESH_TRIANGLE_INDICES / 3 + 1);
@@ -199,13 +203,25 @@ fn scene_mesh_capacity_keeps_indices_columns_clip_and_aggregate_separate() {
             attachment: 0,
         });
     }
-    roundtrip(&total);
+    roundtrip(&total); // Preserve the accepted4096-vertex whole-encoding case.
+    for i in 8..16 {
+        let mut slot = total.slots[0].clone();
+        slot.name = format!("surface{i}");
+        total.slots.push(slot);
+        total.attachment_order.push(AttachmentAddress {
+            slot: i,
+            attachment: 0,
+        });
+    }
+    assert!(super::validate::project(&total).is_ok());
+    // Independent generic-object budgets may reject encoding before this
+    // semantic total limit; do not relax those guards to fit the boundary case.
     let mut extra = total.slots[0].clone();
     extra.name = "over total".into();
     extra.attachments[0] = SceneAttachment::Mesh(Box::new(mesh(3, 2)));
     total.slots.push(extra);
     total.attachment_order.push(AttachmentAddress {
-        slot: 8,
+        slot: 16,
         attachment: 0,
     });
     assert!(encode_scene_payload(&total).is_err());
@@ -247,4 +263,57 @@ fn large_zero_size_source_mesh_keeps_geometry_without_author_permission() {
     normalize_wire_strings(&mut p).unwrap();
     roundtrip(&p);
     assert_eq!(surface(&mut p).image.height.to_bits(), (-0_f32).to_bits());
+}
+
+#[test]
+fn scene_1024_contextual_triangle_edge_lists_and_exact_aggregate_boundaries() {
+    let mut p = project(mesh(1024, 2));
+    assert!(surface(&mut p).triangles.len() > 4096);
+    // Keep every unique triangle edge, as a dense imported mesh can do.
+    let triangles = surface(&mut p).triangles.clone();
+    let mut edges = std::collections::BTreeSet::new();
+    for triangle in triangles.chunks_exact(3) {
+        for axis in 0..3 {
+            let a = triangle[axis] as u32;
+            let b = triangle[(axis + 1) % 3] as u32;
+            edges.insert((a.min(b), a.max(b)));
+        }
+    }
+    surface(&mut p).edges = edges.into_iter().flat_map(|(a, b)| [a, b]).collect();
+    assert!(surface(&mut p).edges.len() > 4096);
+    roundtrip(&p);
+    let mut over_edges = p.clone();
+    surface(&mut over_edges).edges = [0, 1].repeat(MAX_SCENE_MESH_EDGE_INDICES / 2 + 1);
+    assert!(encode_scene_payload(&over_edges).is_err());
+    let mut total = project(mesh(1024, 1));
+    for i in 1..8 {
+        let mut slot = total.slots[0].clone();
+        slot.name = format!("aggregate{i}");
+        total.slots.push(slot);
+        total.attachment_order.push(AttachmentAddress {
+            slot: i,
+            attachment: 0,
+        });
+    }
+    assert!(super::validate::project(&total).is_ok()); // exactly8192 semantic vertices.
+    total.slots[7].attachments[0] = SceneAttachment::Mesh(Box::new(mesh(1022, 1)));
+    let mut extra = total.slots[0].clone();
+    extra.name = "one over aggregate".into();
+    extra.attachments[0] = SceneAttachment::Mesh(Box::new(mesh(3, 1)));
+    total.slots.push(extra);
+    total.attachment_order.push(AttachmentAddress {
+        slot: 8,
+        attachment: 0,
+    });
+    assert_eq!(
+        total
+            .slots
+            .iter()
+            .flat_map(|slot| &slot.attachments)
+            .filter_map(|attachment| attachment.mesh())
+            .map(|mesh| mesh.vertices.len())
+            .sum::<usize>(),
+        8193
+    );
+    assert!(super::validate::project(&total).is_err());
 }

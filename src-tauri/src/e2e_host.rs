@@ -810,14 +810,16 @@ impl Host {
                         .ok_or_else(|| invalid("Missing evaluation request."))?,
                 ),
             ),
-            "import_image" => {
+            "import_image" | "import_psd" => {
                 let Some(path) = self.dialog("open")? else {
                     return Ok(Value::Null);
                 };
-                value(
+                value(if command == "import_psd" {
+                    self.session.import_psd(a.expected_revision, a.bone, &path)
+                } else {
                     self.session
-                        .import_image(a.expected_revision, a.bone, &path),
-                )
+                        .import_image(a.expected_revision, a.bone, &path)
+                })
             }
             "choose_audio_folder" => {
                 let Some(path) = self.dialog("folder")? else {

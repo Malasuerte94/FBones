@@ -6,6 +6,7 @@ import {mkdir, mkdtemp, writeFile} from 'node:fs/promises';
 import {join, resolve} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {deflateSync} from 'node:zlib';
+import {ownPsd} from './psd-fixture.mjs';
 
 function png(width, height, color) {
   const crc32=bytes=>{let crc=0xffffffff;for(const byte of bytes){crc^=byte;for(let i=0;i<8;i++)crc=(crc>>>1)^(crc&1?0xedb88320:0);}return (crc^0xffffffff)>>>0;};
@@ -27,6 +28,8 @@ export class NativeHost {
       ['blue',96,96,[55,110,225,255]],['board',320,240,[110,113,118,255]],
       ['strip',160,48,[238,192,65,255]],
     ])await writeFile(join(root,'images',name+'.png'),png(width,height,color));
+    await writeFile(join(root,'own-layers.psd'),ownPsd());
+    await writeFile(join(root,'unsupported-layers.psd'),ownPsd({unsupported:true}));
     const child=spawn(binary,['--root',root],{stdio:['pipe','pipe','pipe'],windowsHide:true});
     const host=new NativeHost(child,root);
     try{await host.invoke('e2e_info',{});return host;}

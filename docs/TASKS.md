@@ -1,9 +1,14 @@
 # FBones tasks
 
-Current user priority (2026-11-11): general90% usable delivery milestone, then
+Current user priority (2026-11-17): full current-editor MCP with quick setup near
+File and AI docs (F313), preserving the accepted90% roadmap limits below.
+
+Previous priority (2026-11-11): general90% usable delivery milestone, then
 move on; remaining fidelity/edge cases return in the final100% pass. Physics F307
 and both Transform Match actions F308 are READY90. Native upgrade closeout is
 accepted: Debian/AppImage full profiles; Windows x64/macOS ARM64 clean90.
+F312 PSD import now reaches the supported-profile READY90 source milestone:
+layer positions/stacking and atomic history/persistence verified; new installers/publication remain separate.
 Skins remain at the end. STATE owns evidence limits and the next reproducible step.
 
 Statuses: TODO, ACTIVE, WAITING, READY90, DONE. READY90 is an agreed usable planning
@@ -19,9 +24,12 @@ retain their named delivery; they are not a new combined test run.
 | F005-upgrade-macos | READY90 | F005-updater | Actual ARM64 stock0.9.5→0.9.6 clean upgrade accepted43015214283/05ce6f1: retainedold0, uniqueautomaticNSWorkspace/nativeacdc0088+Current0.9.6/registeredSDKnormal0, thenfreshdirectWebGL+Current0.9.6/retained0; exact405Be74 CRC/typed disk checkpoint unchanged. DATA96e6ddc5/UI26c40fe3 pass. Project Open/reopen/New/edit/dirtyCancel/Save and native project persistence explicitly UNTESTED; final100%. |
 | F005-upgrade-windows | READY90 | F005-updater | Actual stockx64 clean0.9.5→0.9.6 accepted43022013711/65c74bb: oneSDKInstall, retainedold8268/installer5932/genuineJobautomatic6984/fresh5836 allactualexit0; exactf012installer/f8dnative/registry0.9.6; completeownedbundledfooter0.9.6, strictautodefaultprofile2absencechecks+Jobchain, freshdirectWebGL and405Be74 CRC/diskintegrity. Automatic/freshCurrentpanel/projectOpen/reopen/persistence explicitly UNTESTED; final100%. |
 | F005-native-final | TODO | Final100%pass | Windows/macOS native project Open/reopen/New/edit/dirtyInstallCancel/Save and project persistence; Windows automatic/fresh Updates Current-panel gesture; remaining native/platform coverage, macOS Intel/publisher signing/notarization/physical OS-mouse routing require their own observations. Reuse accepted full Debian/AppImage flows; no API-return/staticcompile→native-success inference. |
+| F313-mcp | ACTIVE | Current native Session | MCP-first current-authoring API:23tools/86edits, persistent connection/reset, viewport images, docs and real-project README screenshots. Local127UI/370native/463JS pass with retained skips; actual official SDK/nativeGTK and StopStart/reset/401/normal0 pass.0.10 source/release preparation; authorized commit/push/tag and actual CI/publication remain pending. See F313/STATE. |
+| F312-psd-import | READY90 | F102, F222, completed90 closeout | Supported flatPSDv1RGB8Normal/RAW-RLE preserves commoncanvaspositions, stacking, visibility/opacity; oneatomicnativecache/history/revision andportablebinarySaveCloseOpen. PairedDATA/UI/parser gates, full125UI+finaltargetedPSD/nativechecks; sourcefeatureonly, notpublished0.9.6. NativePSDpicker/newinstaller/publication andbroaderprofilelimits explicit in docs/tasks/F312-psd-import.md/STATE. |
 | F311-constraint-multiedit | DONE | F309,F310,F105 | DistinctIK/Transform/Physicsglyphs;Ctrl/Cmd/Shiftcohorts;Mixed/rawf32/nullpreservation;typedatomic42fieldhomogeneousSetup+supportedAnimatekeys/drafts,oneUndo. Native7/JS5/UI3passwithfull120UIregressions. OwnWindows94293013native4groupspass;normalcurrent0.9.5launchverified+publishedbeta2;additionalpointerSlider5cohort/oneUndo passes. Originalgestureparityunknown. |
 | F000-announcement | DONE | Publishedbeta6 | English ready-to-post message in docs/FBONES-ANNOUNCEMENT.md: MIT/community, implementedfeatures,platform/runtime support and bounded Spine4.3.26 compatibility. Shortened peruser from629to289words; checked projectdocs/license/liveLatest; Markdown2links pass. Superseded ownROdraft removed; no external publication/app changes. |
 | F000-public | DONE | Validated stabilization, signed installer pipeline | Published Latest v0.9.6-beta.1/app0.9.6, runtime0.1.0-beta.1, immutable cfc60a4/release439062261. Tag42608780250/main42608780414 required jobs pass; 123 hosted UI,16 uploaded assets/15 checksums, four signed updater payloads/five routes and exact source/runtime archives independently verify. Prior0.9.5 Windows QA retains its scope; native upgrades are READY90, remaining native UX/platform coverage and Physics phase/World shear fidelity return in final100%; full compatibility remains progressive. See STATE. |
+| F000-ci-health | DONE | F000-public | User-requested live audit: fresh normalmain51b38f7 workflow_dispatch43026304209 SUCCESS, Windows/Linux/universalMac builds andUbuntu123UI/README/runtime allPASS; releasejobcorrectlyskipped. Initial58runs35historicalfailures; current4nativeupgradeprofilesgreen. OldLegacyPress/macNewSave remainconsumed/final100%, notnewmainregressions. No newcodefix/historydeletion/native-or-originalrerun; seeSTATE/privateaudit. |
 | F001 | DONE | — | Instructions, continuation notes, ignored research data; remove exactly the three obsolete editor packages and update inventory. |
 | F002 | READY90 | F001 | Shell/viewport implemented; Windows user-confirmed, Linux GTK/X11/WebGL and packaged upgrade profiles observed. macOS ARM64 installed0.9.6 fresh direct WebGL/nativeCurrent/normal0 now pass43015214283. Broader native interactions and Intel execution remain final100%; no pixel parity claim. |
 | F003a | DONE | F001 | Reproducible 4.3.26 corpus inspection; distinguish proven format facts from unknowns. |

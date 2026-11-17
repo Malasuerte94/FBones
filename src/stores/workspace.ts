@@ -425,6 +425,33 @@ export const useWorkspace = defineStore('workspace', () => {
     await run(async () => { project.value = await api.getProject(); });
     ready.value = true;
   }
+  async function prepareForMcp():Promise<boolean>{
+    const focused=document.activeElement;
+    if(focused instanceof HTMLInputElement||focused instanceof HTMLTextAreaElement||focused instanceof HTMLSelectElement)focused.blur();
+    await nextTick();
+    if(editFlight&&!(await editFlight))return false;
+    if(busy.value||newDialog.value||discardDialog.value||traceOpen.value||clippingDraft.value||parentPicking.value)return false;
+    const invalid=inspectorError.value||animationKeyError.value||eventKeyError.value||sequenceFieldError.value||attachmentColorError.value;
+    if(invalid){showNotice(invalid,true);return false;}
+    if(editorMode.value!=='setup'){showNotice(i18n.global.t('mcpSetupFirst'),true);return false;}
+    animation.pauseAnimation();return true;
+  }
+  let mcpRefreshPending=false,mcpRefreshFlight:Promise<void>|null=null;
+  function refreshFromMcp():Promise<void>{
+    mcpRefreshPending=true;
+    if(mcpRefreshFlight)return mcpRefreshFlight;
+    const operation=(async()=>{
+      while(mcpRefreshPending){
+        mcpRefreshPending=false;
+        const value=await api.getProject();
+        if(value?.documentId!==project.value?.documentId){animation.pauseAnimation();editorMode.value='setup';animation.resetAnimationState();}
+        project.value=value;
+        selectedIds.value=selectedIds.value.filter(id=>value?.bones.some(bone=>bone.id===id));
+        if(selectedId.value!==null&&!value?.bones.some(bone=>bone.id===selectedId.value))selectedId.value=selectedIds.value.at(-1)??null;
+      }
+    })().catch(error=>{showNotice(errorMessage(error),true);throw error;}).finally(()=>{if(mcpRefreshFlight===operation)mcpRefreshFlight=null;});
+    mcpRefreshFlight=operation;return operation;
+  }
   async function perform(intent: Intent, discardChanges: boolean) {
     if(intent==='update'){
       let allowed=false;
@@ -842,6 +869,39 @@ export const useWorkspace = defineStore('workspace', () => {
     else if(selectedAttachmentId.value===null)selectSlot(selectedSlotId.value ?? slots.value.at(-1)?.id ?? null);
     tool.value = 'translate';
   }
+  const canImportPsd=computed(()=>canEdit.value&&sceneEditing.value&&editorMode.value==='setup'&&!busy.value&&!newDialog.value&&!discardDialog.value&&!traceOpen.value&&!clippingDraft.value&&!parentPicking.value);
+  let psdImportPending=false;
+  async function importPsd():Promise<boolean>{
+    if(psdImportPending)return false;
+    psdImportPending=true;
+    try{
+      const documentId=project.value?.documentId;
+      // The shared command blurs the field; let its commit register before awaiting it.
+      await nextTick();
+      if(editFlight){if(busy.value&&!editing.value)return false;if(!(await editFlight))return false;}
+      if(editorMode.value!=='setup'){showNotice(i18n.global.t('importPsdSetup'),true);return false;}
+      if(project.value?.documentId!==documentId||!canImportPsd.value||!canUpdateImageResources())return false;
+      const model=project.value!;
+      const bone=selectedSlot.value?.bone??selectedBone.value?.id??model.bones[0]?.id;
+      if(bone===undefined)return false;
+      animation.pauseAnimation();
+      editing.value=true;let imported=false;
+      const operation=run(async()=>{
+        const result=await api.importPsd(bone,model.revision);
+        if(!result||project.value?.documentId!==model.documentId||project.value?.revision!==model.revision||result.documentId!==model.documentId)return;
+        project.value=result;
+        selectedId.value=bone;selectedIds.value=[bone];
+        const attachment=result.editedAttachment??null;
+        selectSceneAttachments(attachment===null?[]:[attachment],attachment);
+        if(attachment===null){selectedSlotId.value=result.editedSlot;selectedSlotIds.value=result.editedSlot===null?[]:[result.editedSlot];}
+        editMode.value='images';tool.value='translate';imported=true;
+        showNotice(i18n.global.t('importPsdImported',{count:result.slots.length-model.slots.length}));
+      }).then(()=>imported);
+      editFlight=operation;
+      try{return await operation;}
+      finally{if(editFlight===operation){editFlight=null;editing.value=false;if(!traceOpen.value&&!clippingDraft.value)releasePose();}}
+    }finally{psdImportPending=false;}
+  }
   async function importImage() {
     if(editorMode.value==='animate'){showNotice('Switch to Setup to add image attachments.',true);return;}
     if (editFlight) await editFlight;
@@ -909,11 +969,11 @@ export const useWorkspace = defineStore('workspace', () => {
     clippingDraft,beginClipping,appendClippingPoint,finishClipping,cancelClipping,beginClippingEdit,
     hoveredBoneId,hoverBone,clearBoneHover,chooseInfluence,
     weightVertices,weightBones,weightLocks,toggleWeightLock,weightActiveVertex,selectWeightVertices,clearWeightVertices,clearWeightBones,weightAutoEdit,
-    grid, zoom, resetCount, tool, transformPivot, initialize, request, create, copy, showNotice,
+    grid, zoom, resetCount, tool, transformPivot, initialize, prepareForMcp, refreshFromMcp, request, create, copy, showNotice,
     save, exportRuntime, saveAndContinue, discardAndContinue, cancelDiscard,
     traceOpen,traceBusy,traceOptions,tracePreview,viewSlots,openTrace,previewTrace,applyTrace,cancelTrace,
     selectedIds,selectBones,escapeSelection,autoColor,applyAutoColors,meshEditUvs,library,librarySelection,librarySelectedKeys,selectLibraryImage,chooseImagesFolder,refreshImagesFolder,placeImage,placeImages,
     selectedId, selectedBone, canEdit, editRig, addBone, removeBone,
     selectedVertex, meshTool, influence, softSelection, softSize, softFeather, brushMode, brushStrength, brushSize, brushFeather,
-    slots, selectedSlotId, selectedSlot, editMode, selectBone, selectSlot, setMode, importImage, removeSelection };
+    slots, selectedSlotId, selectedSlot, editMode, selectBone, selectSlot, setMode, importImage, importPsd, canImportPsd, removeSelection };
 });

@@ -152,6 +152,12 @@ struct Reader<'a> {
     #[cfg(feature = "scene-codec")]
     mesh_uv_limit: usize,
     #[cfg(feature = "scene-codec")]
+    mesh_vertex_limit: usize,
+    #[cfg(feature = "scene-codec")]
+    mesh_triangle_limit: usize,
+    #[cfg(feature = "scene-codec")]
+    mesh_edge_limit: usize,
+    #[cfg(feature = "scene-codec")]
     draw_order_limit: usize,
     #[cfg(feature = "scene-codec")]
     string_encodings: HashMap<usize, super::scene::WireStringForm>,
@@ -820,10 +826,18 @@ impl<'a> Reader<'a> {
                         }
                         FieldKind::Object => {
                             #[cfg(feature = "scene-codec")]
-                            let reference = if class == 46 && tag == 12 {
-                                self.object_with_float_limit(self.mesh_uv_limit)?
-                            } else {
-                                self.object()?
+                            let reference = match (class, tag) {
+                                (46, 12) => self.object_with_float_limit(self.mesh_uv_limit)?,
+                                (46, 13) => {
+                                    self.object_with_limits(512, 512, self.mesh_triangle_limit)?
+                                }
+                                (46, 8) => {
+                                    self.object_with_limits(512, 512, self.mesh_edge_limit)?
+                                }
+                                (71, 2) => {
+                                    self.object_with_limits(512, self.mesh_vertex_limit, 4096)?
+                                }
+                                _ => self.object()?,
                             };
                             #[cfg(not(feature = "scene-codec"))]
                             let reference = self.object()?;
@@ -866,6 +880,14 @@ impl<'a> Reader<'a> {
         self.object_with_float_limit(512)
     }
     fn object_with_float_limit(&mut self, float_limit: usize) -> Result<Reference> {
+        self.object_with_limits(float_limit, 512, 4096)
+    }
+    fn object_with_limits(
+        &mut self,
+        float_limit: usize,
+        array_limit: usize,
+        integer_limit: usize,
+    ) -> Result<Reference> {
         if self.depth >= 256 {
             return unsupported();
         }
@@ -876,7 +898,7 @@ impl<'a> Reader<'a> {
             3 => self.generic(3, |r| Ok(GenericValue::String(r.string()?))),
             15 => self.generic(15, |r| {
                 let count = r.uint()?;
-                if count > 512 {
+                if count as usize > array_limit {
                     return unsupported();
                 }
                 let mut values = Vec::with_capacity(count as usize);
@@ -898,7 +920,7 @@ impl<'a> Reader<'a> {
             }),
             16 | 47 => self.generic(class, |r| {
                 let count = r.uint()?;
-                if count > 4096 {
+                if count as usize > integer_limit {
                     return unsupported();
                 }
                 let mut values = Vec::with_capacity(count as usize);
@@ -1017,6 +1039,21 @@ impl<'a> Reader<'a> {
                 {
                     return unsupported();
                 }
+            }
+        }
+        if let Ok(Reference::Generic(i)) = &value {
+            let valid = match (
+                class,
+                self.generic
+                    .get(*i)
+                    .and_then(|generic| generic.value.as_ref()),
+            ) {
+                (15, Some(GenericValue::Array(values))) => values.len() <= array_limit,
+                (16 | 47, Some(GenericValue::IntList(values))) => values.len() <= integer_limit,
+                _ => true,
+            };
+            if !valid {
+                return unsupported();
             }
         }
         self.depth -= 1;
@@ -1291,6 +1328,12 @@ pub(super) fn decode_region_profile(payload: &[u8]) -> Result<RegionProject> {
         #[cfg(feature = "scene-codec")]
         mesh_uv_limit: 512,
         #[cfg(feature = "scene-codec")]
+        mesh_vertex_limit: 512,
+        #[cfg(feature = "scene-codec")]
+        mesh_triangle_limit: 4096,
+        #[cfg(feature = "scene-codec")]
+        mesh_edge_limit: 4096,
+        #[cfg(feature = "scene-codec")]
         draw_order_limit: 128,
         #[cfg(feature = "scene-codec")]
         string_encodings: HashMap::new(),
@@ -1434,6 +1477,9 @@ mod tests {
                 deform_coordinates: 0,
                 string_fields: vec![],
                 mesh_uv_limit: 1024,
+                mesh_vertex_limit: 1024,
+                mesh_triangle_limit: 6144,
+                mesh_edge_limit: 8192,
                 draw_order_limit: super::super::scene::MAX_SCENE_SLOTS,
                 string_encodings: HashMap::new(),
             }
@@ -1458,6 +1504,89 @@ mod tests {
         let mut uv = reader(&body, 0);
         uv.generic.clear();
         assert!(uv.object_with_float_limit(1024).is_ok());
+    }
+
+    #[cfg(feature = "scene-codec")]
+    #[test]
+    fn mesh_array_and_integer_list_expansions_recheck_cached_request_context() {
+        fn reader(bytes: &[u8], generic: Vec<Generic>) -> Reader<'_> {
+            Reader {
+                bytes,
+                pos: 0,
+                depth: 0,
+                generic,
+                domain: vec![],
+                schema: Schema::new(),
+                deform_coordinates: 0,
+                string_fields: vec![],
+                mesh_uv_limit: 2048,
+                mesh_vertex_limit: 1024,
+                mesh_triangle_limit: 6144,
+                mesh_edge_limit: 8192,
+                draw_order_limit: super::super::scene::MAX_SCENE_SLOTS,
+                string_encodings: HashMap::new(),
+            }
+        }
+        let bytes = [15, 2, 15, 2];
+        let mut cached = reader(
+            &bytes,
+            vec![Generic {
+                kind: 15,
+                value: Some(GenericValue::Array(vec![Reference::Null; 1024])),
+            }],
+        );
+        assert!(cached.object_with_limits(512, 1024, 4096).is_ok());
+        assert!(
+            cached.object().is_err(),
+            "A cached vertex-list identity cannot enlarge an ordinary array"
+        );
+        for kind in [16, 47] {
+            let bytes = [kind as u8, 2, kind as u8, 2];
+            let mut cached = reader(
+                &bytes,
+                vec![Generic {
+                    kind,
+                    value: Some(GenericValue::IntList(vec![0; 6144])),
+                }],
+            );
+            assert!(cached.object_with_limits(512, 512, 6144).is_ok());
+            assert!(
+                cached.object().is_err(),
+                "A cached index list must respect the next requesting field"
+            );
+        }
+        let mut body = vec![15, 1, 0x80, 0x08];
+        body.extend(vec![0; 1024]);
+        assert!(reader(&body, vec![])
+            .object_with_limits(512, 1024, 4096)
+            .is_ok());
+        assert!(reader(&body, vec![]).object().is_err());
+        let mut over = vec![15, 1, 0x81, 0x08];
+        over.extend(vec![0; 1025]);
+        assert!(reader(&over, vec![])
+            .object_with_limits(512, 1024, 4096)
+            .is_err());
+        let mut triangles = vec![47, 1, 0x80, 0x30];
+        triangles.extend(vec![0; 6144 * 2]);
+        assert!(reader(&triangles, vec![])
+            .object_with_limits(512, 512, 6144)
+            .is_ok());
+        assert!(reader(&triangles, vec![]).object().is_err());
+        let mut edges = vec![16, 1, 0x80, 0x40];
+        edges.extend(vec![0; 8192]);
+        assert!(reader(&edges, vec![])
+            .object_with_limits(512, 512, 8192)
+            .is_ok());
+        assert!(reader(&edges, vec![])
+            .object_with_limits(512, 512, 6144)
+            .is_err());
+        let cached = vec![Generic {
+            kind: 16,
+            value: Some(GenericValue::IntList(vec![0; 8193])),
+        }];
+        assert!(reader(&[16, 2], cached)
+            .object_with_limits(512, 512, 8192)
+            .is_err());
     }
 
     #[test]

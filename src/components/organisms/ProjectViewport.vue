@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { invokeNative as invoke } from '../../services/bridge';
+import {onMcpCapture,type McpCaptureRequest} from '../../services/bridge';
 import { useWorkspace } from '../../stores/workspace';
 import { desktop, imageData } from '../../services/desktop';
 import { errorMessage } from '../../domain/project';
@@ -13,6 +14,18 @@ const error = ref<string | null>(null);
 const loaded = ref(false);
 let controller: ViewportController | undefined;
 let disposed = false;
+let stopCapture:(()=>void)|undefined;
+async function captureViewport(request:McpCaptureRequest){
+  try{
+    await workspace.refreshFromMcp();await nextTick();
+    if(disposed||!controller||workspace.project?.revision!==request.expectedRevision||workspace.project.documentId!==request.documentId)throw Error('The project changed.');
+    syncScene();const image=await controller.capture();
+    if(disposed||workspace.project?.revision!==request.expectedRevision||workspace.project.documentId!==request.documentId)throw Error('The project changed.');
+    await invoke('mcp_capture_reply',{requestId:request.requestId,result:{...image,revision:request.expectedRevision,documentId:request.documentId,editorMode:workspace.editorMode,animationId:workspace.animationId,frame:workspace.animationFrame},error:null});
+  }catch{
+    if(!disposed)await invoke('mcp_capture_reply',{requestId:request.requestId,result:null,error:'Viewport capture failed.'}).catch(()=>{});
+  }
+}
 let animationFrame:number|null=null,previousFrame:number|null=null;
 function tick(time:number){
   if(disposed)return;
@@ -68,6 +81,7 @@ onMounted(async () => {
     void reportReady('unavailable');
     return;
   }
+  if(desktop){const stop=await onMcpCapture(request=>{void captureViewport(request);});if(disposed)stop();else stopCapture=stop;}
   void reportReady('webgl');
 });
 watch(() => workspace.grid, (value) => controller?.setGrid(value));
@@ -82,7 +96,7 @@ function syncScene() {
 }
 watch(() => [workspace.parentPicking,workspace.project,workspace.editorMode,workspace.animationBones,workspace.animationDraftVersion,workspace.renderedBones,workspace.simulationError,workspace.animationPhysicsError,workspace.animationPhysicsGeneration,workspace.simulationIntent,workspace.viewSlots,workspace.traceOpen, workspace.selectedId, workspace.selectedIds,workspace.hoveredBoneId,workspace.library,workspace.selectedSlotId,workspace.selectedAttachmentIds,workspace.selectedAttachment,workspace.treeFilters.bone,workspace.treeFilters.slot,workspace.treeFilters.attachment,workspace.clippingDraft,workspace.clippingDraft?.points.length, workspace.editMode, workspace.tool, workspace.transformPivot, workspace.busy,workspace.selectedVertex,workspace.weightActiveVertex,workspace.weightVertices,workspace.weightBones,workspace.weightLocks,workspace.influence,workspace.meshTool,workspace.meshEditUvs,workspace.softSelection,workspace.softSize,workspace.softFeather,workspace.brushMode,workspace.brushStrength,workspace.brushSize,workspace.brushFeather], syncScene);
 watch(() => workspace.resetCount, () => controller?.reset());
-onBeforeUnmount(() => { disposed = true;if(animationFrame!==null)cancelAnimationFrame(animationFrame);document.removeEventListener('visibilitychange',visibility);controller?.destroy();workspace.clearBoneHover();workspace.setPreviewVisible(false); });
+onBeforeUnmount(() => { disposed = true;stopCapture?.();if(animationFrame!==null)cancelAnimationFrame(animationFrame);document.removeEventListener('visibilitychange',visibility);controller?.destroy();workspace.clearBoneHover();workspace.setPreviewVisible(false); });
 </script>
 <template>
   <div class="relative min-h-0 min-w-0 overflow-hidden bg-canvas viewport-checker">

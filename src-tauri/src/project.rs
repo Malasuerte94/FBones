@@ -401,6 +401,122 @@ impl Session {
         state.revision += 1;
         Ok(state.summary().unwrap())
     }
+    #[cfg(not(feature = "scene-editing"))]
+    pub fn import_psd(
+        &self,
+        _expected_revision: u64,
+        _bone: u64,
+        _path: &Path,
+    ) -> Result<ProjectSummary, AppError> {
+        Err(AppError::new(
+            "UnsupportedProfile",
+            "PSD import requires the complete scene-editing profile.",
+        ))
+    }
+    #[cfg(feature = "scene-editing")]
+    pub fn import_psd(
+        &self,
+        expected_revision: u64,
+        bone: u64,
+        path: &Path,
+    ) -> Result<ProjectSummary, AppError> {
+        // Decode into private immutable assets first. No source/destination
+        // writes occur here; normal Save owns portable resource persistence.
+        let document = crate::psd::read(path)?;
+        let mut state = self.lock()?;
+        if state.revision != expected_revision {
+            return Err(AppError::new(
+                "ProjectChanged",
+                "The project changed while importing the PSD.",
+            ));
+        }
+        let Some(Document::Editable {
+            project,
+            images,
+            image_roots,
+            rig,
+            dirty,
+            ..
+        }) = state.document.as_mut()
+        else {
+            return Err(AppError::new(
+                "InspectionOnly",
+                "Create or open an editable project before importing a PSD.",
+            ));
+        };
+        if !matches!(
+            project.images_root.as_str(),
+            "./images/" | "images/" | "images"
+        ) {
+            return Err(AppError::new("PsdImagesRoot", "Use Save As to save a portable project with its images folder before importing a PSD."));
+        }
+        rig.history.frame().bone_index(bone)?;
+        if document.layers.is_empty()
+            || document.layers.len() > 128
+            || project.slots.len() + document.layers.len()
+                > fbones_format::minimal::scene::MAX_SCENE_SLOTS
+        {
+            return Err(AppError::new(
+                "InvalidPsd",
+                "Import 1–128 raster layers within the project slot limit.",
+            ));
+        }
+        let mut cache = images.clone();
+        let mut layers = Vec::with_capacity(document.layers.len());
+        for (index, layer) in document.layers.into_iter().enumerate() {
+            let name = if layer.name.trim().is_empty() {
+                format!("Layer {}", index + 1)
+            } else {
+                layer.name
+            };
+            if layer.width != layer.image.width || layer.height != layer.image.height {
+                return Err(AppError::new(
+                    "InvalidPsd",
+                    "PSD pixels and layer bounds do not agree.",
+                ));
+            }
+            let key = cache.unique_stem(&name);
+            cache.insert(key.clone(), layer.image)?;
+            layers.push(crate::scene_edit::PsdLayerPlacement {
+                name,
+                path: key,
+                x: (f64::from(layer.left) + f64::from(layer.width) / 2.0
+                    - f64::from(document.width) / 2.0) as f32,
+                y: (f64::from(document.height) / 2.0
+                    - f64::from(layer.top)
+                    - f64::from(layer.height) / 2.0) as f32,
+                width: layer.width as f32,
+                height: layer.height as f32,
+                visible: layer.visible,
+                opacity: layer.opacity,
+            });
+        }
+        // Folder switches retain immutable resource snapshots for Undo/Redo.
+        // Count unique allocations across those roots and the staged cache.
+        let mut seen = std::collections::HashSet::new();
+        let (mut encoded_bytes, mut decoded_bytes) = (0usize, 0usize);
+        for held in image_roots.values().chain(std::iter::once(&cache)) {
+            for (_, asset) in held.entries() {
+                if seen.insert(std::sync::Arc::as_ptr(asset)) {
+                    encoded_bytes = encoded_bytes.saturating_add(asset.bytes().len());
+                    decoded_bytes = decoded_bytes
+                        .saturating_add(asset.width as usize * asset.height as usize * 4);
+                }
+            }
+        }
+        if encoded_bytes > 128 * 1024 * 1024 || decoded_bytes > 256 * 1024 * 1024 {
+            return Err(AppError::new("ImageCacheBudget", "PSD and retained image resources exceed the cache budget. Save and reopen before importing more layers."));
+        }
+        // SceneHistory validates a cloned complete frame/IDs/encoding before
+        // publishing it. All subsequent resource publication is infallible.
+        rig.history
+            .apply(crate::scene_edit::SceneEdit::ImportPsd { bone, layers })?;
+        **project = rig.history.frame().project.clone();
+        *images = cache;
+        *dirty = rig.dirty(project);
+        state.revision += 1;
+        Ok(state.summary().unwrap())
+    }
     pub fn select_images_folder(
         &self,
         expected_revision: u64,
@@ -766,6 +882,10 @@ impl Session {
         let state = self.lock()?;
         Ok(state.summary())
     }
+    pub fn summary_with_revision(&self) -> Result<(Option<ProjectSummary>, u64), AppError> {
+        let state = self.lock()?;
+        Ok((state.summary(), state.revision))
+    }
     /// Keep authoring serialized with the final synchronous updater install.
     /// Frontend drafts are flushed before this call; native revision/dirty state
     /// is checked again while holding the same mutex used by all Session edits.
@@ -796,8 +916,34 @@ impl Session {
         drop(state);
         result
     }
+    #[cfg(test)]
+    pub fn revision(&self) -> Result<u64, AppError> {
+        Ok(self.lock()?.revision)
+    }
     pub fn replace(&self, document: Document, discard: bool) -> Result<ProjectSummary, AppError> {
+        self.replace_impl(document, discard, None)
+    }
+    pub fn replace_checked(
+        &self,
+        document: Document,
+        discard: bool,
+        expected_revision: u64,
+    ) -> Result<ProjectSummary, AppError> {
+        self.replace_impl(document, discard, Some(expected_revision))
+    }
+    fn replace_impl(
+        &self,
+        document: Document,
+        discard: bool,
+        expected_revision: Option<u64>,
+    ) -> Result<ProjectSummary, AppError> {
         let mut state = self.lock()?;
+        if expected_revision.is_some_and(|revision| revision != state.revision) {
+            return Err(AppError::new(
+                "ProjectChanged",
+                "The project changed before the operation.",
+            ));
+        }
         if !discard && state.document.as_ref().is_some_and(|d| d.summary().dirty) {
             return Err(AppError::new(
                 "UnsavedChanges",
@@ -814,7 +960,19 @@ impl Session {
         Ok(state.summary().unwrap())
     }
     pub fn close(&self, discard: bool) -> Result<(), AppError> {
+        self.close_impl(discard, None)
+    }
+    pub fn close_checked(&self, discard: bool, expected_revision: u64) -> Result<(), AppError> {
+        self.close_impl(discard, Some(expected_revision))
+    }
+    fn close_impl(&self, discard: bool, expected_revision: Option<u64>) -> Result<(), AppError> {
         let mut state = self.lock()?;
+        if expected_revision.is_some_and(|revision| revision != state.revision) {
+            return Err(AppError::new(
+                "ProjectChanged",
+                "The project changed before the operation.",
+            ));
+        }
         if !discard && state.document.as_ref().is_some_and(|d| d.summary().dirty) {
             return Err(AppError::new(
                 "UnsavedChanges",
@@ -826,7 +984,27 @@ impl Session {
         Ok(())
     }
     pub fn prepare_save(&self, copy: bool) -> Result<SaveSnapshot, AppError> {
+        self.prepare_save_impl(copy, None)
+    }
+    pub fn prepare_save_checked(
+        &self,
+        copy: bool,
+        expected_revision: u64,
+    ) -> Result<SaveSnapshot, AppError> {
+        self.prepare_save_impl(copy, Some(expected_revision))
+    }
+    fn prepare_save_impl(
+        &self,
+        copy: bool,
+        expected_revision: Option<u64>,
+    ) -> Result<SaveSnapshot, AppError> {
         let state = self.lock()?;
+        if expected_revision.is_some_and(|revision| revision != state.revision) {
+            return Err(AppError::new(
+                "ProjectChanged",
+                "The project changed before the operation.",
+            ));
+        }
         let document = state
             .document
             .as_ref()
@@ -2637,6 +2815,9 @@ mod large_mesh_tests;
 #[path = "placement_tests.rs"]
 mod placement_tests;
 #[cfg(all(test, feature = "scene-editing"))]
+#[path = "psd_import_tests.rs"]
+mod psd_import_tests;
+#[cfg(all(test, feature = "scene-editing"))]
 #[path = "scene_native_tests.rs"]
 mod scene_tests;
 #[cfg(all(test, feature = "scene-editing"))]
@@ -3366,5 +3547,38 @@ mod logical_document_tests {
             .unwrap();
         assert_ne!(replaced.logical_document_id, opened.logical_document_id);
         stamped(&session, &replaced, replaced.logical_document_id);
+    }
+}
+
+#[cfg(test)]
+mod mcp_revision_tests {
+    use super::*;
+
+    #[test]
+    fn checked_lifecycle_rejects_stale_revision_without_replacing_or_closing() {
+        let session = Session::default();
+        assert_eq!(session.revision().unwrap(), 0);
+        let created = session
+            .replace_checked(new_document("AI".into()).unwrap(), false, 0)
+            .unwrap();
+        assert_eq!(session.revision().unwrap(), created.revision);
+        assert!(session
+            .replace_checked(new_document("stale".into()).unwrap(), true, 0)
+            .is_err());
+        assert!(session.close_checked(true, 0).is_err());
+        assert!(session.prepare_save_checked(true, 0).is_err());
+        assert_eq!(session.summary().unwrap().unwrap().name, "AI");
+        assert_eq!(session.revision().unwrap(), created.revision);
+        assert!(session.prepare_save_checked(true, created.revision).is_ok());
+        session.close_checked(true, created.revision).unwrap();
+        assert!(session.summary().unwrap().is_none());
+        assert_eq!(session.revision().unwrap(), created.revision + 1);
+        assert!(session
+            .replace_checked(
+                new_document("reopen".into()).unwrap(),
+                false,
+                created.revision
+            )
+            .is_err());
     }
 }

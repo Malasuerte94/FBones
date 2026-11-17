@@ -743,10 +743,11 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "fbones-desktop"
-version = "0.9.6"
+version = "0.10.0"
 dependencies = [
  "base64 0.22.1",
  "fbones-format",
+ "getrandom 0.3.4",
  "gtk",
  "png",
  "serde",
@@ -759,7 +760,7 @@ dependencies = [
 
 [[package]]
 name = "fbones-format"
-version = "0.9.6"
+version = "0.10.0"
 dependencies = [
  "flate2",
  "tempfile",
@@ -768,7 +769,7 @@ dependencies = [
 
 [[package]]
 name = "fbones-research"
-version = "0.9.6"
+version = "0.10.0"
 dependencies = [
  "fbones-format",
  "serde",

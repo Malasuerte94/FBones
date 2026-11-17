@@ -515,7 +515,7 @@ pub(super) fn project(p: &SceneProject) -> Result<(), FormatError> {
             }
         }
     }
-    if vertex_count > 4096 {
+    if vertex_count > MAX_SCENE_VERTICES {
         return Err(unsupported());
     }
     let mut constraint_names = HashSet::new();

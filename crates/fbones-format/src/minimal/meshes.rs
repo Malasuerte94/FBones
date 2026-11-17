@@ -27,7 +27,7 @@ pub(super) fn validate_mesh(
     owner: usize,
     bone_count: usize,
 ) -> Result<(), FormatError> {
-    validate_mesh_with_limits(mesh, owner, bone_count, 256, 1536)
+    validate_mesh_with_limits(mesh, owner, bone_count, 256, 1536, 4096)
 }
 #[cfg(feature = "scene-codec")]
 pub(super) fn validate_scene_mesh(
@@ -41,6 +41,7 @@ pub(super) fn validate_scene_mesh(
         bone_count,
         super::scene::MAX_SCENE_MESH_VERTICES,
         super::scene::MAX_SCENE_MESH_TRIANGLE_INDICES,
+        super::scene::MAX_SCENE_MESH_EDGE_INDICES,
     )
 }
 fn validate_mesh_with_limits(
@@ -49,6 +50,7 @@ fn validate_mesh_with_limits(
     bone_count: usize,
     max_vertices: usize,
     max_triangle_indices: usize,
+    max_edge_indices: usize,
 ) -> Result<(), FormatError> {
     let unsupported = || FormatError::UnsupportedProfile;
     let n = mesh.vertices.len();
@@ -62,7 +64,7 @@ fn validate_mesh_with_limits(
         || !mesh.triangles.len().is_multiple_of(3)
         || mesh.triangles.len() > max_triangle_indices
         || !mesh.edges.len().is_multiple_of(2)
-        || mesh.edges.len() > 4096
+        || mesh.edges.len() > max_edge_indices
         || mesh
             .uvs
             .iter()

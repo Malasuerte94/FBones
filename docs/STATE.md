@@ -1,4 +1,90 @@
-# Current state — 2026-11-11
+# Current state — 2026-11-17
+
+## Current work — MCP first,0.10 release candidate (F313 ACTIVE)
+
+User authorizes commit, push and a new release after finishing MCP, public/developer
+MCP-first documentation and three real-project GitHub screenshots. Implementation
+and local acceptance are complete; publication/hosted CI verification remain active.
+Package/Tauri/Cargo version0.10.0 agree; next immutable tagv0.10.0-beta.1 is not yet
+pushed. Never replace existing0.9.6 release assets or selected Windows images.
+
+Current MCP:23 tools/86 native edit variants/36 nested inputs, actual visible
+Session, authenticated IPv4 loopback HTTP, remembered per-profile address/token,
+explicit stopped Reset, real viewport image/camera metadata, PNG/WAV content,
+resource/guide/prompt and optional negotiated-version stdio adapter. Start is
+explicit (no autostart), validates Setup drafts and hands manual editing to AI.
+Stop joins the listener/serializes dispatch and refreshes before unlock. Native
+revisions, pose epochs, history, binary/resource guards remain authoritative.
+New supported features follow the MCP-first shared-Session contributor contract.
+
+FINAL actual GTK acceptance passes on build8f00ebef, own203568/start2349033:
+W3C Copy followed by independent GTK clipboard read; official SDK1.32.1 (registry
+integrity independently matched),23routes/56calls/11groups, stronger normalized
+bones/mesh/binding/constraint/animation/event SaveCloseOpen equality, referenced
+PNG/WAV bytes, runtime export, actual viewport PNG, visible native project,
+StopStart same copied settings/reinitialize, explicit Reset/new credentials,
+old token at NEW listener401 and retained normal native exit0. Private receipts
+`.local/mcp-native-acceptance/final-clipboard/` join bound/terminal identities.
+Independent audit verifies882B own binary9f4e573f/internal4.3.26/rawDEFLATE1579B/
+CRC64=20f2daf93243d56f. This is Linux clipboard/native proof; full process restart
+is covered by config file-load/unit tests, not a second real app restart. Windows/
+macOS client/clipboard gestures and original-editor fidelity are not inferred.
+
+The preceding final0.10 negative remains under `final-0.10`: same SDK/StopStart
+passed, but old-token HTTP body caused reset104 instead of a reliable401 and its
+launch transport ended native-15 (not normal). Paired DATA/UI gates diagnose
+unread rejected bodies; bounded drain without JSON parse/dispatch corrects it.
+A64KiB actual socket regression requires clean read_to_end, no tolerated reset,
+and zero rejected dispatch. Both later final-http and final-clipboard runs pass
+all phases; negative receipts are retained unchanged.
+
+Final local checks:127production-CSP Chromium/real-Rust UI pass;370native pass/
+2existingignored;105Scene/16default format,7research and103legacy/1ignored pass;
+463JavaScript pass/1existingPhysics skip. Runtime16package+24native-export samples
+pass; typechecks, web build, strict all-target Clippy and rustfmt pass. Linux CI
+workflow now requires matching actual GTK/official-client/clipboard acceptance
+before release, in addition to the three-platform/package/source/signature gates.
+
+Actual supplied project is now losslessly supported:71bones/26slots/32default
+attachments/14animations,13weighted meshes up to893vertices. Scoped Scene limits
+1024vertices/6144triangle indices/8192edge indices and aggregate vertices preserve
+ordinary/legacy/Clip/Trace limits and independent object/byte budgets. Cached
+Array/UV/IntList16/ShortList47 references are rechecked per requesting field.
+Final ACTUAL format example on the private source proves complete715855payload
+byte equality after the strengthened cache guard. New1024/1025,8192/8193 semantics,
+scoped/cache and high-index native/TS regressions pass; no records/animations are
+dropped. This is FBones capacity policy, not a new original numerical-parity claim.
+
+README's three1440x900 PNGs are the exact visually inspected0.10 captures from
+`.local/mcp-readme-release-0.10/`: full Setup, actual big_win frame17 Dopesheet and
+head Graph. Whole71-bone character now clears floating tools; Preview/keys remain
+real. Package-derived EN/RO footer fixes stale static0.9.6. Public provenance hashes
+and README link/image checker pass. Original user folder and32-file Ubuntu copy
+hashes remain unchanged; raw project/JSON/PNGs and credentials stay private.
+Only authorized editor screenshots enter Git/source archives.
+
+Root .git is unavailable; clean public clone `.local/mcp-release-repo` is main
+51b38f7. Authorized SSH authentication and push dry-run succeed. Prepare final
+reviewed export with `scripts/prepare-public-release.py`; copy its reviewed tree/
+manifest into the clone, inspect diff, commit/push main+new tag, then observe exact
+CI jobs/Latest assets/checksums/signatures/versions before closing F313 or the goal.
+The previous996-file archive audit is pre-final only; regenerate after these edits.
+
+Prior protected user normal164d057d executable was preserved at immutable
+`.local/mcp-2026-11-17/builds/<sha>/FBones`; its ownership receipt is updated. Own
+acceptance processes all have retained terminal receipts; do not operate user
+windows. Native availability launch of final0.10 and end-of-session cleanup are
+still due. Private Xvfb92 via exec54345 and extracted local tools (~6.5MiB) remain
+needed until final native checks; installed pinned SDK is retained for reproduction.
+Earlier cleanup234,303,008B plus agent-owned24,014,436B npm scratch and42,808,901B
+isolated diagnostic target retain their scopes. Final disk remeasure/own disposable
+workspace and old snapshot cleanup remain due; last Linux~814GiB/hostG~3.6GiB.
+No original operation, global package/settings change or physical-recovery claim.
+
+Next: final privacy/export review and authorized commit/push/tag; retain live CI
+IDs/terminal outcomes, verify actual publication and then update this checkpoint.
+Preserve accepted90% Physics/Match/native-upgrade evidence; no old probes resumed.
+[Task](tasks/F313-mcp.md), [AI guide](MCP.md), [acceptance checklist](research/MCP-ACCEPTANCE-CHECKLIST-2026-11-17.md).
 
 ## Active goal and priorities
 
@@ -25,6 +111,57 @@ never labeled project persistence. Three agents supplied DATA/UI/tooling reviews
 root alone operated shared CI/native cases. No original Physics/Match probe was
 resumed. Release0.9.6 and the selected0.9.5 local delivery stay immutable.
 
+## Current work — PSD import READY90
+
+Latest user steering after the completed closeout requests Photoshop PSD import
+preserving layer positions and stacking order. [F312](tasks/F312-psd-import.md)
+is delivered as a usable90 **source feature**: File → Import PSD in editable
+Setup stages all raster layers as one contiguous slot/Region block, preserving
+signed/half-pixel positions relative to one canvas center at the destination
+bone's local origin, bottom-to-top order, opacity and hidden inventory. One
+successful import is one revision and Undo/Redo; source PSDs are never written.
+Native cache/ID/history/encoder guards stay atomic, and existing PNG-resource
+Save/Close/Open preserves exact imported bytes in the ordinary binary project.
+
+Three agents supplied the preimplementation [DATA](research/PSD-IMPORT-DATA-GATE-2026-11-11.md),
+[UI](research/PSD-IMPORT-UI-GATE-2026-11-11.md) and
+[parser](research/PSD-IMPORT-PARSER-AUDIT-2026-11-11.md) findings, then distinct
+frontend/parser/Session implementations. The coordinator owned integration and
+shared tests. There is no measured exact4.3.26 PSD gesture: this is an explicit
+FBones import policy, not Photoshop/Spine PSD compositing parity. No original
+Physics/Match or completed native-upgrade batch was repeated.
+
+The supported profile is flat PSDv1 RGB8 Normal raster layers, RAW/PackBits and
+straight transparency, within declared input/layer/cache budgets. Groups,
+masks/effects/text/smart objects/adjustments, ZIP/PSB, embedded ICC and nonempty
+global DisplayInfo1007/1077 are refused. The last refusal is conservative: Adobe
+documents global Spot preview effects, but the kind layout is not inferred; no
+actual original Spot observation was collected. Some benign modern metadata is
+also refused. External Images roots require portable Save As. Explicit nonempty
+animated draw-order keys retain their existing structural-edit rejection; no
+Animate data is cleared or lost to make the import succeed.
+
+Verification: the final complete125-case production-CSP Chromium/real-Rust suite
+passes after the resource-safety refusal and lint cleanup, including PSD overlap
+pixels and binary Save/Close/Open plus retained Animate/Physics/Match regressions.
+Final364 native e2e-feature tests pass/2 existing ignored; the focused PSD UI
+run also passes after rebuilding both the frontend and real Rust host. JavaScript451 pass/one existing Physics skip; legacy102 pass/one existing
+ignored; format16 default/103 Scene pass. Default desktop357 passed before the
+extra resource-refusal test; the final e2e-feature suite is a superset. Typechecks,
+production web build, Rust check, strict all-target Clippy and rustfmt are included
+in the current local verification. Private logs/JSON/own PSD inputs and accepted
+binary/PNG/pixel outputs are retained in `.local/psd-import-2026-11-11/`.
+
+Final normal Linux source build37a5ce50 starts with renderer=webgl in a viewable
+owned GTK/X11 window277245/startTicks3156774/window0xa00003. It is handed to the
+user and protected; the earlier80592821 working window270527 also remains
+protected rather than being closed or overwritten. The final active executable
+is retained in RAM-backed storage so no second large disk copy is needed. Its startup is not a PSD OS-picker gesture. Native GTK/Windows/
+macOS PSD-picker gestures, new three-platform installer builds and publication
+are separate next delivery checks. The selected Windows image and published
+v0.9.6 remain unchanged; **published0.9.6 does not contain PSD import**. Broader
+PSD/group/compositing fidelity returns in the final pass; skins remain last.
+
 ## Current release publication
 
 Published GitHub Latest is now v0.9.6-beta.1/application0.9.6, runtime remains
@@ -47,6 +184,29 @@ closed at90%: Debian42679060912, AppImage43001332547, macOS43015214283 and
 Windows43022013711. Their different native project/current-panel scopes are
 retained below. Physics moving-parent phase, World shear precision and broader
 compatibility remain explicitly deferred/open for final100%.
+
+## Current GitHub Actions health
+
+User-requested audit2026-11-11: fresh [normal main CI43026304209](https://github.com/Malasuerte94/FBones/actions/runs/43026304209)
+on51b38f7dbc9617ccd8aa61c7edad004e7927dc7d passes all four check jobs:
+Windows x64, Linux x64, universal macOS builds/package structures and Ubuntu
+UI/README/runtime checks. All123 UI cases pass (7.5minutes); release publishing
+is correctly skipped for this branch/manual run. Current main needed no code fix.
+The former `[skip ci]` final documentation commit is now explicitly verified by
+workflow_dispatch; no accepted native/original case was repeated.
+
+The complete initial list contained58 runs:20success/35failure/3cancelled.
+Failed historical runs remain historical; the latest four actual native-upgrade
+profiles pass as recorded above. The newest former Desktop failure42508880037
+was Sequence Graph Undo (expected index2, observed1), corrected later by4033a83
+and covered by subsequent green runs, including this one. Two old research
+workflow heads still show failure: Windows Legacy Press42679065767 and macOS
+New/Save43007410715. Their unresolved interaction/observation limits stay consumed
+or final100%, not falsely called repaired by clean90. No history deletion,
+continue-on-error, global setting or workflow-name cosmetic change was used.
+Private audit receipts are in `.local/ci-health-2026-11-11/`. Only56KiB of required audit JSON receipts were retained; this read-only audit created no disposable cache/build/package artifacts and reclaimed0additional bytes. Host G: remains1,470,742,528B free; no local product/native build ran. This audit changed
+no product/workflow source or public main commit; current51b38f7 retains its
+actual green checks. These continuation-note edits are local to this workspace.
 
 ## New exact4.3.26 observations
 
@@ -383,7 +543,7 @@ not fresh liveness/ownership receipts: prior protected FBones85172/start
 Nov9 owned originals are historical/consumed identities; any future original
 operation needs fresh ownership/absence guards, not that old manual-close gate.
 
-This QA/research/documentation pass changes no product sources and performs no
+The earlier upgrade/CI closeout changed no product sources and performed no
 local product build or duplicate normal availability launch. All target apps
 were dedicated hosted-VM copies; accepted native instances closed normally.
 Local Windows operations were small C# type compilation/AST and a pure SDK parse
@@ -399,10 +559,10 @@ debugdeps~7.6GiB mixed/reusable/incrementalempty. No fullcargo clean/user-data
 removal/physical recovery claim. No new localCargo/frontend build or large
 package download. Remote fixtures live only in ephemeral VMs.
 
-Latest actual checks2026-11-11T12:44:37UTC: Linux available883,951,112,192B
+Earlier closeout checks2026-11-11T13:22:32UTC: Linux available883,947,839,488B
 (~823GiB); Ubuntu VHDX is on Windows G:, free1,470,742,528B,
 VHDX224,114,245,632B nonsparse. Linux free space does not establish host safety.
-Current cleanup removes233,513logicalbytes:26,326B own generator/freeze caches,
+The preceding closeout cleanup removed233,513logicalbytes:26,326B own generator/freeze caches,
 9,482B obsolete helpers (six duplicate AST validators consolidated into one),
 and197,705B new unpublished archive copies; private originals are preserved.
 Required frozen tools/manifests/raw successes and useful negatives (~42MiB) stay
@@ -411,14 +571,28 @@ frontend build or large package download. No trim/shutdown/compaction/global
 settings or physical-reclamation claim; retain uncertain old variants and mixed
 reusable dependencies rather than deleting mapped/other-task artifacts.
 
-Next reproducible action after this closeout: read the full
-[F105 Animate scope](tasks/F105-animation.md) and its existing paired DATA/UI
-findings, then select an unclosed supported vertical slice with satisfied
-dependencies toward90%. Preserve current Animate integration and the complete
-scope; do not automatically reopen F307-final/F308-final/F005-native-final or
-completed native upgrade/provider batches. Remaining caller timing, exact World
-precision/Additive/Physics/suffix/Save-only fidelity and broader platform UX
-return only in final100%; skins remain at the end. Existing evidence remains in
-`.local/native-install-upgrade-2026-11-09/`,
-`.local/research/finish-three-2026-11-09/` and current
+Current PSD-session cleanup2026-11-11T17:07UTC removes12,066,436,398logical
+bytes of own RAM-backed build cache (~11.24GiB),242 completed generated headless
+workspaces/54,771,609B and106,870B of duplicate-ledger/unused-PNG/own Python cache
+scratch. Original Cargo targets, original inputs, all preexisting workspaces and
+personal files are preserved. The active final executable266,657,600B remains
+in RAM-backed storage; its live profile and the earlier protected working-window
+image266,691,608B/profile remain needed by user windows. No selected/mapped image
+was removed. Eight accepted PSD input/semantic/binary/PNG/pixel files plus their
+manifest and concise test logs/JSON remain ignored for reproduction. Uncertain
+old native variants (~1.074GiB) and mixed reusable original debugdeps remain
+retained as previously recorded. Final Linux free space is~823GiB; tmpfs has
+~20GiB available with only the active executable retained. Host G: still has
+1,470,742,528B free, VHDX224,114,245,632B nonsparse, actually rechecked17:07:43UTC.
+No physical host-space recovery, trim, compaction or global setting change is claimed.
+
+Next reproducible action: read F312 and its paired gates; export only the reviewed
+source additions, run normal three-platform CI and targeted native PSD picker/
+installer checks before publishing a higher application version. Never replace
+existing0.9.6 release assets or selected/mapped Windows executables. The tested
+PSD core is READY90; keep broader codecs/compositing and F307-final/F308-final/
+F005-native-final deferred instead of automatically reopening accepted probes.
+Preserve the complete F105 Animate scope and integration. Skins stay at the end.
+Earlier native-upgrade receipts remain in `.local/native-install-upgrade-2026-11-09/`,
+`.local/research/finish-three-2026-11-09/` and
 `.local/native-upgrade-closeout-2026-11-11/`.

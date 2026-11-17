@@ -280,3 +280,122 @@ fn large_mesh_308_native_roundtrip_keeps_exact_uvs_and_1638_triangle_indices() {
     command(&session, json!({"type":"undo"}));
     assert_eq!(payload(&session), before);
 }
+
+#[test]
+fn scene_1024_high_vertex_full_weight_batch_history_and_portable_roundtrip() {
+    let (directory, session, source) = open(32, 32, false);
+    let p = summary(&session);
+    let before = payload(&session);
+    let frozen = sampled(&session, 0.);
+    let attachment = p.slots[1].attachments[0].id;
+    let pose = frozen
+        .deform_pose
+        .iter()
+        .find(|pose| pose.attachment == attachment)
+        .unwrap();
+    assert_eq!(pose.world_vertices.len(), 1024);
+    let target = pose.world_vertices[1023];
+    command(
+        &session,
+        json!({"type":"moveVertex","id":p.slots[1].id,"vertex":1023,"x":target[0]+2.,"y":target[1]-3.}),
+    );
+    let moved = payload(&session);
+    assert_ne!(moved, before);
+    command(&session, json!({"type":"undo"}));
+    assert_eq!(payload(&session), before);
+    command(&session, json!({"type":"redo"}));
+    assert_eq!(payload(&session), moved);
+    let geometry = model(&session).slots[1].attachments[0]
+        .mesh()
+        .unwrap()
+        .vertices
+        .clone();
+    let changes = (0..1024)
+        .map(|vertex| json!({"vertex":vertex,"value":0.375}))
+        .collect::<Vec<_>>();
+    command(
+        &session,
+        json!({"type":"paintWeights","id":p.slots[1].id,"bone":p.bones[1].id,"changes":changes}),
+    );
+    let weighted = model(&session);
+    for (row, old) in weighted.slots[1].attachments[0]
+        .mesh()
+        .unwrap()
+        .vertices
+        .iter()
+        .zip(&geometry)
+    {
+        assert_eq!(row.weights, [0.375, 0.625]);
+        assert_eq!(row.positions, old.positions);
+    }
+    let excessive = (0..1025)
+        .map(|vertex| json!({"vertex":vertex,"x":0,"y":0}))
+        .collect::<Vec<_>>();
+    assert_rejected(
+        &session,
+        json!({"type":"moveVertices","id":p.slots[1].id,"vertices":excessive}),
+    );
+    let target = directory.path().join("portable/own1024.fbones");
+    session
+        .save_snapshot(session.prepare_save(true).unwrap(), target.clone())
+        .unwrap();
+    let saved = payload(&session);
+    session.close(false).unwrap();
+    session
+        .replace(open_document(target).unwrap(), false)
+        .unwrap();
+    assert_eq!(payload(&session), saved);
+    assert_eq!(
+        model(&session).slots[1].attachments[0].mesh(),
+        weighted.slots[1].attachments[0].mesh()
+    );
+    assert_eq!(
+        std::fs::read(directory.path().join("own-large.spine")).unwrap(),
+        source
+    );
+    for key in ["red", "green"] {
+        assert_eq!(
+            std::fs::read(directory.path().join(format!("portable/images/{key}.png"))).unwrap(),
+            std::fs::read(directory.path().join(format!("images/{key}.png"))).unwrap()
+        );
+    }
+}
+
+#[test]
+fn scene_1024_frozen_full_deformation_keys_do_not_bake_setup() {
+    let (_directory, session, _source) = open(32, 32, true);
+    let p = summary(&session);
+    let setup = model(&session);
+    let frozen = sampled(&session, 6.);
+    let attachment = p.slots[1].attachments[0].id;
+    let pose = frozen
+        .deform_pose
+        .iter()
+        .find(|pose| pose.attachment == attachment)
+        .unwrap();
+    assert_eq!(pose.offsets.len(), 4096);
+    let moves = pose
+        .world_vertices
+        .iter()
+        .enumerate()
+        .map(|(vertex, point)| json!({"vertex":vertex,"x":point[0]+1.125,"y":point[1]-2.5}))
+        .collect::<Vec<_>>();
+    let edit=serde_json::from_value(json!({"type":"setAnimationDeformVertices","animation":p.animations[0].id,"attachment":attachment,"frame":6,"vertices":moves})).unwrap();
+    let changed = session
+        .edit_in_pose(p.revision, frozen.pose_epoch, edit)
+        .unwrap();
+    assert_eq!(changed.revision, p.revision + 1);
+    let after = model(&session);
+    assert_eq!(after.rig.bones, setup.rig.bones);
+    assert_eq!(after.slots, setup.slots);
+    let sampled = sampled(&session, 6.);
+    let result = sampled
+        .deform_pose
+        .iter()
+        .find(|pose| pose.attachment == attachment)
+        .unwrap();
+    for (before, after) in pose.world_vertices.iter().zip(&result.world_vertices) {
+        assert!((after[0] - before[0] - 1.125).abs() < 1e-5);
+        assert!((after[1] - before[1] + 2.5).abs() < 1e-5);
+    }
+}
