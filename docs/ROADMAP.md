@@ -86,7 +86,7 @@ is implemented.
 ## Current verification and earlier stabilization evidence
 
 The0.10 local integration passes127 production-CSP UI cases,370 native checks
-(with2 existing ignored),463 JavaScript tests (with1 existing skip),105 Scene/
+(with2 existing ignored),464 JavaScript tests (with1 existing skip),105 Scene/
 16 default format checks and103 legacy checks (with1 existing ignored). The
 independent official MCP client operates an actual dedicated Linux editor,
 including real Copy/GTK clipboard read, all23 tools, viewport images, portable

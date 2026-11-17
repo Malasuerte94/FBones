@@ -1,5 +1,5 @@
 {
-  "release": "v0.10.0-beta.1",
+  "release": "v0.10.0-beta.2",
   "kind": "source-only",
   "files": [
     {
@@ -15,7 +15,7 @@
     {
       "path": "README.md",
       "bytes": 13587,
-      "sha256": "4ad79da6db1468d3437a9543a1f28abb9ea4cbf57c075054d9890c16f1b12a36"
+      "sha256": "37445db635381b16c85a14ae9f200cf1810f3ebe4cb2c7419c180ea69b2e9db9"
     },
     {
       "path": "CONTRIBUTING.md",
@@ -1964,8 +1964,8 @@
     },
     {
       "path": "tests/mcp-schema.test.mjs",
-      "bytes": 5794,
-      "sha256": "6af78ede2f96202c56c07b19b921af19671eb309862714d3a0cf9eeea8a6a689"
+      "bytes": 8316,
+      "sha256": "5be971da194d1e968f13a45431fd0687bc6e2e134e21fa4f32bacbcec2487455"
     },
     {
       "path": "tests/mcp-stdio.test.mjs",
@@ -2179,8 +2179,8 @@
     },
     {
       "path": "scripts/generate-mcp-schema.mjs",
-      "bytes": 12039,
-      "sha256": "e637582dc9c54c8ab63877cf6cf48740fbf7a25780d2405af7a645c9a4e6c060"
+      "bytes": 12222,
+      "sha256": "dac568a84c74a9d952e0347ea29c659f4703e8ee01e7d7adc86f90e74fad064f"
     },
     {
       "path": "scripts/import-windows-results.py",
@@ -2705,7 +2705,7 @@
     {
       "path": "scripts/prepare-public-release.py",
       "bytes": 9458,
-      "sha256": "a670fe69a877c1cec9cb6ff5723dad9f7422c715060070302ad0cf2e4edc234b"
+      "sha256": "b8fb43b263fee8836fdecfb371c7b130274a4a092716a3bca3b26889702033d7"
     },
     {
       "path": "scripts/prepare-runtime-release.py",
@@ -2855,7 +2855,7 @@
     {
       "path": "docs/ROADMAP.md",
       "bytes": 8974,
-      "sha256": "9b0d46441e1ff3b2508b54763c0f65448052c22a64228be91af8bef57b96b637"
+      "sha256": "480118167cb532829540f2474df7a40178346def8f000bfa4cdd3e7d9ab7e72d"
     },
     {
       "path": "docs/SLOT-ATTACHMENTS-4.3.26.md",
@@ -2864,13 +2864,13 @@
     },
     {
       "path": "docs/STATE.md",
-      "bytes": 44042,
-      "sha256": "40beec64d2255d4b17880cb809ad9df3fc203d2d738accc40d62a623ceead394"
+      "bytes": 44818,
+      "sha256": "c7367bfa37719d19006ec169ebd1c4acf5db0263df680b3f00ac930d27332e13"
     },
     {
       "path": "docs/TASKS.md",
       "bytes": 24819,
-      "sha256": "11592421f3481a2c0ddc7cfffb3960032bbded4594d2da5ced0eafd7a43170b9"
+      "sha256": "6fc41d50065097903343c6decf6b1ce74e67687919256df2aea8546c9a4b9836"
     },
     {
       "path": "docs/TESTING.md",
@@ -2899,8 +2899,13 @@
     },
     {
       "path": "docs/releases/v0.10.0-beta.1.md",
-      "bytes": 3072,
-      "sha256": "93238bcc10ce4d6928548c5ddcb1b1b43ecb9aeb2b9ba3240d150da36975f1c3"
+      "bytes": 495,
+      "sha256": "dc43d9a6a8261684c9b2519730bafe8ba677f2788df4debd6a680698336fbfac"
+    },
+    {
+      "path": "docs/releases/v0.10.0-beta.2.md",
+      "bytes": 3191,
+      "sha256": "518953901658bf8d39538d90d8bbb4d288cc27acfee762fa752c283b1187025e"
     },
     {
       "path": "docs/releases/v0.9.4-beta.1.md",
@@ -3569,8 +3574,8 @@
     },
     {
       "path": "docs/research/MCP-ACCEPTANCE-CHECKLIST-2026-11-17.md",
-      "bytes": 14658,
-      "sha256": "86cfb0e8f60d2fa3f3ffac05d343c27929b6c1afc1d274591ed140fa0233d6bc"
+      "bytes": 16953,
+      "sha256": "a889dde8cbbab40e54fe058965fa39e3262a5ffa609b9f18fb602e5b529c047e"
     },
     {
       "path": "docs/research/MCP-DATA-GATE-2026-11-17.md",
@@ -3596,6 +3601,11 @@
       "path": "docs/research/MCP-RESET-REJECTION-UI-GATE-2026-11-17.md",
       "bytes": 2331,
       "sha256": "355768af2f48a812aa8cc6c6c4167dd02744600512cebf78b706026bf009e6ca"
+    },
+    {
+      "path": "docs/research/MCP-SCHEMA-CHECKOUT-EOL-UI-GATE-2026-11-17.md",
+      "bytes": 1915,
+      "sha256": "7e4b8ec6657db4ac2693e14bb62dcdc73a73d40009f393a737a6364327fd9ad5"
     },
     {
       "path": "docs/research/MCP-UI-GATE-2026-11-17.md",

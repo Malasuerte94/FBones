@@ -14,14 +14,14 @@ Build rigs, paint weights, and animate offline on Windows, macOS, and Linux. Con
 
 ## Download
 
-**FBones `v0.10.0-beta.1` — desktop app and developer runtime.** The release workflow publishes these downloads only after the build, UI, runtime and signing gates pass. [Release page](https://github.com/Malasuerte94/FBones/releases/tag/v0.10.0-beta.1) · [All published releases](https://github.com/Malasuerte94/FBones/releases).
+**FBones `v0.10.0-beta.2` — desktop app and developer runtime.** The release workflow publishes these downloads only after the build, UI, runtime and signing gates pass. [Release page](https://github.com/Malasuerte94/FBones/releases/tag/v0.10.0-beta.2) · [All published releases](https://github.com/Malasuerte94/FBones/releases).
 
 | Download | Platform / use |
 | --- | --- |
-| [Windows installer (.exe)](https://github.com/Malasuerte94/FBones/releases/download/v0.10.0-beta.1/FBones_0.10.0_x64-setup.exe) | Windows x64 desktop app |
-| [macOS disk image (.dmg)](https://github.com/Malasuerte94/FBones/releases/download/v0.10.0-beta.1/FBones_0.10.0_universal.dmg) | macOS 13+; Intel and Apple Silicon |
-| [Linux AppImage](https://github.com/Malasuerte94/FBones/releases/download/v0.10.0-beta.1/FBones_0.10.0_amd64.AppImage) · [Debian package (.deb)](https://github.com/Malasuerte94/FBones/releases/download/v0.10.0-beta.1/FBones_0.10.0_amd64.deb) | Linux x64 desktop app |
-| [Developer runtime (.tgz)](https://github.com/Malasuerte94/FBones/releases/download/v0.10.0-beta.1/fbones-runtime-0.1.0-beta.1.tgz) | Node/browser player with optional PixiJS 8 view |
+| [Windows installer (.exe)](https://github.com/Malasuerte94/FBones/releases/download/v0.10.0-beta.2/FBones_0.10.0_x64-setup.exe) | Windows x64 desktop app |
+| [macOS disk image (.dmg)](https://github.com/Malasuerte94/FBones/releases/download/v0.10.0-beta.2/FBones_0.10.0_universal.dmg) | macOS 13+; Intel and Apple Silicon |
+| [Linux AppImage](https://github.com/Malasuerte94/FBones/releases/download/v0.10.0-beta.2/FBones_0.10.0_amd64.AppImage) · [Debian package (.deb)](https://github.com/Malasuerte94/FBones/releases/download/v0.10.0-beta.2/FBones_0.10.0_amd64.deb) | Linux x64 desktop app |
+| [Developer runtime (.tgz)](https://github.com/Malasuerte94/FBones/releases/download/v0.10.0-beta.2/fbones-runtime-0.1.0-beta.1.tgz) | Node/browser player with optional PixiJS 8 view |
 
 Install the downloaded runtime in your game project:
 
@@ -29,7 +29,7 @@ Install the downloaded runtime in your game project:
 npm install ./fbones-runtime-0.1.0-beta.1.tgz
 ```
 
-Early beta: Windows installer is unsigned; macOS is ad-hoc signed without Developer ID or notarization. Earlier 0.9.5→0.9.6 upgrade acceptance retains its recorded platform scope; it does not establish an installed 0.10.0 upgrade. Installation/restart remains explicit. See [release scope and checks](docs/releases/v0.10.0-beta.1.md) and the [current checkpoint](docs/STATE.md).
+Early beta: Windows installer is unsigned; macOS is ad-hoc signed without Developer ID or notarization. Earlier 0.9.5→0.9.6 upgrade acceptance retains its recorded platform scope; it does not establish an installed 0.10.0 upgrade. Installation/restart remains explicit. See [release scope and checks](docs/releases/v0.10.0-beta.2.md) and the [current checkpoint](docs/STATE.md).
 
 ![FBones Animate workspace with a rig, animation timeline, and property controls](docs/screenshots/animate-dopesheet.png)
 
@@ -77,7 +77,7 @@ Unsupported structures remain inspection-only rather than being discarded to mak
 
 ## Getting started
 
-Use the [desktop app downloads](#download) for your platform. The application displays **0.10.0**; the release tag is **`v0.10.0-beta.1`**. Its installers and runtime are published together only after the required checks pass. Source code is also included in the [release assets](https://github.com/Malasuerte94/FBones/releases/tag/v0.10.0-beta.1).
+Use the [desktop app downloads](#download) for your platform. The application displays **0.10.0**; the release tag is **`v0.10.0-beta.2`**. Its installers and runtime are published together only after the required checks pass. Source code is also included in the [release assets](https://github.com/Malasuerte94/FBones/releases/tag/v0.10.0-beta.2).
 
 To build from source, install **Node.js 22.12+**, **pnpm 11.1.0**, **Rust 1.93+**, and the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/).
 
@@ -98,7 +98,7 @@ The independent **`@fbones/runtime` 0.1.0-beta.1** package plays the supported F
 
 In the desktop editor, choose **File → Export runtime** and select a destination folder. The new bundle contains `skeleton.fbones.runtime.json` and referenced PNG/WAV resources. This separate game export does not replace the binary `.fbones` authoring format or bake temporary poses into saved keys.
 
-Download the [runtime archive](https://github.com/Malasuerte94/FBones/releases/download/v0.10.0-beta.1/fbones-runtime-0.1.0-beta.1.tgz) from the gated [beta release](https://github.com/Malasuerte94/FBones/releases/tag/v0.10.0-beta.1), then use the install command above. To build the package from source:
+Download the [runtime archive](https://github.com/Malasuerte94/FBones/releases/download/v0.10.0-beta.2/fbones-runtime-0.1.0-beta.1.tgz) from the gated [beta release](https://github.com/Malasuerte94/FBones/releases/tag/v0.10.0-beta.2), then use the install command above. To build the package from source:
 
 ```sh
 pnpm build:runtime
@@ -125,7 +125,7 @@ cargo test --workspace --locked
 
 For the full browser UI suite, install Chromium or set `CHROME_BINARY`, run `cargo fetch --locked` once, build the runtime with `pnpm build:runtime`, then run `pnpm test:ui`. It uses the production CSP and isolated instances of the real Rust Session, including shipped-runtime GPU checks. See [development](docs/DEVELOPMENT.md) and [testing](docs/TESTING.md).
 
-The release workflow requires three-platform builds, native tests, production-CSP UI/runtime checks, an independent official-client MCP run against an actual Linux editor, and package/source/signature/version gates before publishing installers. Tests and screenshots prove their named scenarios; they do not establish every Spine feature or native interaction on every platform. See the [release notes](docs/releases/v0.10.0-beta.1.md) and [checkpoint](docs/STATE.md) for evidence and limits.
+The release workflow requires three-platform builds, native tests, production-CSP UI/runtime checks, an independent official-client MCP run against an actual Linux editor, and package/source/signature/version gates before publishing installers. Tests and screenshots prove their named scenarios; they do not establish every Spine feature or native interaction on every platform. See the [release notes](docs/releases/v0.10.0-beta.2.md) and [checkpoint](docs/STATE.md) for evidence and limits.
 
 ## License
 

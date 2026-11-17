@@ -5,8 +5,7 @@
 User authorizes commit, push and a new release after finishing MCP, public/developer
 MCP-first documentation and three real-project GitHub screenshots. Implementation
 and local acceptance are complete; publication/hosted CI verification remain active.
-Package/Tauri/Cargo version0.10.0 agree; next immutable tagv0.10.0-beta.1 is not yet
-pushed. Never replace existing0.9.6 release assets or selected Windows images.
+Package/Tauri/Cargo version0.10.0 agree; immutable tagv0.10.0-beta.1 was pushed, and beta2 is now being prepared. Never replace existing0.9.6 release assets or selected Windows images.
 
 Current MCP:23 tools/86 native edit variants/36 nested inputs, actual visible
 Session, authenticated IPv4 loopback HTTP, remembered per-profile address/token,
@@ -40,7 +39,7 @@ all phases; negative receipts are retained unchanged.
 
 Final local checks:127production-CSP Chromium/real-Rust UI pass;370native pass/
 2existingignored;105Scene/16default format,7research and103legacy/1ignored pass;
-463JavaScript pass/1existingPhysics skip. Runtime16package+24native-export samples
+464JavaScript pass/1existingPhysics skip. Runtime16package+24native-export samples
 pass; typechecks, web build, strict all-target Clippy and rustfmt pass. Linux CI
 workflow now requires matching actual GTK/official-client/clipboard acceptance
 before release, in addition to the three-platform/package/source/signature gates.
@@ -63,25 +62,34 @@ and README link/image checker pass. Original user folder and32-file Ubuntu copy
 hashes remain unchanged; raw project/JSON/PNGs and credentials stay private.
 Only authorized editor screenshots enter Git/source archives.
 
-Root .git is unavailable; clean public clone `.local/mcp-release-repo` is main
-51b38f7. Authorized SSH authentication and push dry-run succeed. Prepare final
-reviewed export with `scripts/prepare-public-release.py`; copy its reviewed tree/
-manifest into the clone, inspect diff, commit/push main+new tag, then observe exact
-CI jobs/Latest assets/checksums/signatures/versions before closing F313 or the goal.
-The previous996-file archive audit is pre-final only; regenerate after these edits.
+Commit7eb094ff471e5b584762811762e5f6fe32093a7d and immutable beta1 tag were
+atomically pushed. Public README/AI guide/3PNGs independently match reviewed bytes.
+Tag run44108608053 and main44108611085 have actual hosted jobs; Windows failed
+at JS schema drift verification (CRLF checkout versus LF), before native tests.
+Job134127709364 raw log retained; other Linux/Mac jobs remain independently live.
+Do not retag/delete beta1 or relabel its failures. No release/assets published yet.
+Paired DATA/UI audit and regression now normalize only CRLFpairs for the exact
+comparison. Canonical JSON is unchanged; relocated full-CRLF checkout passes and
+semantic drift/loneCR/otherformatting still reject.6schema checks pass. Prepare
+new immutable v0.10.0-beta.2 with the same plain application version0.10.0; hosted
+CI/publication/checksum/signature verification remain required before goal closure.
+Export1001file/1002member ece96f19 matched the pushed beta1 snapshot, not the later
+checker fix; regenerate reviewed source/manifest before beta2 commit.
 
 Prior protected user normal164d057d executable was preserved at immutable
 `.local/mcp-2026-11-17/builds/<sha>/FBones`; its ownership receipt is updated. Own
 acceptance processes all have retained terminal receipts; do not operate user
-windows. Native availability launch of final0.10 and end-of-session cleanup are
-still due. Private Xvfb92 via exec54345 and extracted local tools (~6.5MiB) remain
+windows. Normal current-source0.10 build8f00 is now handed to user as own210243/
+start2423656, separate profile, renderer=webgl, protected immutable executable;
+normal-0.10-launch.json binds it. No availability failure or OS-gesture claim.
+End-of-session cleanup/disk remeasure remain due. Private Xvfb92 via exec54345 and extracted local tools (~6.5MiB) remain
 needed until final native checks; installed pinned SDK is retained for reproduction.
 Earlier cleanup234,303,008B plus agent-owned24,014,436B npm scratch and42,808,901B
 isolated diagnostic target retain their scopes. Final disk remeasure/own disposable
 workspace and old snapshot cleanup remain due; last Linux~814GiB/hostG~3.6GiB.
 No original operation, global package/settings change or physical-recovery claim.
 
-Next: final privacy/export review and authorized commit/push/tag; retain live CI
+Next: beta2 privacy/export review and authorized commit/push/newtag; retain live CI
 IDs/terminal outcomes, verify actual publication and then update this checkpoint.
 Preserve accepted90% Physics/Match/native-upgrade evidence; no old probes resumed.
 [Task](tasks/F313-mcp.md), [AI guide](MCP.md), [acceptance checklist](research/MCP-ACCEPTANCE-CHECKLIST-2026-11-17.md).

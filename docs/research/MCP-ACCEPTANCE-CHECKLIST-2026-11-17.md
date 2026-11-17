@@ -178,3 +178,37 @@ inclusion wording, regenerate/audit the final source archive, and observe actual
 commit/push/CI/release assets and signatures before claiming publication. The
 older reviewed996-file source snapshot stays historical; its digest never proves
 the current later source tree.
+
+## Windows schema-checkout DATA gate
+
+Hosted main/tag Windows JavaScript checks exposed a tooling-only failure: the
+checked-out generated JSON begins with CRLF, while the generator compares the
+entire text against `JSON.stringify(...,null,2)` with LF. Direct source inspection
+confirms the current `--check` uses exact unnormalized `assert.equal` and the
+repository has no root `.gitattributes` overriding checkout behavior. The reported
+failure is line-ending conversion, not a native/product/schema semantic failure;
+Windows product/native checks had not yet run at that failed stage.
+
+Chosen correction: normalize only CRLF pairs to LF in the text read for drift
+comparison. Keep generation LF-canonical and preserve exact comparison of every
+other character. Do not parse/reformat the checked-in JSON, ignore arbitrary
+whitespace, change schemas, edit global Git settings, move the beta1 tag or infer
+a passing Windows build. A disposable relocated checkout containing CRLF Rust
+sources/script/JSON must pass; separate altered-semantic and other-formatting
+fixtures must still fail. This choice affects contributor verification only,
+with no new editor behavior/appearance or reference-parity claim. Hosted reruns
+and a new immutable beta2 release remain coordinator work after the local fix.
+
+The paired [UI checkout gate](MCP-SCHEMA-CHECKOUT-EOL-UI-GATE-2026-11-17.md)
+confirms no visual/control/native contract change. The new relocated CRLF checkout
+regression was first run against the unmodified generator and reproduced the
+same `mcp_edits.json is stale` failure with actual CRLF versus expected LF. After
+the one readback-normalization fix, all6 schema tests pass. Its real generator
+subprocess now accepts CRLF Rust/script/JSON input without rewriting files and
+still rejects semantic changes independently in both generated schemas, a lone
+CR and extra indentation. `--check` also passes the ordinary checkout. Canonical
+mcp_edits/catalog JSON bytes are independently equal to the previously prepared
+release clone; no regeneration/contract/native source modification occurred.
+The disposable relocated checkout is removed by the test on success or failure.
+Hosted Windows reruns and beta2 publication remain unproven until observed; the
+failed immutable beta1 remains unchanged.
