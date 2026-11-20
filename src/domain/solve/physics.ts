@@ -8,15 +8,18 @@ const spring=():Spring=>({lastTime:null,remaining:0,anchor:[0,0],origin:[0,0],ti
 const visible=(c:Oscillator,fraction:number)=>c.position-c.lag*Math.max(0,1-fraction);
 function tick(c:Oscillator,force:number,strength:number,mass:number,step:number,retention:number):void{c.velocity+=(force-strength*c.position)*step/mass;c.position+=c.velocity*step;c.velocity*=retention;}
 function cloneSpring(s:Spring):Spring{return{...s,anchor:[...s.anchor],origin:[...s.origin],tip:[...s.tip],channels:s.channels.map(c=>({...c})) as Spring['channels']};}
+export function physicsLayoutKey(scene:InternalScene):string{
+ return JSON.stringify([scene.bones.map(b=>b.id),scene.constraints]);
+}
 /** One instance per document/playback instance. A failed evaluation commits none of it. */
 export class PhysicsState {
  private layout='';private springs:Spring[]=[];
  clear():void{this.layout='';this.springs=[];}
  clone():PhysicsState{const copy=new PhysicsState();copy.layout=this.layout;copy.springs=this.springs.map(cloneSpring);return copy;}
  commit(next:PhysicsState):void{this.layout=next.layout;this.springs=next.springs;}
- prepare(scene:InternalScene,mode:StepMode):void{
+ prepare(scene:InternalScene,mode:StepMode,preparedLayout?:string):void{
   if((mode.type==='reset'||mode.type==='update')&&(!Number.isFinite(mode.time)||mode.time<0))fail('InvalidTime');
-  const layout=JSON.stringify([scene.bones.map(b=>b.id),scene.constraints]);
+  const layout=preparedLayout??physicsLayoutKey(scene);
   const backwards=mode.type==='update'&&this.springs.some(s=>s.lastTime!==null&&mode.time<s.lastTime);
   if(this.layout!==layout||mode.type==='reset'||backwards){this.layout=layout;this.springs=scene.constraints.map(spring);}
  }

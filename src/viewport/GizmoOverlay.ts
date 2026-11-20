@@ -26,7 +26,7 @@ export class TransformGizmo {
   hide() { this.container.visible = false; }
 
   draw(tool: GizmoTool, origin: GizmoPoint, hover: GizmoHandle | null, mode: PivotMode,
-    count: number, satellites: GizmoPoint[], draft?: GizmoFeedback, bounds?: { width: number; height: number },basis:GizmoBasis=WORLD_GIZMO_BASIS,subject:'bones'|'images'='bones',pivotHover=false) {
+    count: number, satellites: GizmoPoint[], draft?: GizmoFeedback, bounds?: { width: number; height: number },basis:GizmoBasis=WORLD_GIZMO_BASIS,subject:'bones'|'images'='bones',pivotHover=false,translationSpace?:'Parent'|'Local') {
     this.container.visible = true;
     const g = this.graphics.clear(), { x, y } = origin;
     const selected = draft?.handle ?? hover;
@@ -79,8 +79,9 @@ export class TransformGizmo {
         if(h.handle==='shearX')g.moveTo(h.x,h.y-13).lineTo(h.x,h.y+13).stroke({color,width:1,alpha:0.5});
         else g.moveTo(h.x-13,h.y).lineTo(h.x+13,h.y).stroke({color,width:1,alpha:0.5});
       } else if(tool==='translate' && (h.kind==='axisX'||h.kind==='axisY')) {
-        const p=h.kind==='axisX'?[h.x,h.y,h.x-9,h.y-4,h.x-9,h.y+4]:[h.x,h.y,h.x-4,h.y+9,h.x+4,h.y+9];
-        g.poly(p).fill(color);
+        const axis=h.kind==='axisX'?basis.x:basis.y;
+        const baseX=h.x-9*axis.x,baseY=h.y-9*axis.y;
+        g.poly([h.x,h.y,baseX+4*axis.y,baseY-4*axis.x,baseX-4*axis.y,baseY+4*axis.x]).fill(color);
       } else g.poly(square(h.x,h.y,h.radius)).fill({color:h.kind==='square'?0x303538:color,alpha:0.95}).stroke({color,width:1.5});
     }
     if(subject==='images'&&(tool==='rotate'||tool==='scale')){
@@ -89,7 +90,8 @@ export class TransformGizmo {
       g.moveTo(x-5,y).lineTo(x+5,y).moveTo(x,y-5).lineTo(x,y+5).stroke({color:pivotHover?0xffffff:ACCENT,width:1.5});
       if(pivotHover)g.circle(x,y,9).stroke({color:0xffffff,width:1.5});
     }
-    const scope=`${tool==='scale'&&subject==='bones'?'Local':'World'} · ${tool==='pose'?'Individual':mode==='individual'?'Individual':'Group'}${count>1?` · ${count} ${subject}`:''}`;
+    const space=translationSpace??(tool==='scale'&&subject==='bones'?'Local':'World');
+    const scope=`${space} · ${tool==='pose'?'Individual':mode==='individual'?'Individual':'Group'}${count>1?` · ${count} ${subject}`:''}`;
     let value='';
     if(draft){const d=draft.delta;
       if(draft.handle==='rotate')value=`${d.rotation.toFixed(1)}°`;

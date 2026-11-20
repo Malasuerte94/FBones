@@ -23,6 +23,12 @@ pub(crate) fn set(
         .iter()
         .flat_map(|clip| &clip.slot_tracks)
     {
+        if enabled && matches!(track, SlotTimeline::Rgb2 { slot: owner, .. } if *owner == slot) {
+            return Err(AppError::new(
+                "InvalidSlotDarkColor",
+                "Tint Black is unavailable on a slot with imported split RGB animation keys.",
+            ));
+        }
         if let SlotTimeline::Rgba { slot: owner, keys } = track {
             if *owner == slot {
                 if enabled

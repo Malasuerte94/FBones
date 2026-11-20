@@ -14,14 +14,14 @@ pub(crate) fn project() -> SceneProject {
         .tracks
         .retain(|t| !(t.bone == 1 && t.channel == BoneChannel::Translate));
     p.animations[0].split_modes = vec![
-        BoneSplitConfig {
+        SplitModeConfig::Bone(BoneSplitConfig {
             bone: 2,
             mode: BoneSplitMode::Scale,
-        },
-        BoneSplitConfig {
+        }),
+        SplitModeConfig::Bone(BoneSplitConfig {
             bone: 1,
             mode: BoneSplitMode::Translate,
-        },
+        }),
     ];
     p.animations[0].tracks.extend([
         BoneTimeline {

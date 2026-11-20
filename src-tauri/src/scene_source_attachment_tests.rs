@@ -123,6 +123,8 @@ fn stateful_source() -> SceneProject {
     ];
     let f = |value| FiniteF32::new(value).unwrap();
     project.wire.as_mut().unwrap().source_state = Some(WireSourceState {
+        stock_cli_field_order: false,
+        project_scalar_32: None,
         skeleton_126: true,
         bone_126: vec![1],
         slot_126: vec![1],
@@ -130,7 +132,9 @@ fn stateful_source() -> SceneProject {
         animation_3: vec![0],
         group_2: [9; 5],
         skeleton_toggles: [true, false, true, false, false, false, true],
+        region_43_order: vec![address(0)],
         mesh_19: vec![(address(1), f(103.5))],
+        ik_56_order: vec![0],
         ik: vec![WireIkSourceState {
             constraint: 0,
             mix_6: f(0.75),
@@ -183,6 +187,7 @@ fn retained_source_snapshots_do_not_drive_none_pose_and_follow_constraint_identi
         .as_ref()
         .unwrap();
     assert_eq!(state.ik[0].constraint, 1);
+    assert_eq!(state.ik_56_order, [1]);
     assert_eq!(state.transform[0].constraint, 2);
     assert_eq!(state.physics[0].constraint, 0);
     assert_eq!(
@@ -205,6 +210,7 @@ fn retained_source_snapshots_do_not_drive_none_pose_and_follow_constraint_identi
         .unwrap();
     assert!(state.physics.is_empty());
     assert_eq!(state.ik[0].constraint, 0);
+    assert_eq!(state.ik_56_order, [0]);
     assert_eq!(state.transform[0].constraint, 1);
     roundtrip(&history.frame().project);
     history.apply(SceneEdit::Undo).unwrap();
@@ -250,6 +256,7 @@ fn source_owner_state_survives_reparent_move_and_history_without_index_reuse() {
         .as_ref()
         .unwrap();
     assert_eq!(state.slot_126, [0]);
+    assert_eq!(state.region_43_order, [address(1)]);
     assert_eq!(state.mesh_19[0].0, address(0));
     history
         .apply(SceneEdit::Rig(

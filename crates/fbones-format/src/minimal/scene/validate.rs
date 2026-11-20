@@ -9,16 +9,73 @@ fn name(value: &str) -> bool {
 fn finite(values: &[f32]) -> bool {
     values.iter().all(|v| v.is_finite())
 }
+fn dense_vertex(vertex: &Vertex, bones: usize, weighted: bool) -> bool {
+    vertex.weights.len() == bones
+        && vertex.positions.len() == bones * 2
+        && finite(&vertex.positions)
+        && vertex
+            .weights
+            .iter()
+            .all(|weight| (0. ..=1.).contains(weight))
+        && (vertex.weights.iter().sum::<f32>() - 1.0).abs() <= 0.0001
+        && (weighted || vertex.weights == [1.0])
+}
 fn indices(values: &[usize], count: usize) -> bool {
     let mut seen = HashSet::new();
     !values.is_empty()
         && values.len() <= 128
         && values.iter().all(|i| *i < count && seen.insert(*i))
 }
+fn same_float_bits(a: &[f32], b: &[f32]) -> bool {
+    a.len() == b.len() && a.iter().zip(b).all(|(a, b)| a.to_bits() == b.to_bits())
+}
+fn linked_meshes(p: &SceneProject) -> Result<(), FormatError> {
+    let mut children = HashSet::new();
+    let mut previous_rank = None;
+    let mesh = |address: AttachmentAddress| {
+        p.slots
+            .get(address.slot)?
+            .attachments
+            .get(address.attachment)?
+            .mesh()
+    };
+    for link in &p.linked_meshes {
+        let rank = p
+            .attachment_order
+            .iter()
+            .position(|a| *a == link.attachment)
+            .ok_or_else(unsupported)?;
+        if !children.insert(link.attachment)
+            || previous_rank.is_some_and(|previous| previous >= rank)
+            || p.linked_mesh(link.source).is_some()
+        {
+            return Err(unsupported());
+        }
+        previous_rank = Some(rank);
+        let child = mesh(link.attachment).ok_or_else(unsupported)?;
+        let source = mesh(link.source).ok_or_else(unsupported)?;
+        if child.weighted != source.weighted
+            || child.hull != source.hull
+            || child.triangles != source.triangles
+            || child.edges != source.edges
+            || child.bones != source.bones
+            || !same_float_bits(&child.uvs, &source.uvs)
+            || child.vertices.len() != source.vertices.len()
+            || !child.vertices.iter().zip(&source.vertices).all(|(a, b)| {
+                same_float_bits(&a.weights, &b.weights)
+                    && same_float_bits(&a.positions, &b.positions)
+            })
+        {
+            return Err(unsupported());
+        }
+    }
+    Ok(())
+}
 pub(super) fn project(p: &SceneProject) -> Result<(), FormatError> {
     super::super::validate_with_bone_limit(&p.rig, MAX_SCENE_BONES)?;
     super::wire::validate(p)?;
     super::constraints_events::validate_definitions(p)?;
+    linked_meshes(p)?;
     if p.images_root.len() > 1024
         || p.images_root.chars().any(char::is_control)
         || p.slots.len() > MAX_SCENE_SLOTS
@@ -29,6 +86,7 @@ pub(super) fn project(p: &SceneProject) -> Result<(), FormatError> {
     if p.animations.is_empty() || p.animations.len() > 64 || !p.fps.is_finite() || p.fps <= 0. {
         return Err(unsupported());
     }
+    super::animation_folders::validate(p)?;
     if p.attachment_sequences.len() > p.attachment_order.len() {
         return Err(unsupported());
     }
@@ -92,16 +150,25 @@ pub(super) fn project(p: &SceneProject) -> Result<(), FormatError> {
     let mut track_count = 0usize;
     let mut extra_domains = 0usize;
     let mut deform_coordinates = 0usize;
-    for animation in &p.animations {
+    for (index, animation) in p.animations.iter().enumerate() {
         let clip_start_tracks = track_count;
         let clip_start_keys = key_count;
-        if !name(&animation.name) || !animation_names.insert(&animation.name) {
+        let qualified = p.qualified_animation_name(index).ok_or_else(unsupported)?;
+        if !name(&animation.name) || !animation_names.insert(qualified) {
             return Err(unsupported());
         }
         let mut split_bones = std::collections::HashMap::new();
-        for row in &animation.split_modes {
+        for row in animation.bone_split_modes() {
             if row.bone >= p.rig.bones.len() || split_bones.insert(row.bone, row.mode).is_some() {
                 return Err(unsupported());
+            }
+        }
+        let mut split_slots = HashSet::new();
+        for row in &animation.split_modes {
+            if let SplitModeConfig::Slot(row) = row {
+                if row.slot >= p.slots.len() || !split_slots.insert(row.slot) {
+                    return Err(unsupported());
+                }
             }
         }
         let mut seen = HashSet::new();
@@ -180,7 +247,7 @@ pub(super) fn project(p: &SceneProject) -> Result<(), FormatError> {
                 previous = key.frame;
             }
         }
-        for row in &animation.split_modes {
+        for row in animation.bone_split_modes() {
             let complete = match row.mode {
                 // Exact source mode1 also occurs with X-only animation.
                 // Absence is no Y timeline, never an empty stored timeline.
@@ -234,11 +301,8 @@ pub(super) fn project(p: &SceneProject) -> Result<(), FormatError> {
         let mut seen_slots = HashSet::new();
         for track in &animation.slot_tracks {
             let slot = p.slots.get(track.slot()).ok_or_else(unsupported)?;
-            let kind = match track {
-                SlotTimeline::Attachment { .. } => 5,
-                SlotTimeline::Rgba { .. } => 4,
-            };
-            if !seen_slots.insert((track.slot(), kind)) {
+            let split = split_slots.contains(&track.slot());
+            if !seen_slots.insert((track.slot(), track.wire())) {
                 return Err(unsupported());
             }
             let frames: Vec<f32> = match track {
@@ -251,6 +315,9 @@ pub(super) fn project(p: &SceneProject) -> Result<(), FormatError> {
                     keys.iter().map(|k| k.frame).collect()
                 }
                 SlotTimeline::Rgba { keys, .. } => {
+                    if split {
+                        return Err(unsupported());
+                    }
                     let dark = p.slot_dark_color(track.slot());
                     for (i, key) in keys.iter().enumerate() {
                         if !finite(&key.values)
@@ -289,6 +356,45 @@ pub(super) fn project(p: &SceneProject) -> Result<(), FormatError> {
                         }
                     }
                     keys.iter().map(|k| k.frame).collect()
+                }
+                SlotTimeline::Rgb2 { keys, .. } => {
+                    // Exact 4.3.26 source uses linear RGB with dormant zero dark lanes.
+                    if !split
+                        || p.slot_dark_color(track.slot()).enabled
+                        || keys.iter().any(|key| {
+                            !matches!(key.curve, SlotColorCurve::Linear)
+                                || key.values[..3].iter().any(|v| !(0. ..=1.).contains(v))
+                                || key.values[3..].iter().any(|v| v.to_bits() != 0)
+                        })
+                    {
+                        return Err(unsupported());
+                    }
+                    keys.iter().map(|key| key.frame).collect()
+                }
+                SlotTimeline::Alpha { keys, .. } => {
+                    if !split {
+                        return Err(unsupported());
+                    }
+                    for (i, key) in keys.iter().enumerate() {
+                        if !(0. ..=1.).contains(&key.values[0]) {
+                            return Err(unsupported());
+                        }
+                        match key.curve {
+                            SlotColorCurve::Linear => (),
+                            SlotColorCurve::Stepped => return Err(unsupported()),
+                            SlotColorCurve::Bezier { controls: [axis] } => {
+                                let next = keys.get(i + 1).ok_or_else(unsupported)?;
+                                if !finite(&axis)
+                                    || !bezier_time_monotone(
+                                        key.frame, next.frame, axis[0], axis[2],
+                                    )
+                                {
+                                    return Err(unsupported());
+                                }
+                            }
+                        }
+                    }
+                    keys.iter().map(|key| key.frame).collect()
                 }
             };
             track_count += 1;
@@ -334,7 +440,11 @@ pub(super) fn project(p: &SceneProject) -> Result<(), FormatError> {
         }
         let mut deformed = HashSet::new();
         for track in &animation.deform_tracks {
-            if !deformed.insert(track.attachment) || track.keys.is_empty() {
+            if !deformed.insert(track.attachment)
+                || track.keys.is_empty()
+                || p.linked_mesh(track.attachment)
+                    .is_some_and(|link| link.inherit_timelines)
+            {
                 return Err(unsupported());
             }
             let attachment = p
@@ -477,7 +587,14 @@ pub(super) fn project(p: &SceneProject) -> Result<(), FormatError> {
             match a {
                 SceneAttachment::Region(_) => (),
                 SceneAttachment::Mesh(m) => {
-                    super::super::meshes::validate_scene_mesh(m, slot.bone, p.rig.bones.len())?;
+                    let address = AttachmentAddress {
+                        slot: slot_index,
+                        attachment: attachment_index,
+                    };
+                    let binding_bone = p
+                        .linked_mesh(address)
+                        .map_or(slot.bone, |link| p.slots[link.source.slot].bone);
+                    super::super::meshes::validate_scene_mesh(m, binding_bone, p.rig.bones.len())?;
                     vertex_count += m.vertices.len();
                 }
                 SceneAttachment::Clipping(c) => {
@@ -497,18 +614,38 @@ pub(super) fn project(p: &SceneProject) -> Result<(), FormatError> {
                             return Err(unsupported());
                         }
                     }
-                    for v in &c.vertices {
-                        if v.weights.len() != c.bones.len()
-                            || v.positions.len() != c.bones.len() * 2
-                            || !finite(&v.positions)
-                            || v.weights
-                                .iter()
-                                .any(|w| !w.is_finite() || *w < 0.0 || *w > 1.0)
-                            || (v.weights.iter().sum::<f32>() - 1.0).abs() > 0.0001
-                            || (!c.weighted && v.weights != [1.0])
-                        {
-                            return Err(unsupported());
-                        }
+                    if !c
+                        .vertices
+                        .iter()
+                        .all(|v| dense_vertex(v, c.bones.len(), c.weighted))
+                    {
+                        return Err(unsupported());
+                    }
+                    vertex_count += n;
+                }
+                SceneAttachment::Path(path) => {
+                    let n = path.vertices.len();
+                    if !(6..=256).contains(&n)
+                        || !n.is_multiple_of(3)
+                        || path.lengths.len() != n / 3
+                        || !indices(&path.bones, p.rig.bones.len())
+                        || (!path.weighted && path.bones != [slot.bone])
+                        || !path
+                            .vertices
+                            .iter()
+                            .all(|v| dense_vertex(v, path.bones.len(), path.weighted))
+                    {
+                        return Err(unsupported());
+                    }
+                    let mut expected = (1..n as u32 - 3)
+                        .step_by(3)
+                        .flat_map(|knot| [knot, knot + 3])
+                        .collect::<Vec<_>>();
+                    if path.closed {
+                        expected.extend([n as u32 - 2, 1]);
+                    }
+                    if path.edges != expected {
+                        return Err(unsupported());
                     }
                     vertex_count += n;
                 }
@@ -569,6 +706,21 @@ pub(super) fn project(p: &SceneProject) -> Result<(), FormatError> {
                             return Err(unsupported());
                         }
                     }
+                }
+            }
+            Constraint::Path(c) => {
+                if c.slot >= p.slots.len()
+                    || !indices(&c.bones, p.rig.bones.len())
+                    || !finite(&[
+                        c.rotation,
+                        c.position,
+                        c.spacing,
+                        c.mix_rotate,
+                        c.mix_x,
+                        c.mix_y,
+                    ])
+                {
+                    return Err(unsupported());
                 }
             }
             Constraint::Physics(c) => {

@@ -23,14 +23,14 @@ fn fixture() -> SceneProject {
         region_order: vec![],
     });
     p.animations[0].split_modes = vec![
-        BoneSplitConfig {
+        SplitModeConfig::Bone(BoneSplitConfig {
             bone: 2,
             mode: BoneSplitMode::Scale,
-        },
-        BoneSplitConfig {
+        }),
+        SplitModeConfig::Bone(BoneSplitConfig {
             bone: 1,
             mode: BoneSplitMode::Translate,
-        },
+        }),
     ];
     for (bone, channel) in [
         (1, BoneChannel::TranslateY),
@@ -128,7 +128,10 @@ fn scalar_key_edit_retains_sibling_modes_setup_and_unrelated_source_bits() {
 fn split_modes_reject_foreign_duplicate_partial_unmarked_and_combined_collisions() {
     let p = fixture();
     let mut bad = p.clone();
-    bad.animations[0].split_modes[0].bone = 99;
+    bad.animations[0].split_modes[0] = SplitModeConfig::Bone(BoneSplitConfig {
+        bone: 99,
+        mode: BoneSplitMode::Scale,
+    });
     assert!(encode_scene_payload(&bad).is_err());
     let mut bad = p.clone();
     let duplicate = bad.animations[0].split_modes[0];
@@ -138,7 +141,10 @@ fn split_modes_reject_foreign_duplicate_partial_unmarked_and_combined_collisions
     bad.animations[0].split_modes.clear();
     assert!(encode_scene_payload(&bad).is_err());
     let mut bad = p.clone();
-    bad.animations[0].split_modes[1].mode = BoneSplitMode::Scale;
+    bad.animations[0].split_modes[1] = SplitModeConfig::Bone(BoneSplitConfig {
+        bone: 1,
+        mode: BoneSplitMode::Scale,
+    });
     assert!(encode_scene_payload(&bad).is_err());
     let mut bad = p.clone();
     // Mode1 still requires X; Y alone is not part of the known profile.

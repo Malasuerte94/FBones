@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {AnimationPhysicsPreview} from '../src/domain/animationPhysicsPreview.ts';
-import {evaluateSampled,PhysicsState} from '../src/domain/solve/index.ts';
+import {evaluateSampled,PhysicsState,prepareSampledEvaluation} from '../src/domain/solve/index.ts';
 const setupBones=[{id:100000007,parent:null,name:'root',x:0.1,y:0,rotation:0,length:40},{id:900000009,parent:100000007,name:'spring',x:40.1,y:0,rotation:0,length:30}];
 const setupConstraints=[{id:31,order:0,name:'spring',type:'physics',bone:900000009,x:1,y:1,scaleX:0,rotate:null,shearX:0,step:.016666668,inertia:.5,strength:100,damping:.85,mass:1,wind:2,gravity:3,mix:1,limit:5000,globals:{inertia:false,strength:false,damping:false,mass:false,wind:false,gravity:false,mix:false}}];
 const clip={id:7,name:'Own preview',duration:60,tracks:[{bone:100000007,channel:'translate',keys:[{id:1,frame:0,values:[0,0],curve:'linear'},{id:2,frame:30,values:[80,15],curve:'linear'}]}],constraintTracks:[{channel:'physics',constraint:31,property:'gravity',keys:[{id:3,frame:0,value:3,curve:'linear'},{id:4,frame:30,value:8,curve:'linear'}]},{channel:'physicsReset',constraint:31,keys:[{id:5,frame:0},{id:6,frame:7.5}]}]};
@@ -48,4 +48,32 @@ test('sampled working coefficients retain spring layout and targeted Reset is ex
  const a=new PhysicsState(),b=new PhysicsState();evaluateSampled(scene,null,a,{type:'reset',time:0},[]);evaluateSampled(scene,null,b,{type:'reset',time:0},[]);
  for(let i=1;i<=20;i++){const pose={constraint:31,type:'physics',inertia:.5,strength:100,damping:Math.fround(.85),mass:1,wind:2,gravity:i/2,mix:1};evaluateSampled(scene,null,a,{type:'update',time:i/60},[pose]);evaluateSampled(scene,null,b,{type:'update',time:i/60},[pose]);}
  const posed=evaluateSampled(scene,null,a,{type:'pose'},[]);const reset=evaluateSampled(scene,null,b,{type:'pose'},[],[31]);assert.notDeepEqual(posed,reset);
+});
+test('prepared animated Setup preserves solver validation, layout and spring state across samples',()=>{
+ const scene=structuredClone({bones:setupBones,constraints:setupConstraints});
+ const prepared=prepareSampledEvaluation(scene),dynamicState=new PhysicsState(),preparedState=new PhysicsState();
+ for(let i=0;i<=30;i++){
+  const mode={type:i===0?'reset':'update',time:i/60},resets=i===9?[31]:[];
+  const poses=[{constraint:31,type:'physics',inertia:.5,strength:100,damping:.85,mass:1,wind:2,gravity:i/2,mix:1}];
+  const result=prepared(null,preparedState,mode,poses,resets);
+  assert.deepEqual(result,evaluateSampled(scene,null,dynamicState,mode,poses,resets));
+  assert.deepEqual(preparedState,dynamicState);
+ }
+
+ const before=preparedState.clone();
+ assert.throws(()=>prepared([],preparedState,{type:'pose'},[]),/InvalidPoseCount/);
+ assert.throws(()=>prepared(null,preparedState,{type:'update',time:NaN},[]),/InvalidTime/);
+ assert.throws(()=>prepared(null,preparedState,{type:'pose'},[],[95]),/InvalidConstraint/);
+ assert.deepEqual(preparedState,before);
+
+ // The same setup still shares spring layout when switching evaluator routes.
+ const mode={type:'update',time:.55};
+ const writtenByPrepared=prepared(null,preparedState,mode,[]);
+ assert.deepEqual(writtenByPrepared,evaluateSampled(scene,null,dynamicState,mode,[]));
+ const next={type:'update',time:.58};
+ assert.deepEqual(evaluateSampled(scene,null,preparedState,next,[]),prepared(null,dynamicState,next,[]));
+ assert.deepEqual(preparedState,dynamicState);
+ const altered=structuredClone(scene);
+ altered.constraints[0].mix=.5;
+ assert.deepEqual(evaluateSampled(altered,null,dynamicState,next,[]),evaluateSampled(altered,null,new PhysicsState(),next,[]));
 });

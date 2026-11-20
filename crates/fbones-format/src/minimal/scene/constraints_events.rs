@@ -72,6 +72,39 @@ macro_rules! axes_curve {
 axes_curve!(IkKeyCurve, 2);
 axes_curve!(TransformMixCurve, 6);
 #[derive(Clone, Copy, Debug)]
+pub enum PathKeyCurve<const N: usize> {
+    Linear,
+    Stepped,
+    Bezier { controls: [[f32; 4]; N] },
+}
+impl<const N: usize> PartialEq for PathKeyCurve<N> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Linear, Self::Linear) | (Self::Stepped, Self::Stepped) => true,
+            (Self::Bezier { controls: a }, Self::Bezier { controls: b }) => a
+                .iter()
+                .flatten()
+                .map(|v| v.to_bits())
+                .eq(b.iter().flatten().map(|v| v.to_bits())),
+            _ => false,
+        }
+    }
+}
+#[derive(Clone, Debug)]
+pub struct PathKeyframe<const N: usize> {
+    pub frame: f32,
+    /// Position and spacing are scalar. Mix channels are rotation, X, and Y.
+    pub values: [f32; N],
+    pub curve: PathKeyCurve<N>,
+}
+impl<const N: usize> PartialEq for PathKeyframe<N> {
+    fn eq(&self, other: &Self) -> bool {
+        self.frame.to_bits() == other.frame.to_bits()
+            && self.values.map(f32::to_bits) == other.values.map(f32::to_bits)
+            && self.curve == other.curve
+    }
+}
+#[derive(Clone, Copy, Debug)]
 pub enum PhysicsCurve {
     Linear,
     Stepped,
@@ -154,6 +187,18 @@ pub enum ConstraintTimeline {
         constraint: usize,
         keys: Vec<TransformMixKeyframe>,
     },
+    PathPosition {
+        constraint: usize,
+        keys: Vec<PathKeyframe<1>>,
+    },
+    PathSpacing {
+        constraint: usize,
+        keys: Vec<PathKeyframe<1>>,
+    },
+    PathMix {
+        constraint: usize,
+        keys: Vec<PathKeyframe<3>>,
+    },
     Physics {
         constraint: usize,
         property: PhysicsProperty,
@@ -169,22 +214,53 @@ impl ConstraintTimeline {
         match self {
             Self::Ik { constraint, .. }
             | Self::TransformMix { constraint, .. }
+            | Self::PathPosition { constraint, .. }
+            | Self::PathSpacing { constraint, .. }
+            | Self::PathMix { constraint, .. }
             | Self::Physics { constraint, .. }
             | Self::PhysicsReset { constraint, .. } => *constraint,
+        }
+    }
+    pub fn set_constraint(&mut self, index: usize) {
+        match self {
+            Self::Ik { constraint, .. }
+            | Self::TransformMix { constraint, .. }
+            | Self::PathPosition { constraint, .. }
+            | Self::PathSpacing { constraint, .. }
+            | Self::PathMix { constraint, .. }
+            | Self::Physics { constraint, .. }
+            | Self::PhysicsReset { constraint, .. } => *constraint = index,
         }
     }
     pub fn kind(&self) -> u32 {
         match self {
             Self::Ik { .. } => 7,
             Self::TransformMix { .. } => 8,
+            Self::PathPosition { .. } => 9,
+            Self::PathSpacing { .. } => 10,
+            Self::PathMix { .. } => 11,
             Self::Physics { property, .. } => 23 + property.index() as u32,
             Self::PhysicsReset { .. } => 30,
         }
     }
     pub fn owner_bone(&self, p: &SceneProject) -> Result<usize, FormatError> {
-        match (p.constraints.get(self.constraint()), self) {
+        self.group_bone(&p.constraints, &p.slots)
+    }
+    pub(in crate::minimal) fn group_bone(
+        &self,
+        constraints: &[Constraint],
+        slots: &[super::SceneSlot],
+    ) -> Result<usize, FormatError> {
+        match (constraints.get(self.constraint()), self) {
             (Some(Constraint::Ik(c)), Self::Ik { .. }) => Ok(c.target),
             (Some(Constraint::Transform(c)), Self::TransformMix { .. }) => Ok(c.source),
+            (
+                Some(Constraint::Path(c)),
+                Self::PathPosition { .. } | Self::PathSpacing { .. } | Self::PathMix { .. },
+            ) => slots
+                .get(c.slot)
+                .map(|slot| slot.bone)
+                .ok_or(FormatError::UnsupportedProfile),
             (Some(Constraint::Physics(c)), Self::Physics { .. } | Self::PhysicsReset { .. }) => {
                 Ok(c.bone)
             }
@@ -287,6 +363,23 @@ pub(crate) struct ConstraintWireKey {
     pub code: u32,
     pub controls: Option<Vec<[f32; 4]>>,
 }
+fn path_wire_keys<const N: usize>(keys: &[PathKeyframe<N>]) -> Vec<ConstraintWireKey> {
+    keys.iter()
+        .map(|key| {
+            let (code, controls) = match key.curve {
+                PathKeyCurve::Linear => (0, None),
+                PathKeyCurve::Stepped => (2, None),
+                PathKeyCurve::Bezier { controls } => (1, Some(controls.to_vec())),
+            };
+            ConstraintWireKey {
+                frame: key.frame,
+                values: key.values.to_vec(),
+                code,
+                controls,
+            }
+        })
+        .collect()
+}
 impl ConstraintTimeline {
     pub(crate) fn wire_keys(&self) -> Vec<ConstraintWireKey> {
         match self {
@@ -328,6 +421,10 @@ impl ConstraintTimeline {
                     }
                 })
                 .collect(),
+            Self::PathPosition { keys, .. } | Self::PathSpacing { keys, .. } => {
+                path_wire_keys(keys)
+            }
+            Self::PathMix { keys, .. } => path_wire_keys(keys),
             Self::Physics { keys, .. } => keys
                 .iter()
                 .map(|k| {

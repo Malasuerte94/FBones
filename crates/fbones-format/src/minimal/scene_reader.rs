@@ -2,6 +2,7 @@
 //! to exact, complete reserialization through the independent scene writer.
 use super::*;
 use crate::minimal::scene::*;
+use std::ops::Range;
 fn number(fields: &BTreeMap<u32, Value>, tag: u32) -> Result<f32> {
     match fields.get(&tag) {
         Some(Value::Float(v)) => Ok(*v),
@@ -65,6 +66,37 @@ fn attachment(
     let Reference::Domain(i) = reference else {
         return unsupported();
     };
+    if r.domain[i].class == 69 {
+        let fields = r.fields(reference, 69)?;
+        let binding = r.fields(Reader::field_reference(fields, 28)?, 53)?;
+        if Reader::field_reference(binding, 0)? != reference {
+            return unsupported();
+        }
+        let points = vertices(r, binding)?;
+        let edges = r.int_list(Reader::field_reference(fields, 8)?, 16)?;
+        if uint(fields, 7)? as usize != points.len() * 4 || edges.iter().any(|edge| edge & 1 != 0) {
+            return unsupported();
+        }
+        let lengths = r
+            .float_list(Reader::field_reference(fields, 15)?)?
+            .into_iter()
+            .map(FiniteF32::new)
+            .collect::<Result<Vec<_>>>()?;
+        return Ok((
+            SceneAttachment::Path(PathAttachment {
+                name: r.text(Reader::field_reference(fields, 1)?)?,
+                closed: flag(fields, 12)?,
+                constant_speed: flag(fields, 13)?,
+                color: r.color(Reader::field_reference(fields, 31)?)?,
+                weighted: flag(fields, 30)?,
+                bones: bone_indices(r, binding, 1, bones)?,
+                vertices: points,
+                edges: edges.into_iter().map(|edge| edge >> 1).collect(),
+                lengths,
+            }),
+            Reader::field_reference(fields, 0)?,
+        ));
+    }
     if r.domain[i].class != 84 {
         let (a, owner) = r.attachment(reference, bones)?;
         return Ok((
@@ -109,7 +141,12 @@ fn property(class: u32, base: u32) -> Result<TransformProperty> {
         .copied()
         .ok_or(FormatError::UnsupportedProfile)
 }
-fn constraint(r: &Reader<'_>, reference: Reference, bones: &[Reference]) -> Result<Constraint> {
+fn constraint(
+    r: &Reader<'_>,
+    reference: Reference,
+    bones: &[Reference],
+    slots: &[Reference],
+) -> Result<Constraint> {
     let Reference::Domain(i) = reference else {
         return unsupported();
     };
@@ -203,6 +240,23 @@ fn constraint(r: &Reader<'_>, reference: Reference, bones: &[Reference]) -> Resu
                 editor_ranges,
             }))
         }
+        72 => {
+            let mode = |tag| r.enum_value(Reader::field_reference(f, tag)?);
+            Ok(Constraint::Path(PathConstraint {
+                name,
+                bones: bone_indices(r, f, 2, bones)?,
+                slot: index(Reader::field_reference(f, 3)?, slots)?,
+                position_mode: PathPositionMode::from_wire(mode(16)?)?,
+                spacing_mode: PathSpacingMode::from_wire(mode(14)?)?,
+                rotate_mode: PathRotateMode::from_wire(mode(15)?)?,
+                rotation: number(f, 10)?,
+                position: number(f, 4)?,
+                spacing: number(f, 12)?,
+                mix_rotate: number(f, 8)?,
+                mix_x: number(f, 6)?,
+                mix_y: number(f, 23)?,
+            }))
+        }
         121 => {
             let Some(Value::AngularBits(rotate)) = f.get(&7) else {
                 return unsupported();
@@ -238,7 +292,81 @@ fn constraint(r: &Reader<'_>, reference: Reference, bones: &[Reference]) -> Resu
         _ => unsupported(),
     }
 }
-fn read_graph(payload: &[u8]) -> Result<(Reader<'_>, Reference, [u8; 16])> {
+fn animation_folders(
+    r: &Reader<'_>,
+    skeleton: &BTreeMap<u32, Value>,
+    animations: &[Reference],
+) -> Result<(Option<AnimationFolderLayout>, Vec<Reference>)> {
+    use crate::minimal::scene::animation_folders::{FOLDER_GROUP_MODE, MAX_ANIMATION_FOLDERS};
+
+    let root_ref = Reader::field_reference(skeleton, 37)?;
+    let root = r.fields(root_ref, 108)?;
+    let members = r.array(Reader::field_reference(root, 5)?)?;
+    if Reader::field_reference(root, 3)? != Reference::Null
+        || Reader::field_reference(root, 1)? != Reference::Null
+        || members.len() > animations.len() + MAX_ANIMATION_FOLDERS
+    {
+        return unsupported();
+    }
+    let mut seen = vec![false; animations.len()];
+    let mut clip_index = |clip, group| {
+        let f = r.fields(clip, 18)?;
+        let index = index(clip, animations)?;
+        if Reader::field_reference(f, 7)? != group || std::mem::replace(&mut seen[index], true) {
+            return unsupported();
+        }
+        Ok(index)
+    };
+    let mut entries = Vec::with_capacity(members.len());
+    let mut folder_refs = Vec::new();
+    for &member in members {
+        let Reference::Domain(id) = member else {
+            return unsupported();
+        };
+        match r.domain[id].class {
+            18 => entries.push(AnimationFolderEntry::Clip(clip_index(member, root_ref)?)),
+            108 => {
+                if folder_refs.len() >= MAX_ANIMATION_FOLDERS || folder_refs.contains(&member) {
+                    return unsupported();
+                }
+                let folder = r.fields(member, 108)?;
+                if Reader::field_reference(folder, 3)? != root_ref
+                    || uint(folder, 2)? != FOLDER_GROUP_MODE
+                {
+                    return unsupported();
+                }
+                let clips = r.array(Reader::field_reference(folder, 5)?)?;
+                if clips.len() > animations.len() {
+                    return unsupported();
+                }
+                entries.push(AnimationFolderEntry::Folder(AnimationFolder {
+                    name: r.text(Reader::field_reference(folder, 1)?)?,
+                    clips: clips
+                        .iter()
+                        .map(|&clip| clip_index(clip, member))
+                        .collect::<Result<_>>()?,
+                }));
+                folder_refs.push(member);
+            }
+            _ => return unsupported(),
+        }
+    }
+    if seen.iter().any(|present| !present) {
+        return unsupported();
+    }
+    if folder_refs.is_empty() {
+        return Ok((None, folder_refs));
+    }
+    if uint(root, 2)? != FOLDER_GROUP_MODE {
+        return unsupported();
+    }
+    Ok((Some(AnimationFolderLayout { entries }), folder_refs))
+}
+
+fn read_graph(
+    payload: &[u8],
+    capture_mesh_sources: bool,
+) -> Result<(Reader<'_>, Reference, [u8; 16])> {
     if !payload.starts_with(&[
         0x48, 0xb0, 0x20, 0xb0, 0x20, b'4', b'.', b'3', b'.', b'2', 0xb6, 1,
     ]) {
@@ -262,6 +390,11 @@ fn read_graph(payload: &[u8]) -> Result<(Reader<'_>, Reference, [u8; 16])> {
         .get_mut(&13)
         .ok_or(FormatError::UnsupportedProfile)?
         .insert(8, FieldKind::Object);
+    let group_schema = schema
+        .get_mut(&108)
+        .ok_or(FormatError::UnsupportedProfile)?;
+    group_schema.insert(1, FieldKind::String);
+    group_schema.insert(3, FieldKind::Object);
     let mut r = Reader {
         bytes: payload,
         pos: 28,
@@ -269,6 +402,9 @@ fn read_graph(payload: &[u8]) -> Result<(Reader<'_>, Reference, [u8; 16])> {
         generic: vec![],
         domain: vec![],
         schema,
+        project_field_order: vec![],
+        alternate_record_order: vec![],
+        mesh_source_ranges: capture_mesh_sources.then(HashMap::new),
         deform_coordinates: 0,
         string_fields: vec![],
         mesh_uv_limit: MAX_SCENE_MESH_VERTICES * 2,
@@ -287,19 +423,117 @@ fn read_graph(payload: &[u8]) -> Result<(Reader<'_>, Reference, [u8; 16])> {
 
 /// Structural closure only: no semantic model extraction or recursive encoding.
 pub(super) fn validate_structure(payload: &[u8]) -> Result<()> {
-    read_graph(payload).map(|_| ())
+    read_graph(payload, false).map(|_| ())
 }
 
-pub(super) fn decode(payload: &[u8]) -> Result<SceneProject> {
-    decode_with_provenance(payload, false)
+struct ChainReferenceChange {
+    leaf: Range<usize>,
+    direct_source: Range<usize>,
+}
+
+#[derive(Default)]
+struct ChainRecovery {
+    change: Option<ChainReferenceChange>,
+    encoded: Option<Vec<u8>>,
+}
+
+impl ChainRecovery {
+    fn record(&mut self, reader: &Reader<'_>, leaf: Reference, middle: Reference) -> Result<()> {
+        if self.change.is_some() {
+            return unsupported();
+        }
+        let alias_range = |owner| {
+            let Reference::Domain(owner) = owner else {
+                return unsupported();
+            };
+            let range = reader
+                .mesh_source_ranges
+                .as_ref()
+                .and_then(|ranges| ranges.get(&owner))
+                .ok_or(FormatError::UnsupportedProfile)?;
+            let bytes = reader
+                .bytes
+                .get(range.clone())
+                .ok_or(FormatError::UnsupportedProfile)?;
+            if bytes.first() != Some(&46) || !bytes.get(1).is_some_and(|value| *value >= 2) {
+                return unsupported();
+            }
+            Ok(range.clone())
+        };
+        self.change = Some(ChainReferenceChange {
+            leaf: alias_range(leaf)?,
+            direct_source: alias_range(middle)?,
+        });
+        Ok(())
+    }
+}
+
+fn verify_encoding(
+    original: &[u8],
+    encoded: Vec<u8>,
+    recovery: Option<&mut ChainRecovery>,
+) -> std::result::Result<(), ProfileRejection> {
+    if let Some(recovery) = recovery {
+        if let Some(change) = &recovery.change {
+            // The middle's typed source field is an alias to the ordinary mesh.
+            // Independent encoding must use exactly that alias on the leaf, with
+            // every byte before and after its value reproduced verbatim.
+            let direct_source = &original[change.direct_source.clone()];
+            let new_end = change.leaf.start + direct_source.len();
+            if encoded.get(..change.leaf.start) != original.get(..change.leaf.start)
+                || encoded.get(change.leaf.start..new_end) != Some(direct_source)
+                || encoded.get(new_end..) != original.get(change.leaf.end..)
+            {
+                return Err(ProfileRejection::UnsupportedStructure);
+            }
+            recovery.encoded = Some(encoded);
+            return Ok(());
+        }
+    }
+    if original == encoded {
+        return Ok(());
+    }
+    Err(ProfileRejection::RoundtripMismatch {
+        offset: first_difference(original, &encoded).expect("decoded payloads differ"),
+    })
+}
+
+pub(super) fn decode_with_diagnostics(
+    payload: &[u8],
+) -> std::result::Result<SceneProject, ProfileDecodeError> {
+    let mut rejection = ProfileRejection::UnsupportedStructure;
+    decode_with_provenance(payload, false, &mut rejection, None)
+        .map_err(|error| ProfileDecodeError { error, rejection })
 }
 pub(super) fn materialize(payload: &[u8]) -> Result<SceneWire> {
-    decode_with_provenance(payload, true)?
-        .wire
-        .ok_or(FormatError::UnsupportedProfile)
+    decode_with_provenance(
+        payload,
+        true,
+        &mut ProfileRejection::UnsupportedStructure,
+        None,
+    )?
+    .wire
+    .ok_or(FormatError::UnsupportedProfile)
 }
-fn decode_with_provenance(payload: &[u8], force_provenance: bool) -> Result<SceneProject> {
-    let (r, root, identity) = read_graph(payload)?;
+
+pub(super) fn recover_direct_linked_mesh_chain(payload: &[u8]) -> Result<Option<Vec<u8>>> {
+    let mut recovery = ChainRecovery::default();
+    decode_with_provenance(
+        payload,
+        false,
+        &mut ProfileRejection::UnsupportedStructure,
+        Some(&mut recovery),
+    )?;
+    Ok(recovery.encoded)
+}
+
+fn decode_with_provenance(
+    payload: &[u8],
+    force_provenance: bool,
+    rejection: &mut ProfileRejection,
+    mut recovery: Option<&mut ChainRecovery>,
+) -> Result<SceneProject> {
+    let (r, root, identity) = read_graph(payload, recovery.is_some())?;
     let p = r.fields(root, 0)?;
     let skeletons = r.array(Reader::field_reference(p, 0)?)?;
     if skeletons.len() != 1 {
@@ -359,7 +593,7 @@ fn decode_with_provenance(payload: &[u8], force_provenance: bool) -> Result<Scen
         let class = match &a {
             SceneAttachment::Region(_) => Some((43, 15)),
             SceneAttachment::Mesh(_) => Some((46, 36)),
-            SceneAttachment::Clipping(_) => None,
+            SceneAttachment::Clipping(_) | SceneAttachment::Path(_) => None,
         };
         if let Some((class, tag)) = class {
             let f = r.fields(*attachment_ref, class)?;
@@ -412,12 +646,65 @@ fn decode_with_provenance(payload: &[u8], force_provenance: bool) -> Result<Scen
         slots[i].active_attachment =
             optional_index(Reader::field_reference(f, 9)?, &inventory_refs[i])?;
     }
+    let mut linked_meshes = Vec::new();
+    for (&reference, &address) in attachment_refs.iter().zip(&attachment_order) {
+        if slots[address.slot].attachments[address.attachment]
+            .mesh()
+            .is_none()
+        {
+            continue;
+        }
+        let fields = r.fields(reference, 46)?;
+        let source = Reader::field_reference(fields, 26)?;
+        let inherit_timelines = flag(fields, 27)?;
+        if source == Reference::Null {
+            if inherit_timelines {
+                return unsupported();
+            }
+            continue;
+        }
+        let declared_fields = r.fields(source, 46)?;
+        let source_inherits = flag(declared_fields, 27)?;
+        let upstream = Reader::field_reference(declared_fields, 26)?;
+        let (source, source_fields) = if upstream == Reference::Null {
+            if source_inherits {
+                return unsupported();
+            }
+            (source, declared_fields)
+        } else {
+            let upstream_fields = r.fields(upstream, 46)?;
+            if reference == source {
+                return unsupported();
+            }
+            *rejection = ProfileRejection::LinkedMeshChain;
+            let Some(recovery) = recovery.as_deref_mut() else {
+                return unsupported();
+            };
+            if upstream == reference
+                || upstream == source
+                || Reader::field_reference(upstream_fields, 26)? != Reference::Null
+                || flag(upstream_fields, 27)?
+            {
+                return unsupported();
+            }
+            index(source, attachment_refs)?;
+            check_shared_mesh_geometry(&r, fields, declared_fields)?;
+            recovery.record(&r, reference, source)?;
+            (upstream, upstream_fields)
+        };
+        check_shared_mesh_geometry(&r, fields, source_fields)?;
+        linked_meshes.push(LinkedMesh {
+            attachment: address,
+            source: attachment_order[index(source, attachment_refs)?],
+            inherit_timelines,
+        });
+    }
     let group = r.fields(Reader::field_reference(s, 44)?, 108)?;
     let constraint_refs = r.array(Reader::field_reference(group, 5)?)?;
     let constraints = constraint_refs
         .iter()
         .rev()
-        .map(|c| constraint(&r, *c, bone_refs))
+        .map(|c| constraint(&r, *c, bone_refs, slot_refs))
         .collect::<Result<Vec<_>>>()?;
     let event_refs = r.array(Reader::field_reference(s, 10)?)?;
     let events = event_refs
@@ -439,9 +726,11 @@ fn decode_with_provenance(payload: &[u8], force_provenance: bool) -> Result<Scen
         })
         .collect::<Result<Vec<_>>>()?;
     let constraint_order: Vec<_> = constraint_refs.iter().rev().copied().collect();
+    let animation_refs = r.array(Reader::field_reference(s, 7)?)?;
+    let (animation_folders, folder_refs) = animation_folders(&r, s, animation_refs)?;
     let mut animations = Vec::new();
     let mut layouts = Vec::new();
-    for animation_ref in r.array(Reader::field_reference(s, 7)?)? {
+    for animation_ref in animation_refs {
         let f = r.fields(*animation_ref, 18)?;
         let Reference::Generic(split_index) = Reader::field_reference(f, 8)? else {
             return unsupported();
@@ -455,11 +744,18 @@ fn decode_with_provenance(payload: &[u8], force_provenance: bool) -> Result<Scen
         };
         let split_modes = rows
             .iter()
-            .map(|(bone, mode)| {
-                Ok(BoneSplitConfig {
-                    bone: index(*bone, bone_refs)?,
-                    mode: BoneSplitMode::from_wire(*mode)?,
-                })
+            .map(|(owner, mode)| {
+                if let Some(bone) = bone_refs.iter().position(|reference| reference == owner) {
+                    Ok(SplitModeConfig::Bone(BoneSplitConfig {
+                        bone,
+                        mode: BoneSplitMode::from_wire(*mode)?,
+                    }))
+                } else {
+                    Ok(SplitModeConfig::Slot(SlotSplitConfig {
+                        slot: index(*owner, slot_refs)?,
+                        mode: SlotSplitMode::from_wire(*mode)?,
+                    }))
+                }
             })
             .collect::<Result<Vec<_>>>()?;
         let mut groups = Vec::new();
@@ -530,30 +826,17 @@ fn decode_with_provenance(payload: &[u8], force_provenance: bool) -> Result<Scen
                     });
                     continue;
                 }
-                if matches!(kind.get(&0), Some(Value::UInt(7 | 8 | 12 | 23..=30))) {
+                if matches!(kind.get(&0), Some(Value::UInt(7..=12 | 23..=30))) {
                     let target = Reader::field_reference(kind, 2)?;
                     let Reference::Generic(key_index) = Reader::field_reference(kind, 1)? else {
                         return unsupported();
                     };
                     match r.generic.get(key_index).and_then(|g| g.value.as_ref()) {
                         Some(GenericValue::ConstraintKeys(track)) => {
-                            let c = index(target, &constraint_order)?;
-                            let expected = match &constraints[c] {
-                                Constraint::Ik(v) => v.target,
-                                Constraint::Transform(v) => v.source,
-                                Constraint::Physics(v) => v.bone,
-                            };
-                            if Some(expected) != bone {
-                                return unsupported();
-                            }
                             let mut track = track.clone();
-                            match &mut track {
-                                ConstraintTimeline::Ik { constraint, .. }
-                                | ConstraintTimeline::TransformMix { constraint, .. }
-                                | ConstraintTimeline::Physics { constraint, .. }
-                                | ConstraintTimeline::PhysicsReset { constraint, .. } => {
-                                    *constraint = c
-                                }
+                            track.set_constraint(index(target, &constraint_order)?);
+                            if Some(track.group_bone(&constraints, &slots)?) != bone {
+                                return unsupported();
                             }
                             constraint_tracks.push(track);
                         }
@@ -587,7 +870,7 @@ fn decode_with_provenance(payload: &[u8], force_provenance: bool) -> Result<Scen
                     }
                     continue;
                 }
-                if matches!(kind.get(&0), Some(Value::UInt(4 | 5))) {
+                if matches!(kind.get(&0), Some(Value::UInt(4 | 5 | 20 | 21))) {
                     let slot = index(Reader::field_reference(kind, 2)?, slot_refs)?;
                     if Some(slots[slot].bone) != bone {
                         return unsupported();
@@ -604,6 +887,30 @@ fn decode_with_provenance(payload: &[u8], force_provenance: bool) -> Result<Scen
                             }),
                         ) => {
                             slot_tracks.push(SlotTimeline::Rgba {
+                                slot,
+                                keys: keys.clone(),
+                            });
+                        }
+                        (
+                            Some(Value::UInt(20)),
+                            Some(Generic {
+                                value: Some(GenericValue::SlotRgb2Keys(keys)),
+                                ..
+                            }),
+                        ) => {
+                            slot_tracks.push(SlotTimeline::Rgb2 {
+                                slot,
+                                keys: keys.clone(),
+                            });
+                        }
+                        (
+                            Some(Value::UInt(21)),
+                            Some(Generic {
+                                value: Some(GenericValue::SlotAlphaKeys(keys)),
+                                ..
+                            }),
+                        ) => {
+                            slot_tracks.push(SlotTimeline::Alpha {
                                 slot,
                                 keys: keys.clone(),
                             });
@@ -748,12 +1055,17 @@ fn decode_with_provenance(payload: &[u8], force_provenance: bool) -> Result<Scen
         attachment_order,
         attachment_sequences,
         attachment_colors,
+        linked_meshes,
         slot_dark_colors,
         constraints,
+        animation_folders,
         animations,
         fps: number(p, 2)?,
     };
-    if !force_provenance && encode_scene_payload(&model).is_ok_and(|encoded| encoded == payload) {
+    if !force_provenance
+        && encode_scene_payload(&model)
+            .is_ok_and(|encoded| verify_encoding(payload, encoded, recovery.as_deref_mut()).is_ok())
+    {
         return Ok(model);
     }
     let mut owners = vec![
@@ -793,10 +1105,16 @@ fn decode_with_provenance(payload: &[u8], force_provenance: bool) -> Result<Scen
             .map(|(i, r)| (*r, WireStringOwner::Event(i))),
     );
     owners.extend(
-        r.array(Reader::field_reference(s, 7)?)?
+        animation_refs
             .iter()
             .enumerate()
             .map(|(i, r)| (*r, WireStringOwner::Animation(i))),
+    );
+    owners.extend(
+        folder_refs
+            .iter()
+            .enumerate()
+            .map(|(i, r)| (*r, WireStringOwner::AnimationFolder(i))),
     );
     let mut strings = Vec::new();
     for (reference, tag, alias) in &r.string_fields {
@@ -861,12 +1179,14 @@ fn decode_with_provenance(payload: &[u8], force_provenance: bool) -> Result<Scen
     strings.retain(|s| !(s.owner == WireStringOwner::Project && s.tag == 13));
     let source_state = super::source_state::read(
         &r,
+        p,
         s,
         bone_refs,
         slot_refs,
         &inventory_refs,
         &constraint_order,
-        r.array(Reader::field_reference(s, 7)?)?,
+        animation_refs,
+        model.animation_folders.is_some(),
     )?;
     model.wire = Some(SceneWire {
         source_state,
@@ -875,6 +1195,7 @@ fn decode_with_provenance(payload: &[u8], force_provenance: bool) -> Result<Scen
         constraint_declarations: Some(WireConstraintDeclarations {
             ik: declarations(16)?,
             transform: declarations(22)?,
+            path: declarations(23)?,
             physics: declarations(41)?,
         }),
         skeleton_bounds_24,
@@ -888,10 +1209,31 @@ fn decode_with_provenance(payload: &[u8], force_provenance: bool) -> Result<Scen
     } else {
         normalize_wire_strings(&mut model)?;
     }
-    if encode_scene_payload(&model)? != payload {
+    if let Err(reason) = verify_encoding(payload, encode_scene_payload(&model)?, recovery) {
+        *rejection = reason;
         return unsupported();
     }
     Ok(model)
+}
+
+fn check_shared_mesh_geometry(
+    reader: &Reader<'_>,
+    child: &BTreeMap<u32, Value>,
+    source: &BTreeMap<u32, Value>,
+) -> Result<()> {
+    for tag in [8, 12, 13] {
+        if Reader::field_reference(child, tag)? != Reader::field_reference(source, tag)? {
+            return unsupported();
+        }
+    }
+    let child = reader.fields(Reader::field_reference(child, 28)?, 71)?;
+    let source = reader.fields(Reader::field_reference(source, 28)?, 71)?;
+    for tag in [1, 2] {
+        if Reader::field_reference(child, tag)? != Reader::field_reference(source, tag)? {
+            return unsupported();
+        }
+    }
+    Ok(())
 }
 
 fn wire_track(
@@ -911,12 +1253,14 @@ fn wire_track(
     }
     let target = Reader::field_reference(kind, 2).unwrap_or(Reference::Null);
     Ok(match channel {
-        4 | 5 => WireTrack::Slot {
+        4 | 5 | 20 | 21 => WireTrack::Slot {
             slot: index(target, slots)?,
-            channel: if channel == 4 {
-                WireSlotChannel::Rgba
-            } else {
-                WireSlotChannel::Attachment
+            channel: match channel {
+                4 => WireSlotChannel::Rgba,
+                5 => WireSlotChannel::Attachment,
+                20 => WireSlotChannel::Rgb2,
+                21 => WireSlotChannel::Alpha,
+                _ => unreachable!(),
             },
         },
         6 => WireTrack::Deform {
@@ -930,11 +1274,14 @@ fn wire_track(
                 })
                 .ok_or(FormatError::UnsupportedProfile)?,
         },
-        7 | 8 | 23..=30 => WireTrack::Constraint {
+        7..=11 | 23..=30 => WireTrack::Constraint {
             constraint: index(target, constraints)?,
             channel: match channel {
                 7 => WireConstraintChannel::Ik,
                 8 => WireConstraintChannel::TransformMix,
+                9 => WireConstraintChannel::PathPosition,
+                10 => WireConstraintChannel::PathSpacing,
+                11 => WireConstraintChannel::PathMix,
                 30 => WireConstraintChannel::PhysicsReset,
                 _ => WireConstraintChannel::Physics(PhysicsProperty::ALL[(channel - 23) as usize]),
             },
@@ -959,4 +1306,114 @@ fn wire_track(
         13 => WireTrack::DrawOrder,
         _ => return unsupported(),
     })
+}
+
+#[cfg(test)]
+#[test]
+fn repairs_only_the_single_proven_leaf_source_alias() {
+    let mut scene = SceneProject::from(&RegionProject {
+        rig: MinimalProject::new("chain proof".into(), [11; 16]),
+        images_root: "./images/".into(),
+        slots: vec![],
+        region_order: vec![],
+    });
+    for name in ["source", "middle", "leaf"] {
+        let mut mesh = super::super::meshes::quad(
+            Region {
+                name: name.into(),
+                path: String::new(),
+                x: 0.,
+                y: 0.,
+                rotation: 0.,
+                scale_x: 1.,
+                scale_y: 1.,
+                width: 16.,
+                height: 12.,
+            },
+            0,
+        );
+        mesh.weighted = true;
+        scene.attachment_order.push(AttachmentAddress {
+            slot: scene.slots.len(),
+            attachment: 0,
+        });
+        scene.slots.push(SceneSlot {
+            name: format!("{name} slot"),
+            bone: 0,
+            color: [255; 4],
+            blend: BlendMode::Normal,
+            active_attachment: Some(0),
+            attachments: vec![SceneAttachment::Mesh(Box::new(mesh))],
+        });
+    }
+    let source = scene.attachment_order[0];
+    let middle = scene.attachment_order[1];
+    let leaf = scene.attachment_order[2];
+    scene.linked_meshes = vec![
+        LinkedMesh {
+            attachment: middle,
+            source,
+            inherit_timelines: false,
+        },
+        LinkedMesh {
+            attachment: leaf,
+            source,
+            inherit_timelines: true,
+        },
+    ];
+    // In the canonical field order Deform records precede attachment inventory.
+    // Define the root before the middle so both source fields are aliases.
+    scene.animations[0].deform_tracks = [(source, 0.25), (middle, 0.125)]
+        .into_iter()
+        .map(|(attachment, offset)| DeformTimeline {
+            attachment,
+            keys: vec![DeformKey {
+                frame: 5.,
+                offsets: vec![offset; 8],
+                data_present: true,
+                curve: DeformCurve::Linear,
+            }],
+        })
+        .collect();
+    let flat = encode_scene_payload(&scene).unwrap();
+    assert!(recover_direct_linked_mesh_chain(&flat).unwrap().is_none());
+    let (reader, _, _) = read_graph(&flat, true).unwrap();
+    let mesh = |name: &str| {
+        reader
+            .domain
+            .iter()
+            .enumerate()
+            .find_map(|(id, record)| {
+                if record.class != 46 {
+                    return None;
+                }
+                let reference = Reader::field_reference(record.fields.as_ref()?, 1).ok()?;
+                (reader.text(reference).ok()? == name).then_some(id)
+            })
+            .unwrap()
+    };
+    let ranges = reader.mesh_source_ranges.as_ref().unwrap();
+    assert_eq!(ranges[&mesh("middle")].len(), 2);
+    let span = ranges[&mesh("leaf")].clone();
+    assert_eq!(span.len(), 2);
+    let middle_alias = u8::try_from(mesh("middle") + 2).unwrap();
+    assert!(middle_alias < 128);
+    let mut chained = flat.clone();
+    chained[span.start + 1] = middle_alias;
+    assert_eq!(
+        decode_with_diagnostics(&chained).unwrap_err().rejection,
+        ProfileRejection::LinkedMeshChain
+    );
+    let recovered = recover_direct_linked_mesh_chain(&chained).unwrap().unwrap();
+    assert_eq!(recovered, flat);
+    assert_eq!(decode_with_diagnostics(&recovered).unwrap(), scene);
+
+    // Project tag 17 is structurally understood but outside the editable model.
+    // Changing it on an otherwise identical chain must defeat full-payload proof.
+    let other = chained[..100]
+        .windows(5)
+        .position(|bytes| bytes == [17, 0x3f, 0x80, 0, 0])
+        .unwrap();
+    chained[other + 1..other + 5].copy_from_slice(&2_f32.to_be_bytes());
+    assert!(recover_direct_linked_mesh_chain(&chained).is_err());
 }

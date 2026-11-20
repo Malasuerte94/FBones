@@ -64,25 +64,24 @@ pub struct SequencePoseView {
     pub image: String,
 }
 pub(crate) fn mode_number(mode: SequenceMode) -> u8 {
-    match mode {
-        SequenceMode::Hold => 0,
-        SequenceMode::Once => 1,
-        SequenceMode::Loop => 2,
-    }
+    mode.wire() as u8
 }
 fn mode(value: u8) -> Result<SequenceMode, AppError> {
-    match value {
-        0 => Ok(SequenceMode::Hold),
-        1 => Ok(SequenceMode::Once),
-        2 => Ok(SequenceMode::Loop),
-        _ => Err(invalid("Choose Hold, Once or Loop.")),
-    }
+    SequenceMode::from_wire(u32::from(value))
+        .ok_or_else(|| invalid("Choose one of the seven Sequence modes."))
 }
 pub(crate) fn settings(p: &SceneProject, a: AttachmentAddress) -> Option<&SequenceSettings> {
     p.attachment_sequences
         .iter()
         .find(|s| s.attachment == a)
         .map(|s| &s.settings)
+}
+
+fn timeline_owner(project: &SceneProject, attachment: AttachmentAddress) -> AttachmentAddress {
+    project
+        .linked_mesh(attachment)
+        .filter(|link| link.inherit_timelines)
+        .map_or(attachment, |link| link.source)
 }
 
 /// Bounded native resource expansion, independent of resource existence.
@@ -316,6 +315,11 @@ pub(crate) fn set_keys(
     let mut seen = HashSet::new();
     for input in inputs {
         let address = frame.attachment_address(input.attachment)?;
+        if input.key_id.is_none() && timeline_owner(&frame.project, address) != address {
+            return Err(invalid(
+                "Key Sequence on the source mesh when a linked mesh inherits its timelines.",
+            ));
+        }
         let s = settings(&frame.project, address)
             .ok_or_else(|| invalid("Enable Sequence on the target attachment first."))?;
         let position = animation::checked_frame(input.frame)?;
@@ -408,6 +412,9 @@ pub(crate) fn move_keys(
         .enumerate()
     {
         let ids = &mut frame.animation_sequence_key_ids[a][t];
+        if !ids.iter().any(|id| selected.contains(id)) {
+            continue;
+        }
         let mut pairs = track
             .keys
             .iter()
@@ -416,7 +423,7 @@ pub(crate) fn move_keys(
             .collect::<Vec<_>>();
         for (key, id) in &mut pairs {
             if selected.contains(id) {
-                key.frame = animation::checked_frame(key.frame + delta)?;
+                key.frame = animation::moved_frame(key.frame, delta)?;
             }
         }
         pairs.sort_by(|a, b| a.0.frame.total_cmp(&b.0.frame));
@@ -490,20 +497,33 @@ pub(crate) fn sample_index(
         return settings.setup_index;
     };
     if key.mode == SequenceMode::Hold {
-        return key.index;
+        return key.index.min(settings.count - 1);
     }
     let steps = ((frame - f64::from(key.frame)) / f64::from(fps) / f64::from(key.delay.get())
         + 0.00001)
         .floor()
         .max(0.);
+    let count = f64::from(settings.count);
+    let last = count - 1.;
+    let index = f64::from(key.index);
     match key.mode {
-        SequenceMode::Hold => key.index,
-        SequenceMode::Once => {
-            (f64::from(key.index) + steps).min(f64::from(settings.count - 1)) as u32
-        }
-        SequenceMode::Loop => {
-            ((f64::from(key.index) + steps % f64::from(settings.count)) % f64::from(settings.count))
-                as u32
+        SequenceMode::Hold => unreachable!("Hold resolves without elapsed intervals"),
+        SequenceMode::Once => (index + steps).min(last) as u32,
+        SequenceMode::OnceReverse => (last - index - steps).max(0.) as u32,
+        SequenceMode::Loop => ((index + steps % count) % count) as u32,
+        SequenceMode::LoopReverse => (last - (index + steps % count) % count) as u32,
+        SequenceMode::PingPong | SequenceMode::PingPongReverse => {
+            if settings.count == 1 {
+                return 0;
+            }
+            let period = 2. * last;
+            let offset = if key.mode == SequenceMode::PingPongReverse {
+                last
+            } else {
+                0.
+            };
+            let phase = (index + steps % period + offset) % period;
+            phase.min(period - phase) as u32
         }
     }
 }
@@ -529,11 +549,9 @@ pub(crate) fn sample(
         .attachment_sequences
         .iter()
         .map(|s| {
-            let track = clip.and_then(|clip| {
-                clip.sequence_tracks
-                    .iter()
-                    .find(|t| t.attachment == s.attachment)
-            });
+            let owner = timeline_owner(&frame.project, s.attachment);
+            let track =
+                clip.and_then(|clip| clip.sequence_tracks.iter().find(|t| t.attachment == owner));
             let index = sample_index(&s.settings, track, position, frame.project.fps);
             let image = frame.project.slots[s.attachment.slot].attachments[s.attachment.attachment]
                 .image()

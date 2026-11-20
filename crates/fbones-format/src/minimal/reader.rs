@@ -10,7 +10,7 @@ use super::{
     Bone, Field, FieldKind, MinimalProject, Object, Record, MAX_DOMAIN_OBJECTS,
     MAX_GENERIC_OBJECTS,
 };
-use crate::FormatError;
+use crate::{FormatError, ProfileDecodeError, ProfileRejection};
 use std::collections::{BTreeMap, HashMap};
 
 #[cfg(feature = "scene-codec")]
@@ -26,6 +26,14 @@ mod source_state;
 type Result<T> = std::result::Result<T, FormatError>;
 fn unsupported<T>() -> Result<T> {
     Err(FormatError::UnsupportedProfile)
+}
+
+fn first_difference(source: &[u8], candidate: &[u8]) -> Option<usize> {
+    source
+        .iter()
+        .zip(candidate)
+        .position(|(a, b)| a != b)
+        .or_else(|| (source.len() != candidate.len()).then_some(source.len().min(candidate.len())))
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -69,6 +77,10 @@ enum GenericValue {
     #[cfg(feature = "scene-codec")]
     SlotRgbaKeys(Vec<super::scene::SlotRgbaKey>),
     #[cfg(feature = "scene-codec")]
+    SlotRgb2Keys(Vec<super::scene::SlotColorKey<6>>),
+    #[cfg(feature = "scene-codec")]
+    SlotAlphaKeys(Vec<super::scene::SlotColorKey<1>>),
+    #[cfg(feature = "scene-codec")]
     SequenceKeys(Vec<super::scene::SequenceKeyframe>),
     #[cfg(feature = "scene-codec")]
     SlotAttachmentKeys(Vec<(f32, Reference)>),
@@ -105,6 +117,8 @@ fn collect_object_schema(object: &Object, schema: &mut Schema) {
                 collect_object_schema(item, schema);
             }
         }
+        #[cfg(feature = "scene-codec")]
+        Object::SharedMeshGeometry { value, .. } => collect_object_schema(value, schema),
         #[cfg(feature = "scene-codec")]
         Object::Map(items) => {
             for (key, value) in items {
@@ -145,6 +159,12 @@ struct Reader<'a> {
     generic: Vec<Generic>,
     domain: Vec<Domain>,
     schema: Schema,
+    #[cfg(feature = "scene-codec")]
+    project_field_order: Vec<u32>,
+    #[cfg(feature = "scene-codec")]
+    alternate_record_order: Vec<usize>,
+    #[cfg(feature = "scene-codec")]
+    mesh_source_ranges: Option<HashMap<usize, std::ops::Range<usize>>>,
     #[cfg(feature = "scene-codec")]
     deform_coordinates: usize,
     #[cfg(feature = "scene-codec")]
@@ -340,7 +360,7 @@ impl<'a> Reader<'a> {
                 if class == 132 {
                     use super::scene::{BoneKeyframe, KeyCurve};
                     let kind = self.uint()?;
-                    if !matches!(kind, 0..=8 | 12..=17 | 22..=30) {
+                    if !matches!(kind, 0..=17 | 20..=30) {
                         return unsupported();
                     }
                     if kind == 22 {
@@ -400,7 +420,7 @@ impl<'a> Reader<'a> {
                         self.depth -= 1;
                         return Ok(Reference::Domain(index));
                     }
-                    if matches!(kind, 7 | 8 | 12 | 23..=30) {
+                    if matches!(kind, 7..=12 | 23..=30) {
                         self.domain[index].fields = Some(self.constraint_event_track(kind)?);
                         self.depth -= 1;
                         return Ok(Reference::Domain(index));
@@ -540,6 +560,20 @@ impl<'a> Reader<'a> {
                             fields.insert(2, Value::Reference(target));
                         }
                         self.domain[index].fields = Some(fields);
+                        self.depth -= 1;
+                        return Ok(Reference::Domain(index));
+                    }
+                    if matches!(kind, 20 | 21) {
+                        let keys = self.generic(204, |r| match kind {
+                            20 => Ok(GenericValue::SlotRgb2Keys(r.split_slot_color_keys()?)),
+                            _ => Ok(GenericValue::SlotAlphaKeys(r.split_slot_color_keys()?)),
+                        })?;
+                        let owner = self.domain(13)?;
+                        self.domain[index].fields = Some(BTreeMap::from([
+                            (0, Value::UInt(kind)),
+                            (1, Value::Reference(keys)),
+                            (2, Value::Reference(owner)),
+                        ]));
                         self.depth -= 1;
                         return Ok(Reference::Domain(index));
                     }
@@ -744,8 +778,23 @@ impl<'a> Reader<'a> {
                     return unsupported();
                 }
                 let mut fields = BTreeMap::new();
-                for _ in 0..count {
+                #[cfg(feature = "scene-codec")]
+                let mut alternate_order = match class {
+                    43 => Some(super::scene::record_order::STOCK_CLI_REGION_ORDER),
+                    56 => Some(super::scene::record_order::STOCK_CLI_IK_ORDER),
+                    _ => None,
+                }
+                .filter(|tags| tags.len() == count as usize);
+                for _field_index in 0..count {
                     let tag = self.uint()?;
+                    #[cfg(feature = "scene-codec")]
+                    if class == 0 && index == 0 {
+                        self.project_field_order.push(tag);
+                    }
+                    #[cfg(feature = "scene-codec")]
+                    if alternate_order.is_some_and(|tags| tags[_field_index as usize] != tag) {
+                        alternate_order = None;
+                    }
                     let kind = self
                         .schema
                         .get(&class)
@@ -827,6 +876,14 @@ impl<'a> Reader<'a> {
                         FieldKind::Object => {
                             #[cfg(feature = "scene-codec")]
                             let reference = match (class, tag) {
+                                (46, 26) if self.mesh_source_ranges.is_some() => {
+                                    let start = self.pos;
+                                    let reference = self.object()?;
+                                    if let Some(ranges) = &mut self.mesh_source_ranges {
+                                        ranges.insert(index, start..self.pos);
+                                    }
+                                    reference
+                                }
                                 (46, 12) => self.object_with_float_limit(self.mesh_uv_limit)?,
                                 (46, 13) => {
                                     self.object_with_limits(512, 512, self.mesh_triangle_limit)?
@@ -863,6 +920,10 @@ impl<'a> Reader<'a> {
                         return unsupported();
                     }
                 }
+                #[cfg(feature = "scene-codec")]
+                if alternate_order.is_some() {
+                    self.alternate_record_order.push(index);
+                }
                 self.domain[index].fields = Some(fields);
                 self.depth -= 1;
                 Ok(Reference::Domain(index))
@@ -876,6 +937,76 @@ impl<'a> Reader<'a> {
             }
         }
     }
+    #[cfg(feature = "scene-codec")]
+    fn split_slot_color_keys<const N: usize>(
+        &mut self,
+    ) -> Result<Vec<super::scene::SlotColorKey<N>>> {
+        use super::scene::{SlotColorCurve, SlotColorKey, MAX_TRACK_KEYS};
+        let count = self.uint()? as usize;
+        if !(1..=MAX_TRACK_KEYS).contains(&count) {
+            return unsupported();
+        }
+        let mut raw = Vec::with_capacity(count);
+        let mut previous = 0;
+        for _ in 0..count {
+            if self.uint()? != 133 || self.uint()? != 1 || self.domain.len() >= MAX_DOMAIN_OBJECTS {
+                return unsupported();
+            }
+            self.domain.push(Domain {
+                class: 133,
+                fields: Some(BTreeMap::new()),
+            });
+            let frame = self.float()?;
+            let mut values = [0.; N];
+            for value in &mut values {
+                *value = self.float()?;
+            }
+            let curve = self.uint()?;
+            let mut handles = [[2147483648.; 4]; N];
+            if curve == 1 || previous == 1 {
+                for handle in &mut handles {
+                    for coordinate in handle {
+                        *coordinate = self.float()?;
+                    }
+                    if self.take(4)? != [0; 4] {
+                        return unsupported();
+                    }
+                }
+            }
+            raw.push((frame, values, curve, handles));
+            previous = curve;
+        }
+        raw.iter()
+            .enumerate()
+            .map(|(i, &(frame, values, curve, handles))| {
+                let curve = match curve {
+                    0 => SlotColorCurve::Linear,
+                    1 => {
+                        let (_, _, _, next) =
+                            raw.get(i + 1).ok_or(FormatError::UnsupportedProfile)?;
+                        SlotColorCurve::Bezier {
+                            controls: std::array::from_fn(|axis| {
+                                [
+                                    handles[axis][2],
+                                    handles[axis][3],
+                                    next[axis][0],
+                                    next[axis][1],
+                                ]
+                            }),
+                        }
+                    }
+                    2 => SlotColorCurve::Stepped,
+                    _ => return unsupported(),
+                };
+                Ok(SlotColorKey {
+                    frame,
+                    values,
+                    curve,
+                })
+            })
+            .collect()
+    }
+
     fn object(&mut self) -> Result<Reference> {
         self.object_with_float_limit(512)
     }
@@ -957,11 +1088,21 @@ impl<'a> Reader<'a> {
                 }
                 let mut rows = Vec::with_capacity(count as usize);
                 for _ in 0..count {
-                    let bone = r.object()?;
-                    r.fields(bone, 12)?;
+                    let owner = r.object()?;
+                    let Reference::Domain(index) = owner else {
+                        return unsupported();
+                    };
                     let mode = r.uint()?;
-                    super::scene::BoneSplitMode::from_wire(mode)?;
-                    rows.push((bone, mode));
+                    match r.domain.get(index).map(|domain| domain.class) {
+                        Some(12) => {
+                            super::scene::BoneSplitMode::from_wire(mode)?;
+                        }
+                        Some(13) => {
+                            super::scene::SlotSplitMode::from_wire(mode)?;
+                        }
+                        _ => return unsupported(),
+                    }
+                    rows.push((owner, mode));
                 }
                 Ok(GenericValue::SplitModes(rows))
             }),
@@ -995,7 +1136,7 @@ impl<'a> Reader<'a> {
             }),
             11 | 12 | 13 | 18 | 43 | 46 | 54 | 71 | 80 | 108 => self.domain(class),
             #[cfg(feature = "scene-codec")]
-            19 | 35 | 39 | 53 | 56 | 65 | 84 | 85 | 86 | 89 | 100 | 121 | 132 | 149 => {
+            19 | 35 | 39 | 53 | 56 | 65 | 69 | 72 | 84 | 85 | 86 | 89 | 100 | 121 | 132 | 149 => {
                 self.domain(class)
             }
             #[cfg(feature = "scene-codec")]
@@ -1073,17 +1214,20 @@ impl<'a> Reader<'a> {
         }
         unsupported()
     }
-    fn blend(&self, reference: Reference) -> Result<BlendMode> {
+    fn enum_value(&self, reference: Reference) -> Result<u32> {
         if let Reference::Generic(index) = reference {
             if let Some(Generic {
                 kind: 201,
                 value: Some(GenericValue::Enum(value)),
             }) = self.generic.get(index)
             {
-                return BlendMode::from_wire(*value).ok_or(FormatError::UnsupportedProfile);
+                return Ok(*value);
             }
         }
         unsupported()
+    }
+    fn blend(&self, reference: Reference) -> Result<BlendMode> {
+        BlendMode::from_wire(self.enum_value(reference)?).ok_or(FormatError::UnsupportedProfile)
     }
     fn array(&self, reference: Reference) -> Result<&[Reference]> {
         if let Reference::Generic(index) = reference {
@@ -1265,6 +1409,18 @@ pub fn decode_minimal(payload: &[u8]) -> Result<MinimalProject> {
 }
 
 pub(super) fn decode_region_profile(payload: &[u8]) -> Result<RegionProject> {
+    decode_region_profile_with_diagnostics(payload).map_err(|failure| failure.error)
+}
+
+pub(super) fn decode_region_profile_with_diagnostics(
+    payload: &[u8],
+) -> std::result::Result<RegionProject, ProfileDecodeError> {
+    let mut rejection = ProfileRejection::UnsupportedStructure;
+    read_region_profile(payload, &mut rejection)
+        .map_err(|error| ProfileDecodeError { error, rejection })
+}
+
+fn read_region_profile(payload: &[u8], rejection: &mut ProfileRejection) -> Result<RegionProject> {
     if !payload.starts_with(&[
         0x48, 0xb0, 0x20, 0xb0, 0x20, b'4', b'.', b'3', b'.', b'2', 0xb6, 1,
     ]) {
@@ -1321,6 +1477,12 @@ pub(super) fn decode_region_profile(payload: &[u8]) -> Result<RegionProject> {
         generic: vec![],
         domain: vec![],
         schema,
+        #[cfg(feature = "scene-codec")]
+        project_field_order: vec![],
+        #[cfg(feature = "scene-codec")]
+        alternate_record_order: vec![],
+        #[cfg(feature = "scene-codec")]
+        mesh_source_ranges: None,
         #[cfg(feature = "scene-codec")]
         deform_coordinates: 0,
         #[cfg(feature = "scene-codec")]
@@ -1449,7 +1611,8 @@ pub(super) fn decode_region_profile(payload: &[u8]) -> Result<RegionProject> {
     };
     // This conservative equality check includes every default, reference,
     // ordering, reserved field and suffix. Unsupported input remains immutable.
-    if encode_region_payload(&project)? != payload {
+    if let Some(offset) = first_difference(payload, &encode_region_payload(&project)?) {
+        *rejection = ProfileRejection::RoundtripMismatch { offset };
         return unsupported();
     }
     Ok(project)
@@ -1459,6 +1622,42 @@ pub(super) fn decode_region_profile(payload: &[u8]) -> Result<RegionProject> {
 mod tests {
     use super::*;
     use crate::minimal::encode_minimal_payload;
+
+    #[test]
+    fn inspection_rejection_reports_the_first_exact_independent_mismatch() {
+        let project = MinimalProject::new("inspection mismatch".into(), [3; 16]);
+        let original = encode_minimal_payload(&project).unwrap();
+        let mut record = project_record_with_regions(&project, &[], &[], "./images/");
+        let scalar = record
+            .fields
+            .iter_mut()
+            .find(|(tag, _)| *tag == 17)
+            .unwrap();
+        scalar.1 = Field::Float(2.);
+        let changed = super::super::encode_record_payload(&record, project.identity);
+        let offset = original
+            .iter()
+            .zip(&changed)
+            .position(|(a, b)| a != b)
+            .unwrap();
+        let legacy = decode_region_profile_with_diagnostics(&changed).unwrap_err();
+        assert!(matches!(legacy.error, FormatError::UnsupportedProfile));
+        assert_eq!(
+            legacy.rejection,
+            ProfileRejection::RoundtripMismatch { offset }
+        );
+        let incomplete = decode_region_profile_with_diagnostics(&changed[..28]).unwrap_err();
+        assert_eq!(incomplete.rejection, ProfileRejection::UnsupportedStructure);
+        #[cfg(feature = "scene-codec")]
+        {
+            let scene = decode_scene_profile_with_diagnostics(&changed).unwrap_err();
+            assert!(matches!(scene.error, FormatError::UnsupportedProfile));
+            assert_eq!(
+                scene.rejection,
+                ProfileRejection::RoundtripMismatch { offset }
+            );
+        }
+    }
 
     #[cfg(feature = "scene-codec")]
     #[test]
@@ -1474,6 +1673,9 @@ mod tests {
                 }],
                 domain: vec![],
                 schema: Schema::new(),
+                project_field_order: vec![],
+                alternate_record_order: vec![],
+                mesh_source_ranges: None,
                 deform_coordinates: 0,
                 string_fields: vec![],
                 mesh_uv_limit: 1024,
@@ -1517,6 +1719,9 @@ mod tests {
                 generic,
                 domain: vec![],
                 schema: Schema::new(),
+                project_field_order: vec![],
+                alternate_record_order: vec![],
+                mesh_source_ranges: None,
                 deform_coordinates: 0,
                 string_fields: vec![],
                 mesh_uv_limit: 2048,
@@ -1648,7 +1853,19 @@ mod tests {
 mod scene_reader;
 #[cfg(feature = "scene-codec")]
 pub(super) fn decode_scene_profile(payload: &[u8]) -> Result<super::scene::SceneProject> {
-    scene_reader::decode(payload)
+    decode_scene_profile_with_diagnostics(payload).map_err(|failure| failure.error)
+}
+
+#[cfg(feature = "scene-codec")]
+pub(super) fn decode_scene_profile_with_diagnostics(
+    payload: &[u8],
+) -> std::result::Result<super::scene::SceneProject, ProfileDecodeError> {
+    scene_reader::decode_with_diagnostics(payload)
+}
+
+#[cfg(feature = "scene-codec")]
+pub(super) fn recover_direct_linked_mesh_chain(payload: &[u8]) -> Result<Option<Vec<u8>>> {
+    scene_reader::recover_direct_linked_mesh_chain(payload)
 }
 #[cfg(feature = "scene-codec")]
 pub(super) fn materialize_scene_wire(payload: &[u8]) -> Result<super::scene::SceneWire> {

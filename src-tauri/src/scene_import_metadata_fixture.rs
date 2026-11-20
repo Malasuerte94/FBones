@@ -74,6 +74,7 @@ pub(crate) fn project() -> SceneProject {
                 constraint,
                 values: [3, 2, 5, 4, 0, 1].map(|index| f(value.mix[index])),
             }),
+            Constraint::Path(_) => {}
             Constraint::Physics(value) => source_state.physics.push(WirePhysicsSourceState {
                 constraint,
                 values: [

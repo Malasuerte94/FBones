@@ -1,5 +1,5 @@
 import type { AttachmentView, BoneView, ClippingView, SlotView } from './project.ts';
-import { bindingPoints, type Point } from './binding.ts';
+import { bindingPoints, type AttachmentGeometryContext, type Point } from './binding.ts';
 
 export function activeAttachment(slot:SlotView):AttachmentView|null {
   return slot.attachments?.find(a=>a.id===slot.activeAttachmentId)??null;
@@ -18,8 +18,8 @@ export function convexHull(points:readonly Point[]):Point[]{
   const lower=half(sorted),upper=half([...sorted].reverse());lower.pop();upper.pop();return [...lower,...upper];
 }
 
-export function clippingPolygon(bones:readonly BoneView[],clip:ClippingView):Point[]{
-  const points=clippingPoints(bones,clip);
+export function clippingPolygon(bones:readonly BoneView[],clip:ClippingView,geometry?:AttachmentGeometryContext):Point[]{
+  const points=geometry?.pointsFor(clip)??clippingPoints(bones,clip);
   // Exact4.3.26 PNG oracle: Inverse uses the convex hull even when its stored
   // Convex checkbox is false/disabled. Both inverse flag combinations matched.
   return clip.convex||clip.inverse?convexHull(points):points;

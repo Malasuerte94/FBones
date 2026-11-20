@@ -177,12 +177,17 @@ enum Object {
     },
     Empty116,
     #[cfg(feature = "scene-codec")]
-    BoneSplitModes(Vec<(String, u32)>),
+    SplitModes(Vec<(u32, String, u32)>),
     Record(Record),
     Link(u32, String),
     FloatList(Vec<f32>),
     IntList(Vec<u32>),
     ShortList(Vec<u16>),
+    #[cfg(feature = "scene-codec")]
+    SharedMeshGeometry {
+        label: String,
+        value: Box<Object>,
+    },
     #[cfg(feature = "scene-codec")]
     AnimationTrack(scene::BoneTimeline),
     #[cfg(feature = "scene-codec")]
@@ -263,6 +268,8 @@ impl<'a> Writer<'a> {
                         visit(writer, item);
                     }
                 }
+                #[cfg(feature = "scene-codec")]
+                Object::SharedMeshGeometry { value, .. } => visit(writer, value),
                 #[cfg(feature = "scene-codec")]
                 Object::Map(items) => {
                     for (key, value) in items {
@@ -523,15 +530,61 @@ impl<'a> Writer<'a> {
         self.bytes.extend_from_slice(&[0; 4]);
     }
 
+    #[cfg(feature = "scene-codec")]
+    fn split_slot_color_keys<const N: usize>(&mut self, keys: &[scene::SlotColorKey<N>]) {
+        use scene::SlotColorCurve;
+        let mut incoming = None;
+        self.uint(keys.len() as u32);
+        for key in keys {
+            self.uint(133);
+            self.domain_count += 1;
+            self.uint(1);
+            self.float(key.frame);
+            for value in key.values {
+                self.float(value);
+            }
+            let (kind, outgoing) = match key.curve {
+                SlotColorCurve::Linear => (0, None),
+                SlotColorCurve::Bezier { controls } => (1, Some(controls)),
+                SlotColorCurve::Stepped => (2, None),
+            };
+            self.uint(kind);
+            if incoming.is_some() || outgoing.is_some() {
+                for axis in 0..N {
+                    let before = incoming.map_or([2147483648.; 2], |controls: [[f32; 4]; N]| {
+                        [controls[axis][2], controls[axis][3]]
+                    });
+                    let after = outgoing.map_or([2147483648.; 2], |controls| {
+                        [controls[axis][0], controls[axis][1]]
+                    });
+                    for value in before.into_iter().chain(after) {
+                        self.float(value);
+                    }
+                    self.uint_zero_curve_metadata();
+                }
+            }
+            incoming = outgoing;
+        }
+    }
+
     fn object(&mut self, value: &Object) {
+        self.object_with_mesh_alias(value, None);
+    }
+
+    fn object_with_mesh_alias(&mut self, value: &Object, alias: Option<&str>) {
         match value {
+            #[cfg(feature = "scene-codec")]
+            Object::SharedMeshGeometry { label, value } => {
+                self.object_with_mesh_alias(value, Some(label));
+            }
             Object::Null => self.uint(0),
             Object::Array(items) => {
                 self.uint(15);
-                self.generic(None);
-                self.uint(items.len() as u32);
-                for item in items {
-                    self.object(item);
+                if self.generic(alias) {
+                    self.uint(items.len() as u32);
+                    for item in items {
+                        self.object(item);
+                    }
                 }
             }
             Object::Vector(values) => {
@@ -552,12 +605,12 @@ impl<'a> Writer<'a> {
                 self.uint(0);
             }
             #[cfg(feature = "scene-codec")]
-            Object::BoneSplitModes(rows) => {
+            Object::SplitModes(rows) => {
                 self.uint(116);
                 self.generic(None);
                 self.uint(rows.len() as u32);
-                for (bone, mode) in rows {
-                    self.object(&Object::Link(12, bone.clone()));
+                for (class, owner, mode) in rows {
+                    self.object(&Object::Link(*class, owner.clone()));
                     self.uint(*mode);
                 }
             }
@@ -673,8 +726,7 @@ impl<'a> Writer<'a> {
                 self.uint(132);
                 self.domain_count += 1;
                 self.uint(1);
-                let rgba = matches!(track, SlotTimeline::Rgba { .. });
-                self.uint(if rgba { 4 } else { 5 });
+                self.uint(track.wire());
                 self.generic(None);
                 match track {
                     SlotTimeline::Attachment { keys, .. } => {
@@ -753,6 +805,8 @@ impl<'a> Writer<'a> {
                             }
                         }
                     }
+                    SlotTimeline::Rgb2 { keys, .. } => self.split_slot_color_keys(keys),
+                    SlotTimeline::Alpha { keys, .. } => self.split_slot_color_keys(keys),
                 }
                 self.domain_link(owner);
             }
@@ -919,26 +973,29 @@ impl<'a> Writer<'a> {
             }
             Object::FloatList(values) => {
                 self.uint(17);
-                self.generic(None);
-                self.uint(values.len() as u32);
-                for value in values {
-                    self.float(*value);
+                if self.generic(alias) {
+                    self.uint(values.len() as u32);
+                    for value in values {
+                        self.float(*value);
+                    }
                 }
             }
             Object::IntList(values) => {
                 self.uint(16);
-                self.generic(None);
-                self.uint(values.len() as u32);
-                for value in values {
-                    self.uint(*value << 1);
+                if self.generic(alias) {
+                    self.uint(values.len() as u32);
+                    for value in values {
+                        self.uint(*value << 1);
+                    }
                 }
             }
             Object::ShortList(values) => {
                 self.uint(47);
-                self.generic(None);
-                self.uint(values.len() as u32);
-                for value in values {
-                    self.bytes.extend_from_slice(&value.to_be_bytes());
+                if self.generic(alias) {
+                    self.uint(values.len() as u32);
+                    for value in values {
+                        self.bytes.extend_from_slice(&value.to_be_bytes());
+                    }
                 }
             }
             #[cfg(feature = "scene-codec")]

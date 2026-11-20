@@ -87,6 +87,19 @@ rows and geometry epochs; reread after topology changes. PSD import preserves
 positions/order within the supported flat RGB8 Normal RAW/PackBits profile;
 groups, effects and other unsupported PSD data are rejected.
 
+Use `fbones_preview_prune_weights` with explicit weighted attachment IDs,
+per-attachment locks, a maximum influence count and a threshold from 0 to 1.
+It returns the removed influence count and changed weight rows. Commit the
+same request with `fbones_edit` and `pruneAttachmentWeights` using the
+preview's revision and Setup pose epoch. The batch uses one Undo action.
+
+For vertex weight paste, read the source rows with `fbones_get_project` and
+retain the bound bone IDs and selected row order. Submit
+`pasteAttachmentWeights` through `fbones_edit` with one destination vertex
+per source row and `weightBits` as exact u32 representations of f32 values.
+The destination must have the same bound bone IDs. Optional `lockedBones`
+protect the destination's current words.
+
 ## Setup, animation and physics
 
 Setup edits authored fields; evaluation produces a separate sampled pose.
@@ -94,6 +107,32 @@ Animation changes require explicit animation/key requests rather than writing
 sampled values into Setup. If an operation uses evaluated coordinates, evaluate
 first and pass the returned pose epoch where the tool supports it. Epochs expire
 after edits and geometry changes. Never persist runtime matrices or velocities.
+
+Use `offsetAnimationKeys` with an animation ID, a bone key ID and
+`deltaFrames` to shift a closed bone property row through its authored clip
+duration. The row needs matching values at frame zero and the authored end.
+Pass `continueOffset: true` only for the same selected key after a successful
+Offset move. This reuses its original curve for the cumulative drag. Read the
+current revision before submitting the next edit.
+
+Use `scaleAnimationKeys` with an animation ID, stable key IDs,
+`anchorFrame`, `fromEdgeFrame` and `toEdgeFrame`. The anchor is the
+fixed edge. The moving edge can cross it to reverse time. Pass the current
+revision. The supported bone profile accepts positive scaling of linear or
+stepped intervals and reversal of linear intervals. Affected Bézier
+intervals and frame collisions reject the whole edit.
+
+Use `setRegionPosition` to update one or both local coordinates of an active
+Region in half-unit steps. Supply the attachment ID and current revision.
+Include a current geometry pose epoch on constrained rigs. Omitted axes,
+rotation, scale and attachment representation are preserved.
+
+Use `translateBoneWithCompensation` for one authored bone in unconstrained
+Setup. Supply its stable ID, signed world `dx` and `dy`, the current revision
+and the `compensateBones` and `compensateImages` booleans. Bones preserves
+direct child world positions. Images compensates the bone's Region inventory
+and its positive Mesh or Clipping binding lanes. The whole edit is one
+history action.
 
 Physics evaluation is preview, not baking. Use authored constraints to configure
 physics; do not infer exact Spine solver parity from a successful request.

@@ -5,7 +5,8 @@ use crate::{
     scene_edit::SceneFrame,
 };
 use fbones_format::minimal::scene::{
-    Animation, SlotAttachmentKey, SlotRgbaCurve, SlotRgbaKey, SlotTimeline,
+    Animation, SlotAttachmentKey, SlotColorCurve, SlotColorKey, SlotRgbaCurve, SlotRgbaKey,
+    SlotTimeline, SplitModeConfig, WireSlotChannel,
 };
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashSet;
@@ -41,6 +42,8 @@ pub enum SlotKeyInput {
         curve: CurveInput,
         #[serde(default)]
         controls: Option<[[f32; 4]; 4]>,
+        #[serde(default, rename = "negativeZeroIndices")]
+        negative_zero_indices: Option<Vec<u8>>,
         #[serde(default, rename = "keyId")]
         key_id: Option<u64>,
     },
@@ -58,8 +61,11 @@ impl SlotKeyInput {
             Self::Attachment { key_id, .. } | Self::Rgba { key_id, .. } => *key_id,
         }
     }
-    fn rgba(&self) -> bool {
-        matches!(self, Self::Rgba { .. })
+    fn channel(&self) -> WireSlotChannel {
+        match self {
+            Self::Attachment { .. } => WireSlotChannel::Attachment,
+            Self::Rgba { .. } => WireSlotChannel::Rgba,
+        }
     }
 }
 #[derive(Clone, Debug, Serialize)]
@@ -82,6 +88,24 @@ pub struct RgbaKeyView {
     pub controls: Option<[[f32; 4]; 4]>,
 }
 #[derive(Clone, Debug, Serialize)]
+pub struct Rgb2KeyView {
+    pub id: u64,
+    pub frame: f32,
+    pub values: [f32; 6],
+    pub curve: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub controls: Option<[[f32; 4]; 6]>,
+}
+#[derive(Clone, Debug, Serialize)]
+pub struct AlphaKeyView {
+    pub id: u64,
+    pub frame: f32,
+    pub value: f32,
+    pub curve: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub controls: Option<[f32; 4]>,
+}
+#[derive(Clone, Debug, Serialize)]
 #[serde(tag = "channel", rename_all = "camelCase")]
 pub enum SlotTrackView {
     Attachment {
@@ -92,6 +116,14 @@ pub enum SlotTrackView {
         slot: u64,
         keys: Vec<RgbaKeyView>,
     },
+    Rgb2 {
+        slot: u64,
+        keys: Vec<Rgb2KeyView>,
+    },
+    Alpha {
+        slot: u64,
+        keys: Vec<AlphaKeyView>,
+    },
 }
 #[derive(Clone, Debug, Serialize)]
 pub struct SlotPoseView {
@@ -100,24 +132,28 @@ pub struct SlotPoseView {
     pub color: [f64; 4],
     pub dark: [f64; 3],
 }
-pub(crate) fn slot(track: &SlotTimeline) -> usize {
+pub(crate) fn channel(track: &SlotTimeline) -> WireSlotChannel {
     match track {
-        SlotTimeline::Attachment { slot, .. } | SlotTimeline::Rgba { slot, .. } => *slot,
+        SlotTimeline::Attachment { .. } => WireSlotChannel::Attachment,
+        SlotTimeline::Rgba { .. } => WireSlotChannel::Rgba,
+        SlotTimeline::Rgb2 { .. } => WireSlotChannel::Rgb2,
+        SlotTimeline::Alpha { .. } => WireSlotChannel::Alpha,
     }
-}
-fn is_rgba(track: &SlotTimeline) -> bool {
-    matches!(track, SlotTimeline::Rgba { .. })
 }
 pub(crate) fn len(track: &SlotTimeline) -> usize {
     match track {
         SlotTimeline::Attachment { keys, .. } => keys.len(),
         SlotTimeline::Rgba { keys, .. } => keys.len(),
+        SlotTimeline::Rgb2 { keys, .. } => keys.len(),
+        SlotTimeline::Alpha { keys, .. } => keys.len(),
     }
 }
 fn frames(track: &SlotTimeline) -> Vec<f32> {
     match track {
         SlotTimeline::Attachment { keys, .. } => keys.iter().map(|k| k.frame).collect(),
         SlotTimeline::Rgba { keys, .. } => keys.iter().map(|k| k.frame).collect(),
+        SlotTimeline::Rgb2 { keys, .. } => keys.iter().map(|k| k.frame).collect(),
+        SlotTimeline::Alpha { keys, .. } => keys.iter().map(|k| k.frame).collect(),
     }
 }
 pub(crate) fn duration(clip: &Animation) -> f32 {
@@ -139,13 +175,22 @@ pub(crate) fn allocate_ids(clip: &Animation, next: &mut u64) -> Result<Vec<Vec<u
         .map(|t| (0..len(t)).map(|_| animation::allocate(next)).collect())
         .collect()
 }
+fn split_curve<const N: usize>(
+    curve: &SlotColorCurve<N>,
+) -> (&'static str, Option<[[f32; 4]; N]>) {
+    match curve {
+        SlotColorCurve::Linear => ("linear", None),
+        SlotColorCurve::Stepped => ("stepped", None),
+        SlotColorCurve::Bezier { controls } => ("bezier", Some(*controls)),
+    }
+}
 pub(crate) fn views(frame: &SceneFrame, a: usize) -> Vec<SlotTrackView> {
     frame.project.animations[a]
         .slot_tracks
         .iter()
         .enumerate()
         .map(|(t, track)| {
-            let slot = slot(track);
+            let slot = track.slot();
             let ids = &frame.animation_slot_key_ids[a][t];
             match track {
                 SlotTimeline::Attachment { keys, .. } => SlotTrackView::Attachment {
@@ -186,6 +231,40 @@ pub(crate) fn views(frame: &SceneFrame, a: usize) -> Vec<SlotTrackView> {
                         })
                         .collect(),
                 },
+                SlotTimeline::Rgb2 { keys, .. } => SlotTrackView::Rgb2 {
+                    slot: frame.slot_ids[slot],
+                    keys: keys
+                        .iter()
+                        .zip(ids)
+                        .map(|(key, &id)| {
+                            let (curve, controls) = split_curve(&key.curve);
+                            Rgb2KeyView {
+                                id,
+                                frame: key.frame,
+                                values: key.values,
+                                curve,
+                                controls,
+                            }
+                        })
+                        .collect(),
+                },
+                SlotTimeline::Alpha { keys, .. } => SlotTrackView::Alpha {
+                    slot: frame.slot_ids[slot],
+                    keys: keys
+                        .iter()
+                        .zip(ids)
+                        .map(|(key, &id)| {
+                            let (curve, controls) = split_curve(&key.curve);
+                            AlphaKeyView {
+                                id,
+                                frame: key.frame,
+                                value: key.values[0],
+                                curve,
+                                controls: controls.map(|[lane]| lane),
+                            }
+                        })
+                        .collect(),
+                },
             }
         })
         .collect()
@@ -203,6 +282,35 @@ fn curve(input: CurveInput, controls: Option<[[f32; 4]; 4]>) -> Result<SlotRgbaC
         )),
     }
 }
+
+fn apply_light_zero_signs(
+    values: &mut [f32; 4],
+    controls: &mut Option<[[f32; 4]; 4]>,
+    indices: &[u8],
+) -> Result<(), AppError> {
+    let mut negative = [false; 20];
+    let available = if controls.is_some() { 20 } else { 4 };
+    for &index in indices {
+        let index = usize::from(index);
+        if index >= available || negative[index] {
+            return Err(invalid("Light RGBA zero indices must address distinct supplied fields."));
+        }
+        negative[index] = true;
+    }
+    for (value, negative) in values
+        .iter_mut()
+        .chain(controls.iter_mut().flatten().flatten())
+        .zip(negative)
+    {
+        if *value == 0.0 {
+            *value = if negative { -0.0 } else { 0.0 };
+        } else if negative {
+            return Err(invalid("Light RGBA zero indices must address zero fields."));
+        }
+    }
+    Ok(())
+}
+
 fn check_neighbors(
     old: &[SlotRgbaKey],
     old_ids: &[u64],
@@ -293,8 +401,15 @@ pub(crate) fn set_keys(
         let (s, position) = input.context();
         let s = frame.slot_index(s)?;
         let position = animation::checked_frame(position)?;
-        let rgba = input.rgba();
-        let existing = old.iter().position(|t| slot(t) == s && is_rgba(t) == rgba);
+        let target_channel = input.channel();
+        if target_channel == WireSlotChannel::Rgba
+            && frame.project.animations[a].slot_split_mode(s).is_some()
+        {
+            return Err(invalid("Imported split RGB/Alpha slot color lanes are read-only."));
+        }
+        let existing = old
+            .iter()
+            .position(|t| t.slot() == s && channel(t) == target_channel);
         let target = if let Some(id) = input.key_id() {
             let t = existing.ok_or_else(|| {
                 invalid("The selected slot key no longer belongs to this slot/channel.")
@@ -314,12 +429,19 @@ pub(crate) fn set_keys(
                 (end > 0 && f[end - 1] == position).then(|| old_ids[t][end - 1])
             })
         };
-        if !seen.insert((s, rgba, position.to_bits(), target)) {
+        if !seen.insert((s, target_channel, position.to_bits(), target)) {
             return Err(invalid("A slot key batch repeats the same key."));
         }
         if let Some(id) = target {
             explicit.insert(id);
         }
+        let explicit_light_zeros = matches!(
+            &input,
+            SlotKeyInput::Rgba {
+                negative_zero_indices: Some(_),
+                ..
+            }
+        );
         // Validate payload before creating a new track or consuming an identity.
         let checked = match input {
             SlotKeyInput::Attachment { attachment, .. } => {
@@ -340,13 +462,17 @@ pub(crate) fn set_keys(
                 }
             }
             SlotKeyInput::Rgba {
-                values,
+                mut values,
                 curve: kind,
-                controls,
+                mut controls,
                 dark_values,
                 dark_controls,
+                negative_zero_indices,
                 ..
             } => {
+                if let Some(indices) = negative_zero_indices {
+                    apply_light_zero_signs(&mut values, &mut controls, &indices)?;
+                }
                 if values
                     .iter()
                     .any(|v| !v.is_finite() || !(0.0..=1.0).contains(v))
@@ -413,14 +539,14 @@ pub(crate) fn set_keys(
         let live = frame.project.animations[a]
             .slot_tracks
             .iter()
-            .position(|t| slot(t) == s && is_rgba(t) == rgba);
+            .position(|t| t.slot() == s && channel(t) == target_channel);
         let t = if let Some(t) = live {
             t
         } else {
             let tracks = &mut frame.project.animations[a].slot_tracks;
             let t = tracks
                 .iter()
-                .rposition(|t| slot(t) == s)
+                .rposition(|t| t.slot() == s)
                 .map_or(tracks.len(), |n| n + 1);
             let empty = match &checked {
                 SlotTimeline::Attachment { .. } => SlotTimeline::Attachment {
@@ -431,6 +557,7 @@ pub(crate) fn set_keys(
                     slot: s,
                     keys: vec![],
                 },
+                SlotTimeline::Rgb2 { .. } | SlotTimeline::Alpha { .. } => unreachable!(),
             };
             tracks.insert(t, empty);
             frame.animation_slot_key_ids[a].insert(t, vec![]);
@@ -467,14 +594,32 @@ pub(crate) fn set_keys(
                 if target.is_some() {
                     let stored = &keys[position_index];
                     key.frame = stored.frame;
-                    for (value, old) in key.values.iter_mut().zip(stored.values) {
+                    for (value, old) in key.dark_values.iter_mut().zip(stored.dark_values) {
                         if *value == old {
                             *value = old;
                         }
                     }
-                    for (value, old) in key.dark_values.iter_mut().zip(stored.dark_values) {
-                        if *value == old {
-                            *value = old;
+                    if !explicit_light_zeros {
+                        // An addressed edit may carry an unchanged -0 as JSON 0.
+                        for (value, old) in key.values.iter_mut().zip(stored.values) {
+                            if *value == old {
+                                *value = old;
+                            }
+                        }
+                        if let (
+                            SlotRgbaCurve::Bezier { controls, .. },
+                            SlotRgbaCurve::Bezier {
+                                controls: prior, ..
+                            },
+                        ) = (&mut key.curve, &stored.curve)
+                        {
+                            for (value, old) in
+                                controls.iter_mut().flatten().zip(prior.iter().flatten())
+                            {
+                                if *value == *old {
+                                    *value = *old;
+                                }
+                            }
                         }
                     }
                     keys[position_index] = key;
@@ -495,7 +640,7 @@ pub(crate) fn set_keys(
         if let Some(n) = frame.project.animations[a]
             .slot_tracks
             .iter()
-            .position(|tr| slot(tr) == *s && is_rgba(tr))
+            .position(|tr| tr.slot() == *s && channel(tr) == WireSlotChannel::Rgba)
         {
             let SlotTimeline::Rgba { keys: after, .. } =
                 &frame.project.animations[a].slot_tracks[n]
@@ -513,11 +658,26 @@ pub(crate) fn set_keys(
     }
     Ok(())
 }
+fn check_editable_ids(frame: &SceneFrame, a: usize, wanted: &HashSet<u64>) -> Result<(), AppError> {
+    if frame.project.animations[a]
+        .slot_tracks
+        .iter()
+        .zip(&frame.animation_slot_key_ids[a])
+        .any(|(track, ids)| {
+            matches!(track, SlotTimeline::Rgb2 { .. } | SlotTimeline::Alpha { .. })
+                && ids.iter().any(|id| wanted.contains(id))
+        })
+    {
+        return Err(invalid("Imported split RGB/Alpha slot color lanes are read-only."));
+    }
+    Ok(())
+}
 pub(crate) fn delete_keys(
     frame: &mut SceneFrame,
     a: usize,
     wanted: &HashSet<u64>,
 ) -> Result<(), AppError> {
+    check_editable_ids(frame, a, wanted)?;
     for t in (0..frame.project.animations[a].slot_tracks.len()).rev() {
         let ids = &mut frame.animation_slot_key_ids[a][t];
         let old_ids = ids.clone();
@@ -540,6 +700,7 @@ pub(crate) fn delete_keys(
                 }
                 check_neighbors(&old, &old_ids, keys, ids, &HashSet::new())?;
             }
+            SlotTimeline::Rgb2 { .. } | SlotTimeline::Alpha { .. } => continue,
         }
         if ids.is_empty() {
             frame.project.animations[a].slot_tracks.remove(t);
@@ -562,7 +723,7 @@ fn move_indices(
             Ok((
                 i,
                 if wanted.contains(id) {
-                    animation::checked_frame(*f + delta)?
+                    animation::moved_frame(*f, delta)?
                 } else {
                     *f
                 },
@@ -587,9 +748,13 @@ pub(crate) fn move_keys(
     wanted: &HashSet<u64>,
     delta: f32,
 ) -> Result<(), AppError> {
+    check_editable_ids(frame, a, wanted)?;
     for t in 0..frame.project.animations[a].slot_tracks.len() {
         let track = &mut frame.project.animations[a].slot_tracks[t];
         let ids = &mut frame.animation_slot_key_ids[a][t];
+        if !ids.iter().any(|id| wanted.contains(id)) {
+            continue;
+        }
         let moved = move_indices(&frames(track), ids, wanted, delta)?;
         match track {
             SlotTimeline::Attachment { keys, .. } => {
@@ -628,8 +793,7 @@ pub(crate) fn move_keys(
                     let left = moved[at].1 - key.frame;
                     let right = moved[at + 1].1 - old[i + 1].frame;
                     for c in &mut controls {
-                        c[0] += left;
-                        c[2] += right;
+                        animation::move_control_times(c, left, right);
                     }
                     after[at].curve = SlotRgbaCurve::Bezier {
                         controls,
@@ -638,6 +802,7 @@ pub(crate) fn move_keys(
                 }
                 *keys = after;
             }
+            SlotTimeline::Rgb2 { .. } | SlotTimeline::Alpha { .. } => continue,
         }
         *ids = moved.iter().map(|(_, _, id)| *id).collect();
     }
@@ -647,13 +812,17 @@ pub(crate) fn move_keys(
 pub(crate) fn remap_references(before: &SceneFrame, next: &mut SceneFrame) -> Result<(), AppError> {
     for clip in &mut next.project.animations {
         for track in &mut clip.slot_tracks {
-            let old_slot = slot(track);
+            let old_slot = track.slot();
             let id = *before
                 .slot_ids
                 .get(old_slot)
                 .ok_or_else(|| invalid("Animation slot reference is missing."))?;
             let new_slot = next.slot_ids.iter().position(|v| *v == id).ok_or_else(|| {
-                invalid("Delete this slot's animation tracks before deleting the slot.")
+                if matches!(track, SlotTimeline::Rgb2 { .. } | SlotTimeline::Alpha { .. }) {
+                    invalid("A slot with imported split RGB/Alpha animation tracks cannot be deleted.")
+                } else {
+                    invalid("Delete this slot's animation tracks before deleting the slot.")
+                }
             })?;
             match track {
                 SlotTimeline::Attachment { slot, keys } => {
@@ -665,15 +834,52 @@ pub(crate) fn remap_references(before: &SceneFrame, next: &mut SceneFrame) -> Re
                     }
                     *slot = new_slot;
                 }
-                SlotTimeline::Rgba { slot, .. } => *slot = new_slot,
+                SlotTimeline::Rgba { slot, .. }
+                | SlotTimeline::Rgb2 { slot, .. }
+                | SlotTimeline::Alpha { slot, .. } => *slot = new_slot,
             }
         }
+        // A slot without color keys can still have a split mode row.
+        clip.split_modes.retain_mut(|row| {
+            let SplitModeConfig::Slot(row) = row else {
+                return true;
+            };
+            let Some(slot) = before
+                .slot_ids
+                .get(row.slot)
+                .and_then(|id| next.slot_ids.iter().position(|candidate| candidate == id))
+            else {
+                return false;
+            };
+            row.slot = slot;
+            true
+        });
     }
     Ok(())
 }
 fn cubic(a: f64, b: f64, c: f64, d: f64, t: f64) -> f64 {
     let u = 1. - t;
     u * u * u * a + 3. * u * u * t * b + 3. * u * t * t * c + t * t * t * d
+}
+fn color_bezier(
+    left_frame: f32,
+    right_frame: f32,
+    left: f32,
+    right: f32,
+    controls: [f32; 4],
+    frame: f64,
+) -> f64 {
+    let [cx1, cy1, cx2, cy2] = controls.map(f64::from);
+    let (mut low, mut high) = (0., 1.);
+    for _ in 0..48 {
+        let t = (low + high) * 0.5;
+        if cubic(f64::from(left_frame), cx1, cx2, f64::from(right_frame), t) < frame {
+            low = t;
+        } else {
+            high = t;
+        }
+    }
+    cubic(f64::from(left), cy1, cy2, f64::from(right), (low + high) * 0.5)
 }
 fn rgba_value(keys: &[SlotRgbaKey], frame: f64) -> Option<[f64; 4]> {
     let first = keys.first()?;
@@ -696,26 +902,29 @@ fn rgba_value(keys: &[SlotRgbaKey], frame: f64) -> Option<[f64; 4]> {
             f64::from(left.values[axis])
                 + (f64::from(right.values[axis]) - f64::from(left.values[axis])) * t
         }
-        SlotRgbaCurve::Bezier { controls, .. } => {
-            let [cx1, cy1, cx2, cy2] = controls[axis].map(f64::from);
-            let (mut low, mut high) = (0., 1.);
-            for _ in 0..48 {
-                let t = (low + high) * 0.5;
-                if cubic(f64::from(left.frame), cx1, cx2, f64::from(right.frame), t) < frame {
-                    low = t
-                } else {
-                    high = t
-                }
-            }
-            cubic(
-                f64::from(left.values[axis]),
-                cy1,
-                cy2,
-                f64::from(right.values[axis]),
-                (low + high) * 0.5,
-            )
-        }
+        SlotRgbaCurve::Bezier { controls, .. } => color_bezier(
+            left.frame, right.frame, left.values[axis], right.values[axis], controls[axis], frame,
+        ),
     }))
+}
+fn split_color_value<const N: usize>(keys: &[SlotColorKey<N>], frame: f64) -> Option<[f64; N]> {
+    let end = keys.partition_point(|key| f64::from(key.frame) <= frame);
+    let left = keys.get(end.checked_sub(1)?)?;
+    let current = left.values.map(f64::from);
+    let Some(right) = keys.get(end).filter(|_| f64::from(left.frame) != frame) else {
+        return Some(current);
+    };
+    Some(match &left.curve {
+        SlotColorCurve::Stepped => current,
+        SlotColorCurve::Linear => {
+            let t =
+                (frame - f64::from(left.frame)) / (f64::from(right.frame) - f64::from(left.frame));
+            std::array::from_fn(|axis| current[axis] + (f64::from(right.values[axis]) - current[axis]) * t)
+        }
+        SlotColorCurve::Bezier { controls } => std::array::from_fn(|axis| color_bezier(
+            left.frame, right.frame, left.values[axis], right.values[axis], controls[axis], frame,
+        )),
+    })
 }
 fn dark_value(keys: &[SlotRgbaKey], position: f64) -> Result<Option<[f64; 3]>, AppError> {
     let Some(first) = keys.first() else {
@@ -798,6 +1007,19 @@ fn sample_at_frame(
                         if let Some(dark) = dark_value(keys, position)? {
                             result[*slot].dark = dark;
                         }
+                    }
+                }
+                SlotTimeline::Rgb2 { slot, keys } => {
+                    if let Some([r, g, b, dr, dg, db]) = split_color_value(keys, position) {
+                        result[*slot].color[..3].copy_from_slice(&[r, g, b]);
+                        if frame.project.slot_dark_color(*slot).enabled {
+                            result[*slot].dark = [dr, dg, db];
+                        }
+                    }
+                }
+                SlotTimeline::Alpha { slot, keys } => {
+                    if let Some([alpha]) = split_color_value(keys, position) {
+                        result[*slot].color[3] = alpha;
                     }
                 }
             }

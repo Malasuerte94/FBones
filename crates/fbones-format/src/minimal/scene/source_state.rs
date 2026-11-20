@@ -29,6 +29,10 @@ pub struct WirePhysicsSourceState {
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WireSourceState {
+    /// The alternate tag order observed in the pinned Linux CLI specimens.
+    pub stock_cli_field_order: bool,
+    /// Non-default Project0/tag32 bits. The editor meaning is unmeasured.
+    pub project_scalar_32: Option<FiniteF32>,
     pub skeleton_126: bool,
     pub bone_126: Vec<usize>,
     pub slot_126: Vec<usize>,
@@ -36,7 +40,11 @@ pub struct WireSourceState {
     pub animation_3: Vec<usize>,
     pub group_2: [u32; 5],
     pub skeleton_toggles: [bool; 7],
+    /// Existing Region43 records using the separately observed CLI order.
+    pub region_43_order: Vec<AttachmentAddress>,
     pub mesh_19: Vec<(AttachmentAddress, FiniteF32)>,
+    /// Existing IK56 records using the separately observed CLI order.
+    pub ik_56_order: Vec<usize>,
     pub ik: Vec<WireIkSourceState>,
     pub transform: Vec<WireTransformSourceState>,
     pub physics: Vec<WirePhysicsSourceState>,
@@ -44,6 +52,8 @@ pub struct WireSourceState {
 impl Default for WireSourceState {
     fn default() -> Self {
         Self {
+            stock_cli_field_order: false,
+            project_scalar_32: None,
             skeleton_126: false,
             bone_126: vec![],
             slot_126: vec![],
@@ -51,7 +61,9 @@ impl Default for WireSourceState {
             animation_3: vec![],
             group_2: [3; 5],
             skeleton_toggles: [false; 7],
+            region_43_order: vec![],
             mesh_19: vec![],
+            ik_56_order: vec![],
             ik: vec![],
             transform: vec![],
             physics: vec![],
@@ -68,13 +80,18 @@ fn ordered(values: impl IntoIterator<Item = usize>, bound: usize) -> bool {
 }
 impl WireSourceState {
     pub(crate) fn normalize(&mut self) {
+        self.project_scalar_32 = self
+            .project_scalar_32
+            .filter(|value| value.to_bits() != 1f32.to_bits());
         self.bone_126.sort_unstable();
         self.slot_126.sort_unstable();
         self.animation_3.sort_unstable();
         self.bone_labels_28.retain(|(_, label)| label != "bone");
         self.bone_labels_28.sort_by_key(|(index, _)| *index);
+        self.region_43_order.sort_by_key(|a| (a.slot, a.attachment));
         self.mesh_19.retain(|(_, value)| value.to_bits() != 0);
         self.mesh_19.sort_by_key(|(a, _)| (a.slot, a.attachment));
+        self.ik_56_order.sort_unstable();
         self.ik.retain(|s| s.mix_6.to_bits() != 0 || s.uint_17 != 0);
         self.ik.sort_by_key(|s| s.constraint);
         self.transform
@@ -86,7 +103,10 @@ impl WireSourceState {
     }
     pub(crate) fn validate(&self, p: &SceneProject) -> Result<(), FormatError> {
         let fail = || FormatError::UnsupportedProfile;
-        if !ordered(self.bone_126.iter().copied(), p.rig.bones.len())
+        if self
+            .project_scalar_32
+            .is_some_and(|value| value.to_bits() == 1f32.to_bits())
+            || !ordered(self.bone_126.iter().copied(), p.rig.bones.len())
             || !ordered(self.slot_126.iter().copied(), p.slots.len())
             || !ordered(self.animation_3.iter().copied(), p.animations.len())
             || !ordered(
@@ -94,9 +114,26 @@ impl WireSourceState {
                 p.rig.bones.len(),
             )
             || self.bone_labels_28.iter().any(|(_, s)| s != "ik")
-            || self.group_2.iter().any(|v| !matches!(v, 3 | 9))
+            || !matches!(self.group_2[0], 3 | 9)
+            || self.group_2[1..].iter().any(|v| !matches!(v, 3 | 7 | 9))
+            || (p.animation_folders.is_some() && self.group_2[0] != 3)
         {
             return Err(fail());
+        }
+        let mut previous = None;
+        for address in &self.region_43_order {
+            let key = (address.slot, address.attachment);
+            if previous.is_some_and(|old| old >= key)
+                || !matches!(
+                    p.slots
+                        .get(address.slot)
+                        .and_then(|s| s.attachments.get(address.attachment)),
+                    Some(super::SceneAttachment::Region(_))
+                )
+            {
+                return Err(fail());
+            }
+            previous = Some(key);
         }
         let mut previous = None;
         for (address, value) in &self.mesh_19 {
@@ -113,7 +150,12 @@ impl WireSourceState {
             }
             previous = Some(key);
         }
-        if !ordered(self.ik.iter().map(|s| s.constraint), p.constraints.len())
+        if !ordered(self.ik_56_order.iter().copied(), p.constraints.len())
+            || self
+                .ik_56_order
+                .iter()
+                .any(|i| !matches!(p.constraints[*i], Constraint::Ik(_)))
+            || !ordered(self.ik.iter().map(|s| s.constraint), p.constraints.len())
             || !ordered(
                 self.transform.iter().map(|s| s.constraint),
                 p.constraints.len(),
@@ -174,6 +216,11 @@ impl WireSourceState {
         fn visit(record: &mut Record, state: &WireSourceState) {
             let label = record.label.clone();
             match record.class {
+                0 if label.as_deref() == Some("project") => {
+                    if let Some(value) = state.project_scalar_32 {
+                        set(record, 32, Field::Float(value.get()));
+                    }
+                }
                 11 if label.as_deref() == Some("skeleton") => {
                     set(record, 126, Field::UInt(u32::from(state.skeleton_126)));
                     for (tag, value) in SOURCE_TOGGLE_TAGS.into_iter().zip(state.skeleton_toggles) {
@@ -195,7 +242,11 @@ impl WireSourceState {
                             .expect("known group")
                             .1
                         {
-                            set(group, 2, Field::UInt(value));
+                            if group.label.as_deref()
+                                != Some(super::animation_folders::ROOT_GROUP_LABEL)
+                            {
+                                set(group, 2, Field::UInt(value));
+                            }
                         }
                     }
                 }
@@ -251,6 +302,9 @@ impl WireSourceState {
                 }
                 56 => {
                     if let Some(i) = index(label.as_deref(), "constraint-") {
+                        if state.ik_56_order.contains(&i) {
+                            super::record_order::apply_ik(record);
+                        }
                         if let Some(s) = state.ik.iter().find(|s| s.constraint == i) {
                             set(record, 6, Field::Float(s.mix_6.get()));
                             set(record, 17, Field::UInt(s.uint_17));
@@ -293,6 +347,9 @@ impl WireSourceState {
                     object_visit(object, state);
                 }
             }
+            if state.stock_cli_field_order {
+                super::record_order::apply(record);
+            }
         }
         fn object_visit(object: &mut Object, state: &WireSourceState) {
             match object {
@@ -302,6 +359,7 @@ impl WireSourceState {
                         object_visit(value, state)
                     }
                 }
+                Object::SharedMeshGeometry { value, .. } => object_visit(value, state),
                 Object::Map(values) => {
                     for (key, value) in values {
                         object_visit(key, state);
@@ -371,12 +429,14 @@ mod tests {
         let mut p = project();
         let authored = (p.rig.clone(), p.constraints.clone(), p.animations.clone());
         p.wire.as_mut().unwrap().source_state = Some(WireSourceState {
+            project_scalar_32: Some(f(f32::from_bits(0x4084f4a4))),
             skeleton_126: true,
             bone_126: vec![1],
             bone_labels_28: vec![(1, "ik".into())],
             animation_3: vec![1],
-            group_2: [9; 5],
+            group_2: [9, 7, 7, 7, 7],
             skeleton_toggles: [true, false, true, false, false, false, true],
+            ik_56_order: vec![0],
             ik: vec![WireIkSourceState {
                 constraint: 0,
                 mix_6: f(-0.),
@@ -402,6 +462,24 @@ mod tests {
             authored
         );
     }
+
+    #[test]
+    fn observed_stock_cli_field_order_roundtrips_as_typed_provenance() {
+        let mut p = project();
+        p.wire.as_mut().unwrap().source_state = Some(WireSourceState {
+            stock_cli_field_order: true,
+            ..WireSourceState::default()
+        });
+        normalize_wire_strings(&mut p).unwrap();
+        let alternate = encode_scene_payload(&p).unwrap();
+        let decoded = decode_scene(&alternate).unwrap();
+        assert_eq!(decoded, p);
+        assert_eq!(encode_scene_payload(&decoded).unwrap(), alternate);
+
+        p.wire.as_mut().unwrap().source_state = None;
+        assert_ne!(encode_scene_payload(&p).unwrap(), alternate);
+    }
+
     #[test]
     fn invalid_owner_kind_duplicate_identity_and_unmeasured_labels_are_rejected() {
         let p = project();

@@ -553,6 +553,58 @@
               "properties": {
                 "type": {
                   "type": "string",
+                  "const": "setLinkedMeshInheritance"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "inheritTimelines": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "id",
+                "inheritTimelines"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "createLinkedMesh"
+                },
+                "source": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "slot": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "source",
+                "slot",
+                "name"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
                   "const": "setAnimationEventKeys"
                 },
                 "animation": {
@@ -670,6 +722,63 @@
               "required": [
                 "type",
                 "id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "storeAnimationKeys"
+                },
+                "animation": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "type",
+                "animation"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "clearStoredAnimationKeys"
+                },
+                "animation": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "type",
+                "animation"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "swapStoredAnimationKeys"
+                },
+                "animation": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "type",
+                "animation"
               ],
               "additionalProperties": false
             },
@@ -1029,12 +1138,97 @@
                 },
                 "deltaFrames": {
                   "type": "number"
+                },
+                "shift": {
+                  "type": "boolean"
                 }
               },
               "required": [
                 "type",
                 "animation",
                 "keys",
+                "deltaFrames"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "scaleAnimationKeys"
+                },
+                "animation": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "keys": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "anchorFrame": {
+                  "type": "number"
+                },
+                "fromEdgeFrame": {
+                  "type": "number"
+                },
+                "toEdgeFrame": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "animation",
+                "keys",
+                "anchorFrame",
+                "fromEdgeFrame",
+                "toEdgeFrame"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "offsetAnimationKeys"
+                },
+                "animation": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "key": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "deltaFrames": {
+                  "type": "number"
+                },
+                "continueOffset": {
+                  "type": "boolean"
+                },
+                "loopRange": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/rig__AnimationOffsetRange"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "type",
+                "animation",
+                "key",
                 "deltaFrames"
               ],
               "additionalProperties": false
@@ -1064,6 +1258,25 @@
                 "type",
                 "id",
                 "bones"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "updateAttachmentBindings"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "type",
+                "id"
               ],
               "additionalProperties": false
             },
@@ -1195,6 +1408,167 @@
               "required": [
                 "type",
                 "id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "smoothAttachmentWeights"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "vertices": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "lockedBones": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "type",
+                "id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "swapAttachmentWeights"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "bones": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "lockedBones": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "type",
+                "id",
+                "bones"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "pasteAttachmentWeights"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "bones": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "rows": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/rig__PasteWeightRow"
+                  }
+                },
+                "lockedBones": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "type",
+                "id",
+                "bones",
+                "rows"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "pruneAttachmentWeights"
+                },
+                "request": {
+                  "$ref": "#/$defs/rig__PruneWeightsRequest"
+                }
+              },
+              "required": [
+                "type",
+                "request"
               ],
               "additionalProperties": false
             },
@@ -1825,29 +2199,258 @@
                   "maximum": 9007199254740991
                 },
                 "x": {
-                  "type": "number"
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 },
                 "y": {
-                  "type": "number"
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 },
                 "rotation": {
-                  "type": "number"
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 },
                 "scaleX": {
-                  "type": "number"
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 },
                 "scaleY": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "type",
+                "id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "setRegionPosition"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "x": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "y": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "type",
+                "id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "translateBoneWithCompensation"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "dx": {
                   "type": "number"
+                },
+                "dy": {
+                  "type": "number"
+                },
+                "compensateBones": {
+                  "type": "boolean"
+                },
+                "compensateImages": {
+                  "type": "boolean"
                 }
               },
               "required": [
                 "type",
                 "id",
-                "x",
-                "y",
-                "rotation",
-                "scaleX",
-                "scaleY"
+                "dx",
+                "dy",
+                "compensateBones",
+                "compensateImages"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "rotateBoneWithCompensation"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "mode": {
+                  "$ref": "#/$defs/rig__RotationCompensationMode"
+                },
+                "angle": {
+                  "type": "number"
+                },
+                "compensateBones": {
+                  "type": "boolean"
+                },
+                "compensateImages": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "id",
+                "mode",
+                "angle",
+                "compensateBones",
+                "compensateImages"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "scaleBoneWithCompensation"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "mode": {
+                  "$ref": "#/$defs/rig__ScaleCompensationMode"
+                },
+                "x": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "y": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "compensateBones": {
+                  "type": "boolean"
+                },
+                "compensateImages": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "id",
+                "mode",
+                "compensateBones",
+                "compensateImages"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "shearBoneWithCompensation"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "mode": {
+                  "$ref": "#/$defs/rig__RotationCompensationMode"
+                },
+                "axis": {
+                  "$ref": "#/$defs/rig__BoneWorldAxis"
+                },
+                "angle": {
+                  "type": "number"
+                },
+                "compensateBones": {
+                  "type": "boolean"
+                },
+                "compensateImages": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "id",
+                "mode",
+                "axis",
+                "angle",
+                "compensateBones",
+                "compensateImages"
               ],
               "additionalProperties": false
             },
@@ -1974,6 +2577,178 @@
                 "y",
                 "rotation",
                 "length"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "renameBones"
+                },
+                "renames": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/rig__BoneRename"
+                  }
+                }
+              },
+              "required": [
+                "type",
+                "renames"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "setBoneParentPosition"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "x": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "y": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "compensateBones": {
+                  "type": "boolean"
+                },
+                "compensateImages": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "setBoneLocalPosition"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "x": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "y": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "compensateBones": {
+                  "type": "boolean"
+                },
+                "compensateImages": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "setBoneWorldPosition"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "axis": {
+                  "$ref": "#/$defs/rig__BoneWorldAxis"
+                },
+                "position": {
+                  "type": "number"
+                },
+                "compensateBones": {
+                  "type": "boolean"
+                },
+                "compensateImages": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "id",
+                "axis",
+                "position"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "setBoneWorldRotation"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "angle": {
+                  "type": "number"
+                },
+                "compensateBones": {
+                  "type": "boolean"
+                },
+                "compensateImages": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "id",
+                "angle"
               ],
               "additionalProperties": false
             },
@@ -2747,6 +3522,60 @@
               "properties": {
                 "type": {
                   "type": "string",
+                  "const": "generateMeshVertices"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "type",
+                "id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "replaceMeshOutline"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "uvs": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "minItems": 2,
+                    "maxItems": 2
+                  },
+                  "minItems": 3,
+                  "maxItems": 256
+                }
+              },
+              "required": [
+                "type",
+                "id",
+                "uvs"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
                   "const": "bindMesh"
                 },
                 "id": {
@@ -3103,6 +3932,327 @@
               "properties": {
                 "channel": {
                   "type": "string",
+                  "const": "pathPosition"
+                },
+                "constraint": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "frame": {
+                  "type": "number"
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 1,
+                  "maxItems": 1
+                },
+                "curve": {
+                  "$ref": "#/$defs/animation__CurveInput"
+                },
+                "controls": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 4,
+                        "maxItems": 4
+                      },
+                      "minItems": 1,
+                      "maxItems": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "valueBits": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 4294967295
+                      },
+                      "minItems": 1,
+                      "maxItems": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "controlsBits": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 4294967295
+                        },
+                        "minItems": 4,
+                        "maxItems": 4
+                      },
+                      "minItems": 1,
+                      "maxItems": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "keyId": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "channel",
+                "constraint",
+                "frame",
+                "values",
+                "curve"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "channel": {
+                  "type": "string",
+                  "const": "pathSpacing"
+                },
+                "constraint": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "frame": {
+                  "type": "number"
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 1,
+                  "maxItems": 1
+                },
+                "curve": {
+                  "$ref": "#/$defs/animation__CurveInput"
+                },
+                "controls": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 4,
+                        "maxItems": 4
+                      },
+                      "minItems": 1,
+                      "maxItems": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "valueBits": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 4294967295
+                      },
+                      "minItems": 1,
+                      "maxItems": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "controlsBits": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 4294967295
+                        },
+                        "minItems": 4,
+                        "maxItems": 4
+                      },
+                      "minItems": 1,
+                      "maxItems": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "keyId": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "channel",
+                "constraint",
+                "frame",
+                "values",
+                "curve"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "channel": {
+                  "type": "string",
+                  "const": "pathMix"
+                },
+                "constraint": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "frame": {
+                  "type": "number"
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
+                },
+                "curve": {
+                  "$ref": "#/$defs/animation__CurveInput"
+                },
+                "controls": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 4,
+                        "maxItems": 4
+                      },
+                      "minItems": 3,
+                      "maxItems": 3
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "valueBits": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 4294967295
+                      },
+                      "minItems": 3,
+                      "maxItems": 3
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "controlsBits": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 4294967295
+                        },
+                        "minItems": 4,
+                        "maxItems": 4
+                      },
+                      "minItems": 3,
+                      "maxItems": 3
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "keyId": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "channel",
+                "constraint",
+                "frame",
+                "values",
+                "curve"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "channel": {
+                  "type": "string",
                   "const": "physics"
                 },
                 "constraint": {
@@ -3265,7 +4415,7 @@
             "mode": {
               "type": "integer",
               "minimum": 0,
-              "maximum": 255
+              "maximum": 6
             },
             "index": {
               "type": "integer",
@@ -3609,6 +4759,21 @@
                     }
                   ]
                 },
+                "negativeZeroIndices": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 255
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
                 "keyId": {
                   "anyOf": [
                     {
@@ -3723,6 +4888,23 @@
                 }
               ]
             },
+            "controlsBits": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4294967295
+                  },
+                  "minItems": 4,
+                  "maxItems": 4
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "dataPresent": {
               "anyOf": [
                 {
@@ -3776,6 +4958,22 @@
           ],
           "additionalProperties": false
         },
+        "rig__AnimationOffsetRange": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": "number"
+            },
+            "end": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "start",
+            "end"
+          ],
+          "additionalProperties": false
+        },
         "rig__WeightChange": {
           "type": "object",
           "properties": {
@@ -3791,6 +4989,83 @@
           "required": [
             "vertex",
             "value"
+          ],
+          "additionalProperties": false
+        },
+        "rig__PasteWeightRow": {
+          "type": "object",
+          "properties": {
+            "vertex": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "weightBits": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4294967295
+              }
+            }
+          },
+          "required": [
+            "vertex",
+            "weightBits"
+          ],
+          "additionalProperties": false
+        },
+        "rig__PruneWeightsRequest": {
+          "type": "object",
+          "properties": {
+            "targets": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/rig__PruneWeightsTarget"
+              }
+            },
+            "maxInfluences": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "threshold": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "targets",
+            "maxInfluences",
+            "threshold"
+          ],
+          "additionalProperties": false
+        },
+        "rig__PruneWeightsTarget": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "lockedBones": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "id"
           ],
           "additionalProperties": false
         },
@@ -4235,6 +5510,45 @@
             "offsets",
             "properties"
           ]
+        },
+        "rig__RotationCompensationMode": {
+          "type": "string",
+          "enum": [
+            "localAbsolute",
+            "worldDelta"
+          ]
+        },
+        "rig__ScaleCompensationMode": {
+          "type": "string",
+          "enum": [
+            "localAbsolute",
+            "localFactor"
+          ]
+        },
+        "rig__BoneWorldAxis": {
+          "type": "string",
+          "enum": [
+            "x",
+            "y"
+          ]
+        },
+        "rig__BoneRename": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ],
+          "additionalProperties": false
         },
         "rig__BoneColorEdit": {
           "type": "object",
@@ -5001,6 +6315,95 @@
     }
   },
   {
+    "name": "fbones_preview_prune_weights",
+    "description": "Preview the weight rows and number of positive influences removed by Prune on weighted Setup Mesh or Clipping attachments. Use the same request, expectedRevision and frozen poseEpoch with pruneAttachmentWeights to apply.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/rig__PruneWeightsRequest"
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "poseEpoch": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "request",
+        "expectedRevision"
+      ],
+      "additionalProperties": false,
+      "$defs": {
+        "rig__PruneWeightsRequest": {
+          "type": "object",
+          "properties": {
+            "targets": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/rig__PruneWeightsTarget"
+              }
+            },
+            "maxInfluences": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "threshold": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "targets",
+            "maxInfluences",
+            "threshold"
+          ],
+          "additionalProperties": false
+        },
+        "rig__PruneWeightsTarget": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "lockedBones": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
     "name": "fbones_preview_trace",
     "description": "Preview bounded alpha/inner-detail auto trace for a slot. Preserve expectedRevision and poseEpoch from preview through apply. Apply is one native history action.",
     "inputSchema": {
@@ -5039,6 +6442,12 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 255
+            },
+            "padding": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 32,
+              "default": 0
             },
             "tolerance": {
               "type": "number"
@@ -5115,6 +6524,12 @@
               "minimum": 0,
               "maximum": 255
             },
+            "padding": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 32,
+              "default": 0
+            },
             "tolerance": {
               "type": "number"
             },
@@ -5190,6 +6605,12 @@
               "minimum": 0,
               "maximum": 255
             },
+            "padding": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 32,
+              "default": 0
+            },
             "tolerance": {
               "type": "number"
             },
@@ -5264,6 +6685,12 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 255
+            },
+            "padding": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 32,
+              "default": 0
             },
             "tolerance": {
               "type": "number"

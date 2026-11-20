@@ -31,14 +31,21 @@ fn float(fields: &BTreeMap<u32, Value>, tag: u32) -> Result<FiniteF32> {
 }
 pub(super) fn read(
     r: &Reader<'_>,
+    project: &BTreeMap<u32, Value>,
     skeleton: &BTreeMap<u32, Value>,
     bones: &[Reference],
     slots: &[Reference],
     inventory: &[Vec<Reference>],
     constraints: &[Reference],
     animations: &[Reference],
+    has_animation_folders: bool,
 ) -> Result<Option<WireSourceState>> {
+    let project_scalar_32 = float(project, 32)?;
     let mut state = WireSourceState {
+        stock_cli_field_order: r.project_field_order.as_slice()
+            == crate::minimal::scene::record_order::STOCK_CLI_PROJECT_ORDER,
+        project_scalar_32: (project_scalar_32.to_bits() != 1f32.to_bits())
+            .then_some(project_scalar_32),
         skeleton_126: flag126(skeleton)?,
         ..WireSourceState::default()
     };
@@ -63,6 +70,10 @@ pub(super) fn read(
         }
     }
     for (i, tag) in SOURCE_GROUP_TAGS.into_iter().enumerate() {
+        if tag == 37 && has_animation_folders {
+            // The named folder layout validates and writes its own group mode.
+            continue;
+        }
         state.group_2[i] = uint(r.fields(Reader::field_reference(skeleton, tag)?, 108)?, 2)?;
     }
     for (i, tag) in SOURCE_TOGGLE_TAGS.into_iter().enumerate() {
@@ -74,6 +85,11 @@ pub(super) fn read(
             let Reference::Domain(index) = reference else {
                 return unsupported();
             };
+            if r.domain[*index].class == 43 && r.alternate_record_order.contains(index) {
+                state
+                    .region_43_order
+                    .push(AttachmentAddress { slot, attachment });
+            }
             if r.domain[*index].class == 46 {
                 let v = float(r.fields(*reference, 46)?, 19)?;
                 if v.to_bits() != 0 {
@@ -92,6 +108,9 @@ pub(super) fn read(
         let fields = r.fields(*reference, class)?;
         match class {
             56 => {
+                if r.alternate_record_order.contains(i) {
+                    state.ik_56_order.push(constraint);
+                }
                 let row = WireIkSourceState {
                     constraint,
                     mix_6: float(fields, 6)?,
@@ -112,6 +131,7 @@ pub(super) fn read(
                     .transform
                     .push(WireTransformSourceState { constraint, values });
             }
+            72 => {}
             121 => {
                 let values = SOURCE_PHYSICS_TAGS
                     .map(|tag| float(fields, tag))

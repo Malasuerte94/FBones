@@ -7,3 +7,9 @@ export function automaticColors(bones:readonly BoneView[]){
  const poses=new Map<number,{h:number;depth:number}>();
  return bones.map(b=>{const parent=b.parent===null?null:poses.get(b.parent);let hash=0;for(const c of b.name)hash=(hash*31+c.codePointAt(0)!)>>>0;const h=b.parent===null?42:parent&&parent.depth>0?parent.h:(hash*137.508)%360,depth=parent?parent.depth+1:0;poses.set(b.id,{h,depth});return{id:b.id,color:pack(h+depth*2,52,58+(depth%4)*5)};});
 }
+
+/** The neutral default needs distinct display colors in a multi-bone binding. */
+export function weightInfluenceColor(bone: Pick<BoneView, 'color'> | undefined, column: number): number {
+  const rgba = bone?.color ?? 0x9b9b9bff;
+  return (column >= 0 && rgba === 0x9b9b9bff ? pack(186 + column * 137.508, 68, 59) : rgba) >>> 8;
+}

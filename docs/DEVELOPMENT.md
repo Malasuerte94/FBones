@@ -8,6 +8,16 @@ prerequisites from https://v2.tauri.app/start/prerequisites/.
 Run `pnpm install`, then `pnpm dev`. `pnpm dev:web` previews the interface in a
 browser; native project file operations require Tauri.
 
+Run `pnpm board` for the local FBones dashboard at
+<http://127.0.0.1:4180/>. It reads the current task table, project memory
+and contributor rules from `docs/TASKS.md`, `docs/STATE.md`, and `AGENTS.md`.
+Status and priority changes from the board write back to `docs/TASKS.md`.
+The default Hierarchy view uses the parent-to-child lists in
+`docs/TASK-HIERARCHY.json`. Dependencies have their own field in the task
+table. Switch to Status board to drag between status columns. Changes with
+recorded activity remain unread until marked read in this browser.
+Run `node --test scripts/project-board/server.test.mjs` to verify the dashboard.
+
 `pnpm build:web` checks TypeScript and builds assets. `pnpm build` builds the
 native application. Rust code can be checked using `cargo test --workspace`.
 The format crate has no desktop dependency and can be tested on its own.
@@ -55,6 +65,9 @@ GitHub source/releases and public npm are the intended distribution routes;
 the local package does not establish registry ownership or publication.
 
 ## Routine interface tests on Ubuntu
+
+Run FBones tests and verification builds in the grouped 15-point implementation
+rounds described in [AGENTS.md](../AGENTS.md#test-cadence).
 
 `pnpm test:ui` builds the frontend and the opt-in headless Rust test host, then
 runs Playwright against Linux Chromium. The host uses the application's real
@@ -108,46 +121,35 @@ patch than the 24.15 currently installed here.
 Use a JDK/decompiler for Java bytecode and Ghidra for native components where
 the identified loader needs them. None of these are dependencies of FBones.
 
-## Original Spine comparison
+## Original Spine comparison on Linux
 
-Use original Spine 4.3.26 on Windows. Create an empty project and one-change
-fixtures (rename skeleton, add one bone, translate one bone, etc.). Keep assets
-and user projects outside version control. Record the operation, version,
-checksum, and observed result. Rename a *copy* of an FBones output to `.spine`
-and open it in Spine. Preserve the source files.
+Use the activated **Spine 4.3.26 Professional** Linux installation for all new
+reference comparisons. Pin the version with `Spine.sh --update 4.3.26`. Verify that
+the startup output names the exact Professional editor. Create small owned
+fixtures and pass an explicit copy for every original comparison. Keep assets and
+user projects outside version control. Record the operation, version, checksum
+and observed result. An independently generated FBones file can be checked by
+opening a copy with a `.spine` extension.
 
-Place controlled reference fixtures in ignored `updates/fixtures/`, starting
-with `blank-4.3.26.spine`: File → New in the original 4.3.26 editor, then save
-without adding bones/images/animations. Next save separate copies with one
-change each. File naming alone does not establish the internal version.
+REA MCP is the source of truth for new reference behavior. Use targeted
+artifact or runtime analysis and preserve the provider evidence. Use private
+paths for CLI input and output. Manual and scripted GUI input in original Spine
+are outside the current reference workflow. Keep existing GUI observations as
+historical evidence. [Reference rules](../AGENTS.md#parallel-work-and-reference-first)
 
-For automated controlled fixtures, run `WINDOWS_TEST/FORMAT_TEST/Ruleaza-Testele.bat`
-on Windows. The separate `fbones-reference.exe` discovers the installed original
-`Spine.com`, or accepts `--spine "C:\path\to\Spine.com"`. It needs the original
-installation activated and version 4.3.26 available. It creates eight fresh cases
-and an envelope-repacking probe beside itself. Results under the shared workspace
-are directly accessible; older Desktop batches can be archived with the import
-script below. No personal project is used, modified or overwritten. FBones does
-not call this helper at runtime. This collection has already passed.
+```sh
+Spine.sh --update 4.3.26 --input own-fixture.spine --output export-dir --export json
+cargo test -p fbones-research
+```
 
-Run its local tests with `cargo test -p fbones-research`. Its process timeout
-test runs on Unix; actual original-Spine CLI acceptance requires Windows results.
+Retain the accepted eight-case envelope and independent encoder batches. The
+read-only checker verifies returned reports and their files without launching
+Spine.
 
-Returned results can be checked locally without launching Spine:
-`python3 scripts/check-reference-results.py updates/fixtures/reference-results-1793191428306
---output analysis/reference-check.json`. The current returned batch passes all
-eight controlled cases and the repacked payload/export equality checks. This
-verifies the artifacts and records the original collector's acceptance report;
-its scope is the original envelope comparison, distinct from the later accepted
-minimal-profile project encoder.
-
-`FORMAT_TEST/Verifica-Proiectele-Noastre.bat` uses the independent writer, then
-asks original Spine to open/export its generated projects. All eight cases and
-interactive opening have now passed. Neither batch needs to be repeated.
-For local differential verification run `cargo run -p fbones-research --
---compare-candidates updates/fixtures/reference-results-1793191428306`.
-`--generate-candidates` writes experimental projects without invoking Spine;
-`--verify-generated` additionally checks them in the original application.
+```sh
+python3 scripts/check-reference-results.py updates/fixtures/reference-results-1793191428306
+cargo run -p fbones-research -- --compare-candidates updates/fixtures/reference-results-1793191428306
+```
 
 ## Windows access without copying builds
 
@@ -160,11 +162,9 @@ shortcut pointing elsewhere. The user ran this setup successfully; both created
 shortcut targets have been independently verified. The user also confirmed
 application startup through the shared UNC shortcut.
 
-Run subsequent test batches directly under shared WINDOWS_TEST/FORMAT_TEST.
-Use an existing mapped drive (W: on this host), including for every Spine
-input/output argument: original Spine refuses UNC paths even when CMD accepts
-the current folder. Results appear directly in the workspace. Older Desktop results can also be read
-and archived by `python3 scripts/import-windows-results.py`; the local source
+Use the existing mapped drive (W: on this host) for FBones acceptance and
+delivery. Shared results appear directly in the workspace. To archive existing
+Desktop results, use `python3 scripts/import-windows-results.py`. The local source
 path is kept in ignored `.local/windows-host.json`, or supplied with `--source`.
 Archive import is read-only toward Windows and refuses conflicting local data.
 
@@ -192,17 +192,11 @@ Native pose/state is authoritative. Field edits commit on blur/Enter; Save
 awaits their completion. Broken names/graphs and invalid numbers never mutate
 the model. Unknown project data stays inspection-only.
 
-Windows comparison for the new stage: shared
-`FORMAT_TEST/Verifica-Bones.bat` (`fbones-reference.exe --verify-bones`). It
-generates four profiles: chain, branches, reordered/reparented hierarchy and
-Unicode names, then verifies original Spine exports by bone name/parent and
-numeric transform. It does not repeat the accepted eight-case baseline.
-Result reports have `caseSet: bones-v1`; validate their actual files with
-`python3 scripts/check-reference-results.py <result-folder>` and optionally
-`cargo run -p fbones-research -- --compare-candidates <result-folder>`.
-All four cases have now passed original Windows Spine 4.3.26 from W:;
-independent artifact validation and byte comparisons passed. The user also
-confirmed bone creation, dragging and parenting. Do not repeat this batch.
+The retained `bones-v1` batch covers chains, branches, reordered or
+reparented hierarchy and Unicode names. The original Spine exports, independent
+artifact validation and byte comparisons passed. The user confirmed bone
+creation, dragging and parenting in FBones. Existing result folders can be
+verified with `python3 scripts/check-reference-results.py <result-folder>`.
 
 ## Windows portable test build from Linux
 

@@ -109,6 +109,98 @@ fn attachment(slot: usize) -> SlotTimeline {
     }
 }
 #[test]
+fn split_slot_color_retains_independent_keys_and_ordered_mode_owners() {
+    let mut project = scene();
+    let clip = &mut project.animations[0];
+    let slot_mode = |slot| {
+        SplitModeConfig::Slot(SlotSplitConfig {
+            slot,
+            mode: SlotSplitMode::RgbAlpha,
+        })
+    };
+    clip.split_modes = vec![
+        slot_mode(1),
+        SplitModeConfig::Bone(BoneSplitConfig {
+            bone: 1,
+            mode: BoneSplitMode::Translate,
+        }),
+        slot_mode(0),
+    ];
+    clip.tracks.push(BoneTimeline {
+        bone: 1,
+        channel: BoneChannel::TranslateX,
+        keys: vec![BoneKeyframe {
+            frame: 0.,
+            values: [0.; 2],
+            curve: KeyCurve::Linear,
+        }],
+    });
+    clip.slot_tracks = vec![
+        SlotTimeline::Alpha {
+            slot: 0,
+            keys: vec![
+                SlotColorKey {
+                    frame: -0.,
+                    values: [0.5],
+                    curve: SlotColorCurve::Bezier {
+                        controls: [[7., 0.4375, 14., 0.375]],
+                    },
+                },
+                SlotColorKey {
+                    frame: 21.,
+                    values: [0.375],
+                    curve: SlotColorCurve::Linear,
+                },
+            ],
+        },
+        attachment(0),
+        SlotTimeline::Rgb2 {
+            slot: 0,
+            keys: vec![
+                SlotColorKey {
+                    frame: 4.,
+                    values: [0.5, -0., 0.25, 0., 0., 0.],
+                    curve: SlotColorCurve::Linear,
+                },
+                SlotColorKey {
+                    frame: 24.,
+                    values: [0.5, 0.25, 1., 0., 0., 0.],
+                    curve: SlotColorCurve::Linear,
+                },
+            ],
+        },
+    ];
+    let payload = encode_scene_payload(&project).unwrap();
+    let decoded = decode_scene(&payload).unwrap();
+    assert_eq!(decoded, project);
+    assert_eq!(encode_scene_payload(&decoded).unwrap(), payload);
+
+    // The terminal linear alpha key has incoming handles from its predecessor.
+    // Its unused outgoing pair has the stock editor's exact sentinel.
+    let mut terminal = vec![0x85, 0x01, 0x01];
+    terminal.extend_from_slice(&21_f32.to_be_bytes());
+    terminal.extend_from_slice(&0.375_f32.to_be_bytes());
+    terminal.push(0);
+    for value in [14_f32, 0.375, 2147483648., 2147483648.] {
+        terminal.extend_from_slice(&value.to_be_bytes());
+    }
+    terminal.extend_from_slice(&[0; 4]);
+    let start = payload
+        .windows(terminal.len())
+        .position(|bytes| bytes == terminal)
+        .unwrap();
+    let mut noncanonical = payload;
+    noncanonical[start + terminal.len() - 5] = 1;
+    assert!(decode_scene(&noncanonical).is_err());
+
+    let mut unknown = project.clone();
+    unknown.animations[0].split_modes.pop();
+    assert!(encode_scene_payload(&unknown).is_err());
+    let mut conflicting = project;
+    conflicting.animations[0].slot_tracks.push(rgba(0));
+    assert!(encode_scene_payload(&conflicting).is_err());
+}
+#[test]
 fn slot_attachment_none_and_seven_axis_mixed_rgba_roundtrip_preserve_setup_and_float_bits() {
     let mut p = scene();
     let setup = (p.rig.clone(), p.slots.clone(), p.attachment_order.clone());

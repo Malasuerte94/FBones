@@ -32,7 +32,9 @@ fn scene() -> SceneProject {
         attachment_order: vec![],
         attachment_sequences: vec![],
         attachment_colors: vec![],
+        linked_meshes: vec![],
         slot_dark_colors: vec![],
+        animation_folders: None,
         constraints: vec![Constraint::Physics(c)],
     }
 }

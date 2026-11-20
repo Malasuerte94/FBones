@@ -16,7 +16,7 @@ export function batchField(kind:ConstraintView['type'],field:string,value:number
   boolean=field.startsWith('global:')&&(physicsBatchGlobals as readonly string[]).includes(field.slice(7));valid=numeric||boolean;
  }else if(kind==='ik'){
   valid=(ikBatchFields as readonly string[]).includes(field);numeric=field==='mix'||field==='softness';boolean=valid&&!numeric;
- }else{
+ }else if(kind==='transform'){
   numeric=/^(offset|mix):[0-5]$/.test(field);boolean=(transformBatchFlags as readonly string[]).includes(field);valid=numeric||boolean;
  }
  if(!valid||numeric&&(typeof value!=='number'||!Number.isFinite(value))||boolean&&typeof value!=='boolean')return null;
@@ -28,6 +28,7 @@ export function batchFieldValue(c:ConstraintView,field:string):number|boolean|nu
   return (physicsBatchFields as readonly string[]).includes(field)?c[field as typeof physicsBatchFields[number]]??null:undefined;
  }
  if(c.type==='ik')return (ikBatchFields as readonly string[]).includes(field)?c[field as typeof ikBatchFields[number]]:undefined;
+ if(c.type!=='transform')return undefined;
  if((transformBatchFlags as readonly string[]).includes(field))return c[field as typeof transformBatchFlags[number]];
  const match=/^(offset|mix):([0-5])$/.exec(field);return match?(match[1]==='offset'?c.offsets:c.mix)[Number(match[2])]:undefined;
 }

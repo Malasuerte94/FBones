@@ -11,7 +11,7 @@ use crate::{
     rig::Pose,
     solve::{self, PhysicsState, StepMode},
 };
-use fbones_format::minimal::scene::{Constraint, SceneProject};
+use fbones_format::minimal::scene::{Constraint, PathAttachment, SceneProject};
 use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -196,6 +196,7 @@ struct ContinuationLayout {
     fps_bits: u32,
     bones: Vec<(u64, Option<usize>, u32)>,
     constraints: Vec<Constraint>,
+    path_targets: Vec<(usize, usize, Option<(usize, PathAttachment)>)>,
     animation: Option<fbones_format::minimal::scene::Animation>,
     animation_pose: Option<Vec<[u64; 7]>>,
     constraint_pose: Option<Vec<(u64, Vec<u64>)>>,
@@ -220,6 +221,23 @@ impl ContinuationLayout {
                 .map(|(b, id)| (*id, b.parent, b.length.to_bits()))
                 .collect(),
             constraints: scene.constraints.clone(),
+            path_targets: scene
+                .constraints
+                .iter()
+                .filter_map(|constraint| {
+                    let Constraint::Path(path) = constraint else {
+                        return None;
+                    };
+                    let slot = scene.slots.get(path.slot)?;
+                    let geometry = slot.active_attachment.and_then(|index| {
+                        slot.attachments
+                            .get(index)?
+                            .path()
+                            .map(|path| (index, path.clone()))
+                    });
+                    Some((path.slot, slot.bone, geometry))
+                })
+                .collect(),
             animation: None,
             animation_pose: None,
             constraint_pose: None,

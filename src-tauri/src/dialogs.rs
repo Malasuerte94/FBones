@@ -2,10 +2,11 @@ use crate::project::AppError;
 use std::path::PathBuf;
 
 #[derive(Clone, Copy, PartialEq)]
-enum ImportKind {
+enum FileKind {
     Project,
     Png,
     Psd,
+    Gif,
 }
 
 pub async fn pick(
@@ -14,7 +15,20 @@ pub async fn pick(
     name: String,
 ) -> Result<Option<PathBuf>, AppError> {
     tauri::async_runtime::spawn_blocking(move || {
-        platform_pick(app, save, name, ImportKind::Project)
+        platform_pick(app, save, name, FileKind::Project, None)
+    })
+    .await
+    .map_err(|_| AppError::new("Dialog", "The file dialog could not be opened."))?
+}
+
+#[cfg(feature = "scene-editing")]
+pub async fn pick_repaired_project(
+    app: tauri::AppHandle,
+    name: String,
+    directory: PathBuf,
+) -> Result<Option<PathBuf>, AppError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        platform_pick(app, true, name, FileKind::Project, Some(directory))
     })
     .await
     .map_err(|_| AppError::new("Dialog", "The file dialog could not be opened."))?
@@ -25,7 +39,8 @@ fn platform_pick(
     app: tauri::AppHandle,
     save: bool,
     name: String,
-    kind: ImportKind,
+    kind: FileKind,
+    directory: Option<PathBuf>,
 ) -> Result<Option<PathBuf>, AppError> {
     use gtk::prelude::*;
     use tauri::Manager;
@@ -35,16 +50,19 @@ fn platform_pick(
         let parent = handle
             .get_webview_window("main")
             .and_then(|w| w.gtk_window().ok());
+        let (title, filter_name, patterns): (&str, &str, &[&str]) = match (kind, save) {
+            (FileKind::Gif, _) => ("Export GIF preview", "GIF image", &["*.gif", "*.GIF"]),
+            (FileKind::Psd, _) => ("Import Photoshop PSD", "Photoshop PSD", &["*.psd", "*.PSD"]),
+            (FileKind::Png, _) => ("Import PNG image", "PNG image", &["*.png", "*.PNG"]),
+            (FileKind::Project, true) => ("Save a project", "FBones project", &["*.fbones"]),
+            (FileKind::Project, false) => (
+                "Open a project",
+                "FBones / Spine project",
+                &["*.fbones", "*.spine"],
+            ),
+        };
         let dialog = gtk::FileChooserNative::new(
-            Some(if kind == ImportKind::Psd {
-                "Import Photoshop PSD"
-            } else if kind == ImportKind::Png {
-                "Import PNG image"
-            } else if save {
-                "Save a project"
-            } else {
-                "Open a project"
-            }),
+            Some(title),
             parent.as_ref().map(|w| w.upcast_ref::<gtk::Window>()),
             if save {
                 gtk::FileChooserAction::Save
@@ -56,31 +74,17 @@ fn platform_pick(
         );
         dialog.set_modal(true);
         let filter = gtk::FileFilter::new();
-        filter.set_name(Some(if kind == ImportKind::Psd {
-            "Photoshop PSD"
-        } else if kind == ImportKind::Png {
-            "PNG image"
-        } else if save {
-            "FBones project"
-        } else {
-            "FBones / Spine project"
-        }));
-        if kind == ImportKind::Psd {
-            filter.add_pattern("*.psd");
-            filter.add_pattern("*.PSD");
-        } else if kind == ImportKind::Png {
-            filter.add_pattern("*.png");
-            filter.add_pattern("*.PNG");
-        } else {
-            filter.add_pattern("*.fbones");
-            if !save {
-                filter.add_pattern("*.spine");
-            }
+        filter.set_name(Some(filter_name));
+        for pattern in patterns {
+            filter.add_pattern(pattern);
         }
         dialog.add_filter(filter);
         if save {
+            if let Some(directory) = directory {
+                dialog.set_current_folder(directory);
+            }
             dialog.set_current_name(&name);
-            dialog.set_do_overwrite_confirmation(true);
+            dialog.set_do_overwrite_confirmation(kind != FileKind::Gif);
         }
         let chosen = if dialog.run() == gtk::ResponseType::Accept {
             dialog.filename()
@@ -100,21 +104,25 @@ fn platform_pick(
     _app: tauri::AppHandle,
     save: bool,
     name: String,
-    kind: ImportKind,
+    kind: FileKind,
+    directory: Option<PathBuf>,
 ) -> Result<Option<PathBuf>, AppError> {
     use std::os::windows::process::CommandExt;
-    let script = if kind == ImportKind::Psd {
+    let script = if kind == FileKind::Gif {
+        "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new(); Add-Type -AssemblyName System.Windows.Forms; $d=[System.Windows.Forms.SaveFileDialog]::new(); $d.Title='Export GIF preview'; $d.Filter='GIF image|*.gif'; $d.DefaultExt='gif'; $d.AddExtension=$true; $d.OverwritePrompt=$false; $d.FileName=$env:FBONES_DIALOG_NAME; if($d.ShowDialog() -eq 'OK'){[Console]::Write($d.FileName)}"
+    } else if kind == FileKind::Psd {
         "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new(); Add-Type -AssemblyName System.Windows.Forms; $d=[System.Windows.Forms.OpenFileDialog]::new(); $d.Title='Import Photoshop PSD'; $d.Filter='Photoshop PSD|*.psd'; if($d.ShowDialog() -eq 'OK'){[Console]::Write($d.FileName)}"
-    } else if kind == ImportKind::Png {
+    } else if kind == FileKind::Png {
         "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new(); Add-Type -AssemblyName System.Windows.Forms; $d=[System.Windows.Forms.OpenFileDialog]::new(); $d.Filter='PNG image|*.png'; if($d.ShowDialog() -eq 'OK'){[Console]::Write($d.FileName)}"
     } else if save {
-        "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new(); Add-Type -AssemblyName System.Windows.Forms; $d=[System.Windows.Forms.SaveFileDialog]::new(); $d.Filter='FBones project|*.fbones'; $d.DefaultExt='fbones'; $d.AddExtension=$true; $d.FileName=$env:FBONES_DIALOG_NAME; if($d.ShowDialog() -eq 'OK'){[Console]::Write($d.FileName)}"
+        "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new(); Add-Type -AssemblyName System.Windows.Forms; $d=[System.Windows.Forms.SaveFileDialog]::new(); $d.Filter='FBones project|*.fbones'; $d.DefaultExt='fbones'; $d.AddExtension=$true; $d.FileName=$env:FBONES_DIALOG_NAME; if($env:FBONES_DIALOG_DIRECTORY){$d.InitialDirectory=$env:FBONES_DIALOG_DIRECTORY}; if($d.ShowDialog() -eq 'OK'){[Console]::Write($d.FileName)}"
     } else {
         "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new(); Add-Type -AssemblyName System.Windows.Forms; $d=[System.Windows.Forms.OpenFileDialog]::new(); $d.Filter='FBones / Spine project|*.fbones;*.spine'; if($d.ShowDialog() -eq 'OK'){[Console]::Write($d.FileName)}"
     };
     let out = std::process::Command::new("powershell.exe")
         .args(["-NoProfile", "-STA", "-Command", script])
         .env("FBONES_DIALOG_NAME", name)
+        .env("FBONES_DIALOG_DIRECTORY", directory.unwrap_or_default())
         .creation_flags(0x08000000)
         .output()?;
     if !out.status.success() {
@@ -132,20 +140,28 @@ fn platform_pick(
     _app: tauri::AppHandle,
     save: bool,
     name: String,
-    kind: ImportKind,
+    kind: FileKind,
+    directory: Option<PathBuf>,
 ) -> Result<Option<PathBuf>, AppError> {
-    let script = if save {
+    let script = if kind == FileKind::Gif {
+        "on run argv\nreturn POSIX path of (choose file name with prompt \"Export GIF preview\" default name (item 1 of argv))\nend run"
+    } else if save && directory.is_some() {
+        "on run argv\nreturn POSIX path of (choose file name with prompt \"Save a repaired project\" default name (item 1 of argv) default location (POSIX file (item 2 of argv)))\nend run"
+    } else if save {
         "on run argv\nreturn POSIX path of (choose file name with prompt \"Save a project\" default name (item 1 of argv))\nend run"
-    } else if kind == ImportKind::Psd {
+    } else if kind == FileKind::Psd {
         "on run argv\nreturn POSIX path of (choose file with prompt \"Import Photoshop PSD\" of type {\"com.adobe.photoshop-image\", \"psd\"})\nend run"
-    } else if kind == ImportKind::Png {
+    } else if kind == FileKind::Png {
         "on run argv\nreturn POSIX path of (choose file with prompt \"Import PNG image\" of type {\"public.png\"})\nend run"
     } else {
         "on run argv\nreturn POSIX path of (choose file with prompt \"Open a project\")\nend run"
     };
-    let out = std::process::Command::new("osascript")
-        .args(["-e", script, "--", &name])
-        .output()?;
+    let mut dialog = std::process::Command::new("osascript");
+    dialog.args(["-e", script, "--", &name]);
+    if let Some(directory) = directory {
+        dialog.arg(directory);
+    }
+    let out = dialog.output()?;
     if !out.status.success() {
         if String::from_utf8_lossy(&out.stderr).contains("(-128)") {
             return Ok(None);
@@ -161,7 +177,7 @@ fn platform_pick(
 
 pub async fn pick_image(app: tauri::AppHandle) -> Result<Option<PathBuf>, AppError> {
     tauri::async_runtime::spawn_blocking(move || {
-        platform_pick(app, false, String::new(), ImportKind::Png)
+        platform_pick(app, false, String::new(), FileKind::Png, None)
     })
     .await
     .map_err(|_| AppError::new("Dialog", "The image dialog could not be opened."))?
@@ -169,10 +185,19 @@ pub async fn pick_image(app: tauri::AppHandle) -> Result<Option<PathBuf>, AppErr
 
 pub async fn pick_psd(app: tauri::AppHandle) -> Result<Option<PathBuf>, AppError> {
     tauri::async_runtime::spawn_blocking(move || {
-        platform_pick(app, false, String::new(), ImportKind::Psd)
+        platform_pick(app, false, String::new(), FileKind::Psd, None)
     })
     .await
     .map_err(|_| AppError::new("Dialog", "The PSD dialog could not be opened."))?
+}
+
+#[cfg(feature = "scene-editing")]
+pub async fn pick_gif(app: tauri::AppHandle, name: String) -> Result<Option<PathBuf>, AppError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        platform_pick(app, true, name, FileKind::Gif, None)
+    })
+    .await
+    .map_err(|_| AppError::new("Dialog", "The GIF save dialog could not be opened."))?
 }
 
 pub async fn pick_folder(app: tauri::AppHandle) -> Result<Option<PathBuf>, AppError> {

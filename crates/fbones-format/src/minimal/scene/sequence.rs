@@ -50,6 +50,10 @@ pub enum SequenceMode {
     Hold,
     Once,
     Loop,
+    PingPong,
+    OnceReverse,
+    LoopReverse,
+    PingPongReverse,
 }
 impl SequenceMode {
     pub fn wire(self) -> u32 {
@@ -57,6 +61,10 @@ impl SequenceMode {
             Self::Hold => 0,
             Self::Once => 1,
             Self::Loop => 2,
+            Self::PingPong => 3,
+            Self::OnceReverse => 4,
+            Self::LoopReverse => 5,
+            Self::PingPongReverse => 6,
         }
     }
     pub fn from_wire(value: u32) -> Option<Self> {
@@ -64,6 +72,10 @@ impl SequenceMode {
             0 => Self::Hold,
             1 => Self::Once,
             2 => Self::Loop,
+            3 => Self::PingPong,
+            4 => Self::OnceReverse,
+            5 => Self::LoopReverse,
+            6 => Self::PingPongReverse,
             _ => return None,
         })
     }
@@ -72,6 +84,10 @@ impl SequenceMode {
             Self::Hold => "hold",
             Self::Once => "once",
             Self::Loop => "loop",
+            Self::PingPong => "pingpong",
+            Self::OnceReverse => "onceReverse",
+            Self::LoopReverse => "loopReverse",
+            Self::PingPongReverse => "pingpongReverse",
         }
     }
 }

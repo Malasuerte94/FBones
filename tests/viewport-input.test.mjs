@@ -14,7 +14,14 @@ const { outputFiles } = await build({
     bundler.onLoad({ filter: /.*/, namespace: 'test-pixi' }, args => ({ contents: args.path.endsWith('unsafe-eval') ? '' : `
       export const Color=globalThis.ActualPixiColor;
       export class Graphics { destroy(){} constructor(){this.circles=[];(globalThis.recordedGraphics??=[]).push(this)} clear(){this.circles=[];return this} rect(){return this} moveTo(){return this} lineTo(){return this} stroke(){return this} fill(){return this} circle(x,y,radius){this.circles.push({x,y,radius});return this} poly(){return this} }
-      export class Container { children=[]; addChild(...items){this.children.push(...items)} setChildIndex(){} destroy(){} }
+      export class Container {
+        children=[];
+        addChild(...items){this.children.push(...items)}
+        addChildAt(item,index){this.children.splice(index,0,item)}
+        getChildIndex(item){return this.children.indexOf(item)}
+        setChildIndex(item,index){this.children.splice(this.getChildIndex(item),1);this.addChildAt(item,index)}
+        destroy(){}
+      }
       export class BitmapText { position={set(){}}; constructor(options){this.text=options.text} }
       export class Texture { static from(){return {width:32,height:24,destroy(){}}} }
       export class Sprite { position={set(){}}; scale={set(){}}; constructor(options){this.texture=options.texture} destroy(){} }
@@ -23,7 +30,7 @@ const { outputFiles } = await build({
       export class MeshGeometry { }
       export class ColorMatrixFilter { }
       export class Application {
-        canvas=globalThis.testCanvas; stage={addChild(){}}; screen={width:800,height:600};
+        canvas=globalThis.testCanvas; stage=new Container(); screen={width:800,height:600};
         renderer={resolution:1,resize:(width,height)=>{this.screen={width,height}}};
         async init(){} render(){globalThis.renderCount=(globalThis.renderCount??0)+1} destroy(){}
       }` }));
@@ -36,12 +43,15 @@ const bones = [
 async function setup(tool = 'select', options = {}) {
   const weightSelections=[], vertexSelections=[], slotSelections = [], groupSelections=[], imageSelections=[],drops=[], escapes=[], errors=[];
   const listeners = new Map(), keys = new Map(), captured = new Set(), commits = [], selections = [];
+  const keyListenerId = (name, capture = false) => `${capture}:${name}`;
   const canvas = { style: {}, tabIndex: -1, focus(){}, getBoundingClientRect: () => ({ left: 0, top: 0 }),
     addEventListener: (name, fn) => listeners.set(name, fn), removeEventListener: name => listeners.delete(name),
     setPointerCapture: id => captured.add(id), hasPointerCapture: id => captured.has(id),
     releasePointerCapture: id => { captured.delete(id); listeners.get('lostpointercapture')?.({ pointerId: id }); } };
   const context = vm.createContext({ testCanvas: canvas, console,ActualPixiColor:Color,
-    window: { devicePixelRatio: 1, addEventListener: (name, fn) => keys.set(name, fn), removeEventListener: name => keys.delete(name) },
+    window: { devicePixelRatio: 1,
+      addEventListener: (name, fn, capture) => keys.set(keyListenerId(name, capture), fn),
+      removeEventListener: (name, _fn, capture) => keys.delete(keyListenerId(name, capture)) },
     ResizeObserver: class { observe(){} disconnect(){} },
   });
   vm.runInContext(outputFiles[0].text, context);
@@ -52,7 +62,12 @@ async function setup(tool = 'select', options = {}) {
   const scene = { bones, selected: 1, tool, editable: true, busy: false, revision: 7 };
   controller.setScene(scene);
   const emit = (name, x, y, extra = {}) => listeners.get(name)?.({ pointerId: 1, button: 0, clientX: x, clientY: y, preventDefault(){}, ...extra });
-  const key = (name, value) => keys.get(name)?.({ preventDefault(){}, target: { closest: () => null }, ...value });
+  const key = (name, value) => {
+    let stopped = false;
+    const event = { preventDefault(){}, stopPropagation(){stopped = true;}, target: { closest: () => null }, ...value };
+    keys.get(keyListenerId(name, true))?.(event);
+    if (!stopped) keys.get(keyListenerId(name))?.(event);
+  };
   return { weightSelections, controller, graphics:context.recordedGraphics, get renderCount(){return context.renderCount??0;},scene, emit, key, commits, vertexSelections, selections, slotSelections, groupSelections,imageSelections, drops, escapes, errors, captured, listeners, keys, canvas };
 }
 test('each sampled animation pose renders once while still canceling a gesture from the prior frame',async()=>{

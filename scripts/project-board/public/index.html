@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FBones · Project dashboard</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="frame topbar-inner">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true"><span></span></div>
+        <div><strong>FBones</strong><span>Project dashboard</span></div>
+      </div>
+      <nav class="tabs" role="tablist" aria-label="Project sections">
+        <button type="button" role="tab" id="tab-board" aria-controls="page-board" aria-selected="true">Tasks</button>
+        <button type="button" role="tab" id="tab-memory" aria-controls="page-memory" aria-selected="false" tabindex="-1">Memory</button>
+        <button type="button" role="tab" id="tab-rules" aria-controls="page-rules" aria-selected="false" tabindex="-1">Rules</button>
+      </nav>
+      <button class="refresh" id="refresh" type="button"><span aria-hidden="true">↻</span> Refresh</button>
+    </div>
+  </header>
+
+  <main class="frame">
+    <div class="sync-bar">
+      <time id="refreshed-at">Loading project data…</time>
+      <output id="notice" role="status" aria-live="polite"></output>
+    </div>
+
+    <section role="tabpanel" id="page-board" aria-labelledby="tab-board">
+      <section class="priorities" aria-labelledby="priorities-title">
+        <div class="priority-heading">
+          <h2 id="priorities-title">Priorities</h2>
+          <form id="priority-form">
+            <label class="sr-only" for="priority-select">Choose a task to prioritize</label>
+            <select id="priority-select" disabled><option value="">Choose a task</option></select>
+            <button id="priority-add" type="submit" disabled>Add</button>
+          </form>
+        </div>
+        <ol id="priority-list" aria-label="Priority order"></ol>
+        <p id="priority-empty" class="priority-empty" hidden>No priority tasks.</p>
+      </section>
+
+      <div class="board-heading">
+        <div><h1>Task board</h1><p id="results"></p></div>
+        <div class="filters">
+          <label><span class="sr-only">Search tasks</span><input id="search" type="search" placeholder="Search tasks" autocomplete="off"></label>
+          <label><span class="sr-only">Filter by status</span><select id="status-filter"><option value="">All statuses</option></select></label>
+          <label><span class="sr-only">Filter by activity</span><select id="activity-filter">
+            <option value="">All activity</option>
+            <option value="unread">Unread changes</option>
+            <option value="recent">Recent activity</option>
+            <option value="updatedAt">Recently updated</option>
+            <option value="movedAt">Recently moved</option>
+          </select></label>
+        </div>
+      </div>
+      <div class="board-controls">
+        <div class="board-view" role="group" aria-label="Task layout">
+          <button type="button" id="view-hierarchy" aria-pressed="true">Hierarchy</button>
+          <button type="button" id="view-status" aria-pressed="false">Status board</button>
+        </div>
+        <button type="button" id="mark-all-read" disabled><span>Mark all read</span><span id="unread-count">0</span></button>
+      </div>
+      <p id="hierarchy-notice" class="hierarchy-notice" role="status" hidden></p>
+      <ul class="activity-legend" aria-label="Task activity legend">
+        <li class="activity-legend-title">Activity in the past 24 hours</li>
+        <li class="activity-mark" data-activity="update" data-recent="true"><span class="activity-dot" aria-hidden="true"></span>Updated</li>
+        <li class="activity-mark" data-activity="move" data-recent="true"><span class="activity-dot" aria-hidden="true"></span>Moved</li>
+        <li class="activity-mark"><span class="activity-dot" aria-hidden="true"></span>No recent activity</li>
+      </ul>
+      <div id="lanes" class="lanes" aria-label="Task hierarchy"></div>
+    </section>
+
+    <section role="tabpanel" id="page-memory" class="reader" aria-labelledby="tab-memory" tabindex="0" hidden>
+      <header><h1>Project memory</h1><p><code>docs/STATE.md</code></p></header>
+      <article id="memory-document"></article>
+    </section>
+
+    <section role="tabpanel" id="page-rules" class="reader" aria-labelledby="tab-rules" tabindex="0" hidden>
+      <header><h1>Working rules</h1><p><code>AGENTS.md</code></p></header>
+      <article id="rules-document"></article>
+    </section>
+  </main>
+</body>
+</html>

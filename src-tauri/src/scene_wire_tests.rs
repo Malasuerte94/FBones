@@ -2,10 +2,10 @@ use super::*;
 use crate::{
     project::{open_document, Session},
     rig::RigEdit,
-    scene_edit::{SceneEdit, SceneHistory},
+    scene_edit::{SceneEdit, SceneHistory, SceneRigHistory},
 };
 use fbones_format::minimal::scene::{
-    decode_scene, encode_scene, encode_scene_payload, SceneProject,
+    decode_scene, encode_scene, encode_scene_payload, SceneProject, WireSlotChannel,
 };
 use fbones_format::ProjectEnvelope;
 use serde_json::json;
@@ -45,6 +45,237 @@ fn selector_frames(history: &SceneHistory) -> Vec<(u64, f32)> {
                 .map(move |(k, key)| (history.frame().animation_key_ids[0][t][k], key.frame))
         })
         .collect()
+}
+
+fn linked_mesh_project() -> SceneProject {
+    use fbones_format::minimal::scene::{Animation, LinkedMesh};
+    let mut project = crate::scene_wire_fixture::project();
+    project.wire = None;
+    project.animations = vec![Animation::new("first".into())];
+    let source_slot = 1;
+    let child_slot = 0;
+    let mut source_mesh = project.slots[source_slot].attachments[0]
+        .mesh()
+        .unwrap()
+        .clone();
+    source_mesh.image.width = 32.;
+    source_mesh.image.height = 24.;
+    source_mesh.weighted = true;
+    let mut child_mesh = source_mesh.clone();
+    child_mesh.image = project.slots[child_slot].attachments[0]
+        .image()
+        .unwrap()
+        .clone();
+    project.slots[source_slot].attachments[0] = SceneAttachment::Mesh(Box::new(source_mesh));
+    project.slots[child_slot].attachments[0] = SceneAttachment::Mesh(Box::new(child_mesh));
+    project.linked_meshes = vec![LinkedMesh {
+        inherit_timelines: true,
+        source: AttachmentAddress {
+            slot: source_slot,
+            attachment: 0,
+        },
+        attachment: AttachmentAddress {
+            slot: child_slot,
+            attachment: 0,
+        },
+    }];
+    project
+}
+
+#[test]
+fn linked_mesh_source_edits_and_slot_remaps_preserve_child_identity() {
+    let project = linked_mesh_project();
+    let source_slot = project.linked_meshes[0].source.slot;
+    let child_slot = project.linked_meshes[0].attachment.slot;
+    let mut source_mesh = project.slots[source_slot].attachments[0]
+        .mesh()
+        .unwrap()
+        .clone();
+    let mut child_mesh = project.slots[child_slot].attachments[0]
+        .mesh()
+        .unwrap()
+        .clone();
+    let original = roundtrip(&project);
+    let mut history = SceneHistory::new(project, true).unwrap();
+    let ids = &history.frame().attachment_ids;
+    let (source_id, child_id) = (ids[source_slot][0], ids[child_slot][0]);
+    let source_slot_id = history.frame().slot_ids[source_slot];
+
+    source_mesh.vertices[0].positions[0] += 1.;
+    assert!(history
+        .apply(SceneEdit::ReplaceAttachment {
+            id: source_id,
+            attachment: SceneAttachment::Mesh(Box::new(source_mesh.clone())),
+        })
+        .unwrap());
+    assert!(history
+        .apply(SceneEdit::ReorderSlot {
+            id: source_slot_id,
+            index: 0
+        })
+        .unwrap());
+    let frame = history.frame();
+    let source = frame.attachment_address(source_id).unwrap();
+    let attachment = frame.attachment_address(child_id).unwrap();
+    assert_eq!(source.slot, child_slot);
+    assert_eq!(
+        frame.project.linked_mesh(attachment).unwrap().source,
+        source
+    );
+    child_mesh.vertices = source_mesh.vertices;
+    assert_eq!(
+        frame.attachment(child_id).unwrap().mesh(),
+        Some(&child_mesh)
+    );
+    let edited = roundtrip(&frame.project);
+    assert!(history
+        .apply(SceneEdit::DeleteAttachment { id: source_id })
+        .is_err());
+    assert!(history
+        .apply(SceneEdit::ReplaceAttachment {
+            id: child_id,
+            attachment: SceneAttachment::Mesh(Box::new(child_mesh)),
+        })
+        .is_err());
+    assert_eq!(roundtrip(&history.frame().project), edited);
+    history.apply(SceneEdit::Undo).unwrap();
+    history.apply(SceneEdit::Undo).unwrap();
+    assert_eq!(roundtrip(&history.frame().project), original);
+}
+
+#[test]
+fn linked_mesh_inheritance_changes_one_flag_and_preserves_owned_keys() {
+    use fbones_format::minimal::scene::{
+        deform_coordinate_count, Animation, DeformCurve, DeformKey, DeformTimeline,
+    };
+    let mut project = linked_mesh_project();
+    let child = project.linked_meshes[0].attachment;
+    let source = project.linked_meshes[0].source;
+    let dimension = deform_coordinate_count(&project.slots[child.slot].attachments[0]).unwrap();
+    let offsets = vec![0.25; dimension];
+    project.animations[0].deform_tracks.push(DeformTimeline {
+        attachment: source,
+        keys: vec![DeformKey {
+            frame: 0.,
+            offsets: offsets.clone(),
+            data_present: true,
+            curve: DeformCurve::Linear,
+        }],
+    });
+    project.animations.push(Animation::new("second".into()));
+    let original = project.clone();
+    let mut rig = SceneRigHistory::new(&project, true);
+    let frame = rig.history.frame();
+    let child_id = frame.attachment_ids[child.slot][child.attachment];
+    let clip_id = frame.animation_ids[1];
+    let inheritance = |inherit_timelines| {
+        serde_json::from_value::<RigEdit>(json!({
+        "type": "setLinkedMeshInheritance", "id": child_id, "inheritTimelines": inherit_timelines,
+    })).unwrap()
+    };
+    assert!(!rig.apply(&mut project, inheritance(true)).unwrap());
+    assert!(rig.apply(&mut project, inheritance(false)).unwrap());
+    let mut independent = original.clone();
+    independent.linked_meshes[0].inherit_timelines = false;
+    assert_eq!(project, independent);
+    assert!(rig.apply(&mut project, RigEdit::Undo).unwrap());
+    assert_eq!(roundtrip(&project), roundtrip(&original));
+    assert!(rig.apply(&mut project, RigEdit::Redo).unwrap());
+    assert_eq!(roundtrip(&project), roundtrip(&independent));
+
+    let key = serde_json::from_value(json!({
+        "type": "setAnimationDeformKeys", "animation": clip_id,
+        "keys": [{"attachment":child_id,"frame":0,"offsets":offsets,"curve":"linear"}],
+    }))
+    .unwrap();
+    assert!(rig.apply(&mut project, key).unwrap());
+    let keyed = project.clone();
+    let key_id = rig.history.frame().animation_deform_key_ids[1][0][0];
+    assert_eq!(
+        rig.apply(&mut project, inheritance(true)).unwrap_err().code,
+        "InvalidSceneEdit"
+    );
+    assert_eq!(project, keyed);
+    assert_eq!(rig.history.frame().animation_deform_key_ids[1][0], [key_id]);
+
+    assert!(!rig
+        .apply(
+            &mut project,
+            RigEdit::StoreAnimationKeys { animation: clip_id }
+        )
+        .unwrap());
+    assert!(rig
+        .apply(
+            &mut project,
+            RigEdit::DeleteAnimationKeys {
+                animation: clip_id,
+                keys: vec![key_id]
+            }
+        )
+        .unwrap());
+    let existing = roundtrip(&project);
+    let conflict = rig.apply(&mut project, inheritance(true)).unwrap_err();
+    assert!(conflict.message.contains("stored animation"));
+    assert_eq!(roundtrip(&project), existing);
+    assert!(rig.history.stored_animation().is_some());
+    assert!(!rig
+        .apply(
+            &mut project,
+            RigEdit::ClearStoredAnimationKeys { animation: clip_id }
+        )
+        .unwrap());
+    assert!(rig.apply(&mut project, inheritance(true)).unwrap());
+    assert_eq!(roundtrip(&project), roundtrip(&original));
+}
+
+#[test]
+fn create_linked_mesh_keeps_prior_links_and_hidden_slot_activation() {
+    let mut project = linked_mesh_project();
+    let existing = project.linked_meshes[0];
+    project.slots[existing.attachment.slot].active_attachment = None;
+    let original = roundtrip(&project);
+    let mut rig = SceneRigHistory::new(&project, true);
+    let frame = rig.history.frame();
+    let source = frame.attachment_ids[existing.source.slot][existing.source.attachment];
+    let prior_child =
+        frame.attachment_ids[existing.attachment.slot][existing.attachment.attachment];
+    let slot = frame.slot_ids[existing.attachment.slot];
+    let create = |source: u64, name: &str| {
+        serde_json::from_value::<RigEdit>(json!({
+            "type":"createLinkedMesh", "source":source, "slot":slot, "name":name,
+        }))
+        .unwrap()
+    };
+    let duplicate = project.slots[existing.attachment.slot].attachments[0]
+        .name()
+        .to_owned();
+    assert!(rig.apply(&mut project, create(source, &duplicate)).is_err());
+    assert!(rig.apply(&mut project, create(prior_child, "new")).is_err());
+    assert_eq!(roundtrip(&project), original);
+
+    assert!(rig.apply(&mut project, create(source, " new ")).unwrap());
+    let new_link = project.linked_meshes[1];
+    let new_id = rig.history.frame().focus.attachment.unwrap();
+    assert_ne!(new_id, prior_child);
+    assert_eq!(project.linked_meshes[0], existing);
+    assert_eq!(new_link.source, existing.source);
+    assert!(new_link.inherit_timelines);
+    assert_eq!(project.attachment_order.last(), Some(&new_link.attachment));
+    let slot = &project.slots[new_link.attachment.slot];
+    assert_eq!(slot.active_attachment, None);
+    let image = slot.attachments[new_link.attachment.attachment]
+        .image()
+        .unwrap();
+    assert_eq!((&*image.name, &*image.path), ("new", "green"));
+    assert_eq!(project.attachment_color(new_link.attachment), [255; 4]);
+    let created = roundtrip(&project);
+
+    assert!(rig.apply(&mut project, RigEdit::Undo).unwrap());
+    assert_eq!(rig.history.frame().focus.attachment, Some(source));
+    assert_eq!(roundtrip(&project), original);
+    assert!(rig.apply(&mut project, RigEdit::Redo).unwrap());
+    assert_eq!(rig.history.frame().focus.attachment, Some(new_id));
+    assert_eq!(roundtrip(&project), created);
 }
 
 #[test]

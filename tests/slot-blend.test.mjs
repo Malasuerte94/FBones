@@ -17,11 +17,12 @@ const built=await build({stdin:{contents:"import {ImageLayer} from './src/viewpo
   b.onLoad({filter:/.*/,namespace:'stub'},()=>({contents:`
    export const Color=globalThis.ActualPixiColor;
    export class ColorMatrixFilter {matrix=[1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0];resources={colorMatrixUniforms:{update(){}}};constructor(options){this.options=options}destroy(){this.destroyed=true}}
-   export class Container {children=[];addChild(...items){this.children.push(...items)}setChildIndex(node,index){this.children.splice(this.children.indexOf(node),1);this.children.splice(index,0,node)}destroy(){}}
-   export class Graphics {clear(){return this}poly(){return this}fill(){return this}stroke(){return this}circle(){return this}moveTo(){return this}lineTo(){return this}destroy(){}}
+   function detach(node){const parent=node.parent;if(parent){parent.children.splice(parent.children.indexOf(node),1);node.parent=null}}
+   export class Container {children=[];addChild(...items){for(const node of items){detach(node);this.children.push(node);node.parent=this}}setChildIndex(node,index){this.children.splice(this.children.indexOf(node),1);this.children.splice(index,0,node)}destroy(){detach(this)}}
+   export class Graphics {clear(){return this}poly(){return this}fill(){return this}stroke(){return this}circle(){return this}moveTo(){return this}lineTo(){return this}destroy(){detach(this)}}
    export class Texture {static from(){return {width:32,height:24,destroy(){}}}}
-   export class Sprite {constructor(o){Object.assign(this,o)}setFromMatrix(matrix){this.matrix=matrix}setMask(o){this.mask=o.mask;this.inverseMask=o.inverse}destroy(){}}
-   export class Mesh {constructor(o){Object.assign(this,o)}setMask(o){this.mask=o.mask;this.inverseMask=o.inverse}destroy(){}}
+   export class Sprite {constructor(o){Object.assign(this,o)}setFromMatrix(matrix){this.matrix=matrix}setMask(o){this.mask=o.mask;this.inverseMask=o.inverse}destroy(){detach(this)}}
+   export class Mesh {constructor(o){Object.assign(this,o)}setMask(o){this.mask=o.mask;this.inverseMask=o.inverse}destroy(){detach(this)}}
    export class MeshGeometry {constructor(o){Object.assign(this,o)}destroy(){}}
    export class Matrix {constructor(...values){this.values=values}}
   `}));

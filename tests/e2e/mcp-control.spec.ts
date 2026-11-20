@@ -19,12 +19,16 @@ test('MCP configuration, AI lock and both stop routes remain accessible',async({
    if(command==='mcp_stop')enabled=false;
    if(command.startsWith('mcp_'))return{enabled,url:enabled?'http://127.0.0.1:54123/mcp':null,token:enabled?'own-ui-test-token':null};
    throw Error('Unexpected MCP fixture command '+command);
-  }},event:{listen:async(name:string,handler:(event:{payload:unknown})=>void)=>{listeners.set(name,handler);return()=>listeners.delete(name);}},window:{getCurrentWindow:()=>({setTitle:async(title:string)=>{document.title=title;},onCloseRequested:async()=>()=>{},destroy:async()=>{}})}};
+  }},event:{listen:async(name:string,handler:(event:{payload:unknown})=>void)=>{listeners.set(name,handler);return()=>listeners.delete(name);}},window:{getCurrentWindow:()=>({setTitle:async(title:string)=>{document.title=title;},onCloseRequested:async()=>()=>{},destroy:async()=>{},isDecorated:async()=>false,isMaximized:async()=>false,onResized:async()=>()=>{},minimize:async()=>{},toggleMaximize:async()=>{}})}};
  });
  await page.goto('/');await expect(page.getByTestId('viewport').locator('canvas')).toBeVisible();
  await page.getByTestId('mcp-toggle').click();const dialog=page.getByRole('dialog',{name:'MCP',exact:true});
  await expect(page.getByTestId('mcp-status')).toHaveText('Stopped');await page.getByTestId('mcp-start').click();
  await expect(page.getByTestId('mcp-status')).toContainText('Running');await expect.poll(()=>page.locator('main').evaluate(node=>(node as HTMLElement).inert)).toBe(true);
+ const minimize=page.getByTestId('window-minimize');
+ await expect(minimize).toBeEnabled();
+ expect(await minimize.evaluate(node=>node.closest('[inert]')===null)).toBe(true);
+ await expect(page.getByTestId('window-close')).toBeDisabled();
  await expect.poll(()=>page.evaluate(()=>(globalThis as typeof globalThis&{__mcpReadiness:{ready:boolean;inert:boolean}[]}).__mcpReadiness.at(-1))).toEqual({ready:true,inert:true});
  await expect(page.getByTestId('mcp-stop')).toBeEnabled();
  expect(await page.getByTestId('mcp-stop').evaluate(node=>node.closest('[inert]')===null)).toBe(true);

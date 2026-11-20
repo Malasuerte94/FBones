@@ -11,6 +11,16 @@ fn constraint_label(i: usize) -> String {
 fn set(record: &mut Record, tag: u32, value: Field) {
     record.fields.iter_mut().find(|(t, _)| *t == tag).unwrap().1 = value;
 }
+fn mesh_geometry_alias(record: &mut Record, tag: u32, source_label: &str) {
+    let field = &mut record.fields.iter_mut().find(|(t, _)| *t == tag).unwrap().1;
+    let Value(value) = std::mem::replace(field, Bool(false)) else {
+        unreachable!()
+    };
+    *field = object(Object::SharedMeshGeometry {
+        label: format!("{source_label}-geometry-{tag}"),
+        value: Box::new(value),
+    });
+}
 pub(super) fn project_record(p: &SceneProject) -> Record {
     let mut root = super::super::project_record_with_regions(&p.rig, &[], &[], &p.images_root);
     set(&mut root, 2, Float(p.fps));
@@ -45,6 +55,9 @@ pub(super) fn project_record(p: &SceneProject) -> Record {
             p,
         ))),
     );
+    if let Some(folders) = &p.animation_folders {
+        set(s, 37, object(super::animation_folders::record(folders)));
+    }
     set(s, 13, object(Object::Array(slot_records(p))));
     set(
         s,
@@ -74,6 +87,7 @@ pub(super) fn project_record(p: &SceneProject) -> Record {
     for (tag, indices) in [
         (16, &declarations.ik),
         (22, &declarations.transform),
+        (23, &declarations.path),
         (41, &declarations.physics),
     ] {
         set(
@@ -193,11 +207,43 @@ fn attachment(p: &SceneProject, address: AttachmentAddress) -> Object {
     let label = attachment_label(address);
     match &p.slots[address.slot].attachments[address.attachment] {
         SceneAttachment::Mesh(m) => {
+            let link = p.linked_mesh(address);
+            let source = link.map(|link| link.source);
             let Object::Record(mut record) =
                 super::super::meshes::record_named(m, address.slot, label)
             else {
                 unreachable!()
             };
+            set(
+                &mut record,
+                27,
+                Bool(link.is_some_and(|link| link.inherit_timelines)),
+            );
+            if let Some(source) = source {
+                set(
+                    &mut record,
+                    26,
+                    object(Object::Link(46, attachment_label(source))),
+                );
+            }
+            if source.is_some() || p.linked_meshes.iter().any(|link| link.source == address) {
+                let source_label = attachment_label(source.unwrap_or(address));
+                for tag in [8, 12, 13] {
+                    mesh_geometry_alias(&mut record, tag, &source_label);
+                }
+                let Value(Object::Record(binding)) = &mut record
+                    .fields
+                    .iter_mut()
+                    .find(|(tag, _)| *tag == 28)
+                    .unwrap()
+                    .1
+                else {
+                    unreachable!()
+                };
+                for tag in [1, 2] {
+                    mesh_geometry_alias(binding, tag, &source_label);
+                }
+            }
             set(&mut record, 36, sequence_field(p, address));
             set(
                 &mut record,
@@ -206,50 +252,85 @@ fn attachment(p: &SceneProject, address: AttachmentAddress) -> Object {
             );
             Object::Record(record)
         }
-        SceneAttachment::Region(r) => Object::Record(Record {
-            class: 43,
-            label: Some(label),
+        SceneAttachment::Region(r) => {
+            let mut record = Record {
+                class: 43,
+                label: Some(label),
+                fields: vec![
+                    (10, Float(r.rotation)),
+                    (15, sequence_field(p, address)),
+                    (11, Float(r.width)),
+                    (8, Float(r.scale_x)),
+                    (9, Float(r.scale_y)),
+                    (14, object(Object::Color(p.attachment_color(address)))),
+                    (6, Float(r.x)),
+                    (13, text(&r.path)),
+                    (12, Float(r.height)),
+                    (7, Float(r.y)),
+                    (1, text(&r.name)),
+                    (32, Bool(false)),
+                    (5, Bool(true)),
+                    (0, DomainLink(13, format!("slot-{}", address.slot))),
+                    (4, UInt(0)),
+                    (33, Bool(true)),
+                    (35, Bool(false)),
+                ],
+            };
+            if p.wire
+                .as_ref()
+                .and_then(|wire| wire.source_state.as_ref())
+                .is_some_and(|state| state.region_43_order.contains(&address))
+            {
+                super::record_order::apply_region(&mut record);
+            }
+            Object::Record(record)
+        }
+        SceneAttachment::Path(path) => Object::Record(Record {
+            class: 69,
+            label: Some(label.clone()),
             fields: vec![
-                (10, Float(r.rotation)),
-                (15, sequence_field(p, address)),
-                (11, Float(r.width)),
-                (8, Float(r.scale_x)),
-                (9, Float(r.scale_y)),
-                (14, object(Object::Color(p.attachment_color(address)))),
-                (6, Float(r.x)),
-                (13, text(&r.path)),
-                (12, Float(r.height)),
-                (7, Float(r.y)),
-                (1, text(&r.name)),
+                (13, Bool(path.constant_speed)),
+                (12, Bool(path.closed)),
+                (
+                    15,
+                    FloatArray(path.lengths.iter().map(|length| length.get()).collect()),
+                ),
+                (20, Float(1.0)),
+                (19, Float(0.0)),
+                (37, UInt(8)),
+                (31, object(Object::Color(path.color))),
+                (30, Bool(path.weighted)),
+                (
+                    28,
+                    object(Object::Record(Record {
+                        class: 53,
+                        label: None,
+                        fields: vec![
+                            (1, bones(&path.bones)),
+                            (2, object(Object::Array(vertex_records(&path.vertices)))),
+                            (0, object(Object::Link(69, label))),
+                        ],
+                    })),
+                ),
+                (7, UInt(path.vertices.len() as u32 * 4)),
+                (21, Float(1.0)),
+                (8, object(Object::IntList(path.edges.clone()))),
+                (33, Bool(true)),
+                (1, text(&path.name)),
+                (4, UInt(0)),
+                (0, DomainLink(13, format!("slot-{}", address.slot))),
+                (35, Bool(false)),
                 (32, Bool(false)),
                 (5, Bool(true)),
-                (0, DomainLink(13, format!("slot-{}", address.slot))),
-                (4, UInt(0)),
-                (33, Bool(true)),
-                (35, Bool(false)),
             ],
         }),
         SceneAttachment::Clipping(c) => {
-            let vertices = c
-                .vertices
-                .iter()
-                .map(|v| {
-                    Object::Record(Record {
-                        class: 54,
-                        label: None,
-                        fields: vec![
-                            (0, object(Object::FloatList(v.weights.clone()))),
-                            (1, object(Object::FloatList(v.positions.clone()))),
-                        ],
-                    })
-                })
-                .collect();
             let binding = Object::Record(Record {
                 class: 53,
                 label: None,
                 fields: vec![
                     (0, object(Object::Link(84, label.clone()))),
-                    (2, object(Object::Array(vertices))),
+                    (2, object(Object::Array(vertex_records(&c.vertices)))),
                     (
                         1,
                         object(Object::Array(
@@ -293,6 +374,21 @@ fn attachment(p: &SceneProject, address: AttachmentAddress) -> Object {
         }
     }
 }
+fn vertex_records(vertices: &[Vertex]) -> Vec<Object> {
+    vertices
+        .iter()
+        .map(|vertex| {
+            Object::Record(Record {
+                class: 54,
+                label: None,
+                fields: vec![
+                    (0, object(Object::FloatList(vertex.weights.clone()))),
+                    (1, object(Object::FloatList(vertex.positions.clone()))),
+                ],
+            })
+        })
+        .collect()
+}
 fn bones(values: &[usize]) -> Field {
     object(Object::Array(
         values
@@ -301,7 +397,16 @@ fn bones(values: &[usize]) -> Field {
             .collect(),
     ))
 }
-fn common(name: &str) -> Vec<(u32, Field)> {
+fn common(name: &str, class: u32) -> Vec<(u32, Field)> {
+    if class == 72 {
+        return vec![
+            (22, empty()),
+            (0, DomainLink(11, "skeleton".into())),
+            (1, text(name)),
+            (34, Bool(true)),
+            (32, object(Object::Link(108, "constraint-group".into()))),
+        ];
+    }
     vec![
         (34, Bool(true)),
         (22, empty()),
@@ -380,6 +485,34 @@ fn constraint(c: &Constraint, index: usize) -> Object {
             (7, Float(c.offsets[2])),
             (4, Float(c.mix[1])),
         ],
+        Constraint::Path(c) => vec![
+            (8, Float(c.mix_rotate)),
+            (23, Float(c.mix_y)),
+            (
+                15,
+                Enum(c.rotate_mode as u32, path_rotate_label(c.rotate_mode)),
+            ),
+            (6, Float(c.mix_x)),
+            (2, bones(&c.bones)),
+            (24, Float(0.0)),
+            (11, Bool(true)),
+            (
+                14,
+                Enum(c.spacing_mode as u32, path_spacing_label(c.spacing_mode)),
+            ),
+            (4, Float(c.position)),
+            (5, Float(0.0)),
+            (10, Float(c.rotation)),
+            (13, Float(0.0)),
+            (
+                16,
+                Enum(c.position_mode as u32, path_position_label(c.position_mode)),
+            ),
+            (12, Float(c.spacing)),
+            (9, Float(0.0)),
+            (3, DomainLink(13, format!("slot-{}", c.slot))),
+            (7, Float(0.0)),
+        ],
         Constraint::Physics(c) => {
             let (rotate, shear) = c.angular.wire_bits();
             let g = c.globals;
@@ -417,12 +550,36 @@ fn constraint(c: &Constraint, index: usize) -> Object {
             ]
         }
     };
-    fields.extend(common(c.name()));
+    fields.extend(common(c.name(), c.class()));
     Object::Record(Record {
         class: c.class(),
         label: Some(constraint_label(index)),
         fields,
     })
+}
+
+fn path_position_label(mode: PathPositionMode) -> &'static str {
+    match mode {
+        PathPositionMode::Fixed => "path-position-fixed",
+        PathPositionMode::Percent => "path-position-percent",
+    }
+}
+
+fn path_spacing_label(mode: PathSpacingMode) -> &'static str {
+    match mode {
+        PathSpacingMode::Length => "path-spacing-length",
+        PathSpacingMode::Fixed => "path-spacing-fixed",
+        PathSpacingMode::Percent => "path-spacing-percent",
+        PathSpacingMode::Proportional => "path-spacing-proportional",
+    }
+}
+
+fn path_rotate_label(mode: PathRotateMode) -> &'static str {
+    match mode {
+        PathRotateMode::Tangent => "path-rotate-tangent",
+        PathRotateMode::Chain => "path-rotate-chain",
+        PathRotateMode::ChainScale => "path-rotate-chain-scale",
+    }
 }
 
 /// Schema fixture is built from our typed values, never from an original file.
@@ -459,6 +616,8 @@ pub(super) fn schema_record() -> Record {
     let p = SceneProject {
         wire: None,
         attachment_colors: vec![],
+        animation_folders: None,
+        linked_meshes: vec![],
         slot_dark_colors: vec![],
         attachment_sequences: vec![AttachmentSequence {
             attachment: AttachmentAddress {
@@ -495,9 +654,26 @@ pub(super) fn schema_record() -> Record {
                 SceneAttachment::Region(image.clone()),
                 SceneAttachment::Mesh(Box::new(super::super::meshes::quad(image, 0))),
                 SceneAttachment::Clipping(clipping),
+                SceneAttachment::Path(PathAttachment {
+                    name: "path".into(),
+                    closed: false,
+                    constant_speed: true,
+                    color: [255; 4],
+                    weighted: false,
+                    bones: vec![0],
+                    vertices: vec![
+                        Vertex {
+                            weights: vec![1.],
+                            positions: vec![0., 0.]
+                        };
+                        6
+                    ],
+                    edges: vec![1, 4],
+                    lengths: vec![FiniteF32::new(1.).unwrap(); 2],
+                }),
             ],
         }],
-        attachment_order: (0..3)
+        attachment_order: (0..4)
             .map(|attachment| AttachmentAddress {
                 slot: 0,
                 attachment,
@@ -529,6 +705,20 @@ pub(super) fn schema_record() -> Record {
         constraints: vec![
             Constraint::Ik(IkConstraint::new("ik".into(), vec![0], 0)),
             Constraint::Transform(TransformConstraint::new("transform".into(), vec![0], 0)),
+            Constraint::Path(PathConstraint {
+                name: "path".into(),
+                bones: vec![0],
+                slot: 0,
+                position_mode: PathPositionMode::Fixed,
+                spacing_mode: PathSpacingMode::Length,
+                rotate_mode: PathRotateMode::Tangent,
+                rotation: 0.,
+                position: 0.,
+                spacing: 0.,
+                mix_rotate: 1.,
+                mix_x: 1.,
+                mix_y: 1.,
+            }),
             Constraint::Physics(PhysicsConstraint::new("physics".into(), 0)),
         ],
     };

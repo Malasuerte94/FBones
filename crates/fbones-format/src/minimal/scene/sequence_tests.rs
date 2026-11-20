@@ -157,6 +157,24 @@ fn independent_region_mesh_sequences_all_modes_fractional_frames_and_raw_delays_
     assert!(p.to_regions().is_err());
     p.animations[0].sequence_tracks[0].keys[1].index = 3;
     p.animations[0].sequence_tracks[1].keys[0].frame = 1.25;
+    for (wire, mode, name) in [
+        (3, SequenceMode::PingPong, "pingpong"),
+        (4, SequenceMode::OnceReverse, "onceReverse"),
+        (5, SequenceMode::LoopReverse, "loopReverse"),
+        (6, SequenceMode::PingPongReverse, "pingpongReverse"),
+    ] {
+        assert_eq!(mode.wire(), wire);
+        assert_eq!(SequenceMode::from_wire(wire), Some(mode));
+        assert_eq!(mode.name(), name);
+        p.animations[0].sequence_tracks[0]
+            .keys
+            .push(SequenceKeyframe {
+                frame: 20.25 + wire as f32,
+                mode,
+                index: 1,
+                delay: FiniteF32::new(f32::from_bits(0x3d17_b427)).unwrap(),
+            });
+    }
     roundtrip(&p);
     assert_eq!(p.rig, setup);
     assert_eq!(p.slots, slots);
@@ -181,7 +199,7 @@ fn sequence_raw_mode_index_curve_and_nonfinite_payloads_reject_without_normalizi
         .unwrap();
     for (offset, value) in [
         (3, f32::NAN),
-        (7, 3.),
+        (7, 7.),
         (7, 1.5),
         (7, -0.),
         (11, 1.5),

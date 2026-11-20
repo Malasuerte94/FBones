@@ -1,7 +1,8 @@
 import {test,expect,openNativeEditor,type NativeSession} from './fixtures/native-session';
 import type {Page} from '@playwright/test';
 import type {ProjectSummary,RigEdit,EvaluationSnapshot,BoneView,TransformProperty} from '../../src/domain/project';
-import type {ConstraintAnimationTrack} from '../../src/domain/animationConstraints';
+import type {ConstraintAnimationTrack,ConstraintKeyInput,ScalarControls,TransformMixControls} from '../../src/domain/animationConstraints';
+import {preserveConstraintKeyBits} from '../../src/domain/constraintTransport';
 import {copyFile,cp,writeFile} from 'node:fs/promises';
 import {dirname,join} from 'node:path';
 import {stringifyNativeResponse} from '../../scripts/e2e/native-response.mjs';
@@ -16,14 +17,16 @@ async function seek(page:Page,frame:number){await field(page,'timeline-current',
 async function choose(page:Page,id:number){await page.getByRole('button',{name:'Tree',exact:true}).click();await page.locator(`[data-tree-kind="constraint"][data-tree-id="${id}"]`).getByRole('treeitem').click();}
 async function evaluated(native:NativeSession,frame:number){const p=(await native.snapshot())!;return native.invoke<EvaluationSnapshot>('evaluate_project',{expectedRevision:p.revision,request:{mode:'none',time:frame/Math.fround(p.animationFps??30),animationId:clip(p).id}});}
 async function rendered(page:Page,id:number){return page.evaluate(id=>{const app=document.querySelector('#app')as HTMLElement&{__vue_app__:{config:{globalProperties:{$pinia:{_s:Map<string,{renderedBones:BoneView[]}>}}}}};return app.__vue_app__.config.globalProperties.$pinia._s.get('workspace')!.renderedBones.find(b=>b.id===id)?.evaluatedWorld;},id);}
-async function fixture(page:Page,native:NativeSession,all=false){
+async function fixture(page:Page,native:NativeSession,all=false,seed?: (ids:{animation:number;ik:number;transform:number;physics:number})=>Promise<ProjectSummary>){
  let p=await native.invoke<ProjectSummary>('create_project',{name:'Own keyed constraints and events',discardChanges:true});const root=p.bones[0]!.id,ids:number[]=[];
  for(const b of[{parent:root,x:-80,y:0,length:60},{parent:1,x:60,y:0,length:50},{parent:root,x:-20,y:70,length:10},{parent:root,x:90,y:-30,length:35}]){p=await edit(native,{type:'create',rotation:0,...b,parent:b.parent===1?ids[0]!:b.parent});ids.push(p.editedBone!);}
  const[upper,lower,target,mapped]=ids as[number,number,number,number];
  p=await edit(native,{type:'addConstraint',constraint:{type:'ik',name:'Keyed IK',bones:[upper,lower],target,mix:0,softness:0,stretch:false,compress:false,bendPositive:true}});const ik=p.constraints!.at(-1)!.id;let transform=-1,physics=-1;
  if(all){const channels:TransformProperty[]=['rotate','x','y','scaleX','scaleY','shearY'];p=await edit(native,{type:'addConstraint',constraint:{type:'transform',name:'Keyed Transform',source:target,bones:[mapped],localSource:false,localTarget:false,additive:false,clamp:false,offsets:[0,0,0,0,0,0],mix:[0,0,0,0,0,0],properties:channels.map(property=>({property,offset:0,to:[{property,offset:0,max:1,scale:1}]}))}});transform=p.constraints!.at(-1)!.id;
  p=await edit(native,{type:'addConstraint',constraint:{type:'physics',name:'Keyed Physics',bone:mapped,x:1,y:1,rotate:null,scaleX:0,shearX:0,step:Math.fround(1/60),inertia:.5,strength:100,damping:.85,mass:1,wind:0,gravity:0,mix:1,limit:5000,globals:{inertia:false,strength:false,damping:false,mass:false,wind:false,gravity:false,mix:false}}});physics=p.constraints!.at(-1)!.id;}
- p=await edit(native,{type:'createAnimation',name:NAME});await openNativeEditor(page);await page.getByTestId('editor-mode-animate').click();await page.getByTestId('animation-select').selectOption(String(clip(p).id));return{before:p,upper,lower,target,mapped,ik,transform,physics};
+ p=await edit(native,{type:'createAnimation',name:NAME});
+ if(seed)p=await seed({animation:clip(p).id,ik,transform,physics});
+ await openNativeEditor(page);await page.getByTestId('editor-mode-animate').click();await page.getByTestId('animation-select').selectOption(String(clip(p).id));return{before:p,upper,lower,target,mapped,ik,transform,physics};
 }
 async function saveReopen(page:Page,native:NativeSession,path:string){await native.queueDialog('save',path);await page.getByRole('button',{name:'Save',exact:true}).click();await expect.poll(async()=>(await native.snapshot())!.dirty).toBe(false);const saved=(await native.snapshot())!,file=page.locator('header details').filter({has:page.locator('summary').filter({hasText:/^File$/})});await file.locator('summary').click();await file.getByRole('button',{name:/^Close project/}).click();await expect.poll(()=>native.snapshot()).toBeNull();await native.queueDialog('open',path);await page.getByRole('button',{name:'Open project',exact:true}).first().click();await expect.poll(()=>native.snapshot()).not.toBeNull();return{saved,reopened:(await native.snapshot())!};}
 
@@ -64,4 +67,114 @@ test('@native Event Tree definitions and discrete key payloads preserve defaults
  await page.getByTestId('timeline-key-'+keys[1]!.id).click();await expect(page.getByTestId('timeline-interpolation-bezier')).toBeDisabled();await page.getByTestId('timeline-tab-graph').click();await expect(page.locator('[data-testid^="timeline-curve-"]')).toHaveCount(0);await page.getByTestId('timeline-tab-dopesheet').click();
  const numeric=panel.getByTestId('event-int'),stable=(await native.snapshot())!,start=native.calls.length;await numeric.fill('2147483648');await expect(numeric).toHaveAttribute('aria-invalid','true');await page.getByRole('button',{name:'Save',exact:true}).click();expect(await native.snapshot()).toEqual(stable);expect(native.calls.slice(start).filter(c=>c.command==='save_project')).toHaveLength(0);await numeric.press('Escape');await expect(numeric).toHaveAttribute('aria-invalid','false');
  await page.getByRole('button',{name:'Undo',exact:true}).click();await expect.poll(async()=>clip((await native.snapshot())!).eventTracks![0]!.keys[1]!.string).toBe('Setup default');await page.getByRole('button',{name:'Redo',exact:true}).click();await expect.poll(async()=>clip((await native.snapshot())!).eventTracks![0]!.keys[1]!.string).toBe('Animated footstep');const changed=(await native.snapshot())!,{saved,reopened}=await saveReopen(page,native,'event-performance.fbones');expect(animations(reopened)).toEqual(animations(saved));expect(setup(reopened)).toEqual(setup(before));expect(Object.is(clip(reopened).eventTracks![0]!.keys[1]!.float,-0)).toBe(true);await writeFile(info.outputPath('event-animation-semantic.json'),stringifyNativeResponse({before,changed,saved,reopened}));await copyFile(saved.path!,info.outputPath('ui-authored-event-performance.fbones'));
+});
+
+test('@native IK Key, Transform Auto Key and Physics Auto Key split interior Beziers with one Undo each', async ({page, native}) => {
+  const leftFlags = {stretch: true, compress: false, bendPositive: false};
+  const rightFlags = {stretch: false, compress: true, bendPositive: true};
+  const f = await fixture(page, native, true, ({animation, ik, transform, physics}) => {
+    const keys: ConstraintKeyInput[] = [
+      {channel: 'ik', constraint: ik, frame: 0, mix: .125, softness: 2, ...leftFlags,
+        curve: 'bezier', controls: [[8, .25, 16, .5], [6, 3, 18, 5]]},
+      {channel: 'ik', constraint: ik, frame: 24, mix: .625, softness: 6, ...rightFlags, curve: 'linear'},
+      {channel: 'transformMix', constraint: transform, frame: 0, values: [.125, -0, .125, .25, .5, .75],
+        curve: 'bezier', controls: transformControls(8, 16, .25, .5)},
+      {channel: 'transformMix', constraint: transform, frame: 24, values: [.625, -0, .125, .25, .5, .75], curve: 'linear'},
+      {channel: 'physics', constraint: physics, property: 'gravity', frame: 0, value: 2, curve: 'bezier', controls: [8, 3, 16, 5]},
+      {channel: 'physics', constraint: physics, property: 'gravity', frame: 24, value: 6, curve: 'linear'},
+      {channel: 'physics', constraint: physics, property: 'wind', frame: 6, value: -3, curve: 'stepped'},
+      {channel: 'physicsReset', constraint: physics, frame: 8},
+    ];
+    return edit(native, {type: 'setAnimationConstraintKeys', animation, keys: keys.map(preserveConstraintKeyBits)});
+  });
+  function transformControls(frame1: number, frame2: number, rotate1: number, rotate2: number): TransformMixControls {
+    return [
+      [frame1, rotate1, frame2, rotate2], [frame1, -0, frame2, -0],
+      [frame1, .125, frame2, .125], [frame1, .25, frame2, .25],
+      [frame1, .5, frame2, .5], [frame1, .75, frame2, .75],
+    ];
+  }
+
+  await seek(page, 12);
+  const current = page.getByTestId('timeline-current');
+  const undo = page.getByRole('button', {name: 'Undo', exact: true});
+  const redo = page.getByRole('button', {name: 'Redo', exact: true});
+  const autoKey = page.getByTestId('timeline-auto-key');
+  const inspector = page.getByTestId('constraint-inspector');
+  const authored = (start: number) => native.calls.slice(start).filter(call => call.command === 'edit_rig');
+  const baseline = (await native.snapshot())!;
+  const animation = clip(baseline).id;
+  const setupTransform = tracks(baseline).find(track => track.channel === 'transformMix');
+  if (setupTransform?.channel !== 'transformMix') throw Error('Own Transform timeline missing');
+  expect(setupTransform.keys[0]!.values[1]).toBe(-0);
+  expect(setupTransform.keys[0]!.controls?.[1]).toEqual([8, -0, 16, -0]);
+
+  async function splice(channel: 'ik'|'transformMix'|'physics', constraint: number, action: () => Promise<void>,
+    leftControls: ScalarControls | ScalarControls[], middle: Record<string, unknown>) {
+    const match = (track: ConstraintAnimationTrack) => track.constraint === constraint && track.channel === channel
+      && (track.channel !== 'physics' || track.property === 'gravity');
+    const before = (await native.snapshot())!;
+    const [left, right] = tracks(before).find(match)!.keys;
+    const start = native.calls.length;
+    await action();
+    await expect.poll(async () => tracks((await native.snapshot())!).find(match)!.keys.map(key => key.frame)).toEqual([0, 12, 24]);
+    const after = (await native.snapshot())!;
+    const [predecessor, inserted, end] = tracks(after).find(match)!.keys;
+    const calls = authored(start);
+    const property = channel === 'physics' ? {property: 'gravity'} : {};
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.args).toMatchObject({expectedRevision: before.revision, edit: {
+      type: 'setAnimationConstraintKeys', animation,
+      keys: [{channel, constraint, frame: 0, keyId: left!.id, ...property}, {channel, constraint, frame: 12, ...property}],
+    }});
+    expect(after.revision).toBe(before.revision + 1);
+    expect(predecessor).toEqual({...left, controls: leftControls});
+    expect(inserted).toMatchObject({frame: 12, curve: 'bezier', ...middle});
+    expect(end).toEqual(right);
+    expect(tracks(after).filter(track => !match(track))).toEqual(tracks(before).filter(track => !match(track)));
+    expect(clip(after).tracks).toEqual(clip(before).tracks);
+    expect(setup(after)).toEqual(setup(baseline));
+
+    await undo.click();
+    await expect.poll(async () => (await native.snapshot())!.animations).toEqual(before.animations);
+    await redo.click();
+    await expect.poll(async () => (await native.snapshot())!.animations).toEqual(after.animations);
+    await expect(current).toHaveValue('12');
+    await expect(inspector).toHaveAttribute('data-constraint-id', String(constraint));
+  }
+
+  await choose(page, f.ik);
+  await autoKey.click();
+  await expect(autoKey).toHaveAttribute('aria-pressed', 'false');
+  const bend = inspector.getByRole('checkbox', {name: 'Positive bend', exact: true});
+  await expect(bend).not.toBeChecked();
+  const draftStart = native.calls.length;
+  await bend.check();
+  await field(page, 'constraint-mix', 50);
+  await expect(bend).toBeChecked();
+  await expect(inspector.getByTestId('constraint-mix')).toHaveValue('50');
+  expect(await native.snapshot()).toEqual(baseline);
+  expect(authored(draftStart)).toHaveLength(0);
+  await splice('ik', f.ik, () => inspector.getByTestId('constraint-animation-key').click(),
+    [[4, .1875, 8, .40625], [3, 2.5, 7.5, 3.25]],
+    {mix: .5, softness: 4, ...leftFlags, bendPositive: true, controls: [[16, .59375, 20, .5625], [16.5, 4.75, 21, 5.5]]});
+
+  await autoKey.click();
+  await expect(autoKey).toHaveAttribute('aria-pressed', 'true');
+  await choose(page, f.transform);
+  await splice('transformMix', f.transform, () => field(page, 'transform-mix-0', 50),
+    transformControls(4, 8, .1875, .40625),
+    {values: [.5, -0, .125, .25, .5, .75], controls: transformControls(16, 20, .59375, .5625)});
+
+  await choose(page, f.physics);
+  await splice('physics', f.physics, () => field(page, 'physics-gravity', 5),
+    [4, 2.5, 8, 4.25], {value: 5, controls: [16, 5.75, 20, 5.5]});
+
+  const {saved, reopened} = await saveReopen(page, native, 'constraint-interior-keys.fbones');
+  expect(animations(reopened)).toEqual(animations(saved));
+  expect(setup(reopened)).toEqual(setup(baseline));
+  const transform = tracks(reopened).find(track => track.channel === 'transformMix');
+  if (transform?.channel !== 'transformMix') throw Error('Reopened Transform timeline missing');
+  expect(transform.keys[1]?.values[1]).toBe(-0);
+  expect(transform.keys[1]?.controls?.[1]).toEqual([16, -0, 20, -0]);
 });

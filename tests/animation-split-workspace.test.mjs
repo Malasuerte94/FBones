@@ -6,6 +6,7 @@ import {effectScope,ref,shallowRef} from 'vue';
 import {animationBoneChannels,animationChannelDimensions,animationFamilyChannels,keyValues,sampleAnimation} from '../src/domain/animation.ts';
 import {useAnimationWorkspace} from '../src/composables/useAnimationWorkspace.ts';
 import {draftSummary} from '../src/domain/project.ts';
+import {previewEdit} from '../src/domain/rig.ts';
 
 const copy=value=>structuredClone(value);
 // A staged update may carry its collecting transport discriminator. Retention
@@ -67,22 +68,78 @@ test('relative Scale uses only the addressed axis denominator',()=>{
 test('manual family keys mix combined and split representations in one command; axis row keys only itself',async()=>{
  const e=fixture();try{
   e.selected.value=[0,1];await e.w.insertAnimationKeys('translate');
-  assert.deepEqual(e.edits[0].keys.map(k=>[k.bone,k.channel]),[[0,'translate'],[1,'translateX'],[1,'translateY']]);
+  assert.deepEqual(e.edits[0].keys.map(k=>[k.bone,k.channel,k.frame,k.keyId,k.curve]),[
+   [0,'translate',8,undefined,'linear'],
+   [1,'translateX',0,3,'bezier'],[1,'translateX',8,undefined,'bezier'],
+   [1,'translateY',8,undefined,'stepped'],
+  ]);
   assert.equal(e.edits[0].type,'setAnimationKeys');
-  e.selected.value=[1];await e.w.insertAnimationKeys('translateY');assert.deepEqual(e.edits[1].keys.map(k=>k.channel),['translateY']);
+  e.selected.value=[1];await e.w.insertAnimationKeys('translateY');
+  assert.deepEqual(e.edits[1].keys,[{bone:1,channel:'translateY',frame:8,values:[5,0],curve:'stepped'}]);
   e.selected.value=[0,1];await e.w.insertAnimationKeys('translateX');assert.equal(e.edits.length,2,'incompatible mixed scalar request is atomic before transport');assert.match(e.notices.at(-1).message,/existing separated channel/);
  }finally{e.close();}
 });
 
 test('dirty K and Auto Key route only changed scalar fields despite all eight capabilities',async()=>{
  const e=fixture();try{
-  stage(e,1,{x:71});await e.w.keyAnimationChanges('rotate');assert.deepEqual(e.edits[0].keys.map(k=>[k.channel,k.values]),[['translateX',[61,0]]]);
+  stage(e,1,{x:71});await e.w.keyAnimationChanges('rotate');
+  assert.deepEqual(e.edits[0].keys.map(k=>[k.channel,k.frame,k.keyId,k.values,k.curve]),[
+   ['translateX',0,3,[2,0],'bezier'],['translateX',8,undefined,[61,0],'bezier'],
+  ]);
   e.w.clearAnimationDraft();e.w.animationAutoKey.value=true;
   const y=stage(e,1,{y:81});assert.deepEqual(y.keys.map(k=>[k.channel,k.values]),[['translateY',[61,0]]]);
   const both=stage(e,1,{x:71,y:81});assert.deepEqual(both.keys.map(k=>k.channel),['translateX','translateY']);
   e.selected.value=[2];const scale=stage(e,2,{scaleX:-6});assert.deepEqual(scale.keys.map(k=>[k.channel,k.values]),[['scaleX',[-3,0]]]);
   e.selected.value=[3];const negative=stage(e,3,{scaleY:6});assert.deepEqual(negative.keys.map(k=>[k.channel,k.values]),[['scaleY',[-3,0]]]);
  }finally{e.close();}
+});
+
+test('Auto Key preserves sub-f32 relative intent and ignores affine zero sign on a clean sibling', () => {
+ const e=fixture();
+ try {
+  const source=copy(e.project.value);
+  const root={...source.bones[0],x:2 ** 19,y:-0};
+  source.bones[0]=root;
+  source.animations[0].tracks[0].keys=[
+   key(1,0,[0,-0],'bezier',[[6,0,18,0],[6,-0,18,-0]]),
+   key(2,24,[0,-0]),
+  ];
+  e.project.value=source;
+  e.selected.value=[root.id];
+  const frame=8,subUlp=1/64;
+  assert.equal(e.w.animationFrame.value,frame);
+  assert.equal(Math.fround(root.x+subUlp),root.x);
+  const clean=e.w.animationBones.value;
+  assert.ok(Object.is(clean[0].y,-0));
+  const update={type:'update',id:root.id,x:root.x+subUlp};
+  const expectedKey={bone:root.id,channel:'translate',frame,curve:'linear'};
+  e.w.animationAutoKey.value=true;
+  const numeric=e.w.boneAnimationEditPlan(update,clean,{source:'numericField',frame});
+  assert.deepEqual(numeric.boneAutoKey,{source:'numericField',lanes:[[true,false]]});
+  assert.deepEqual(numeric.edit.keys,[{...expectedKey,values:[subUlp,0]}]);
+
+  const drag={type:'transformBones',mode:'translate',ids:[root.id],pivotX:0,pivotY:0,dx:1,dy:0,
+   rotation:0,scaleX:1,scaleY:1,shearX:0,shearY:0};
+  const viewport={source:'viewportPose',frame};
+  assert.ok(Object.is(previewEdit(clean,drag)[0].y,0));
+  const cleanDrag=e.w.boneAnimationEditPlan(drag,clean,viewport);
+  assert.deepEqual(cleanDrag.boneAutoKey,{source:'viewportPose',lanes:[[true,false]]});
+  assert.deepEqual(cleanDrag.edit.keys,[{...expectedKey,values:[1,0]}]);
+
+  e.w.animationAutoKey.value=false;
+  assert.equal(e.w.boneAnimationEditPlan(update,clean,{source:'numericField',frame}),null);
+  const working=e.w.animationBones.value;
+  assert.equal(working[0].x,root.x+subUlp);
+  const frozen=working.map(bone=>({...bone,x:Math.fround(bone.x),y:Math.fround(bone.y)}));
+  assert.equal(frozen[0].x,root.x);
+  e.w.animationAutoKey.value=true;
+  const draftDrag=e.w.boneAnimationEditPlan({...drag,dx:0,dy:1},frozen,viewport);
+  assert.deepEqual(draftDrag.boneAutoKey,{source:'viewportPose',lanes:[[true,true]]});
+  assert.deepEqual(draftDrag.edit.keys,[{...expectedKey,values:[subUlp,1]}]);
+  assert.deepEqual(e.edits,[]);
+ } finally {
+  e.close();
+ }
 });
 
 test('manual keys on zero Setup report the addressed failure without consuming the working pose',async()=>{

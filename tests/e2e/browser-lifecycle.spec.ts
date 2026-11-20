@@ -48,12 +48,47 @@ test('File menu closes a browser draft only after explicit discard',async({page}
   await expect(page.getByRole('heading',{name:'A place to bring characters to life.',exact:true})).toBeVisible();await expect(page).toHaveTitle('FBones');
 });
 
-test('real canvas wheel zoom, Reset view and grid toggle work in the browser',async({page})=>{
+test('real canvas wheel zoom, navigation rail, Reset view and grid toggle work in the browser',async({page})=>{
   await openBrowserEditor(page);const canvas=page.getByTestId('viewport').locator('canvas'),zoom=page.locator('.mode-toolbar .tabular-nums');
+  const rail=page.getByTestId('viewport-navigation'),slider=rail.getByTestId('viewport-zoom');
+  await expect(rail).toBeVisible();await expect(rail.getByTestId('viewport-fit')).toBeDisabled();
+  const rulers=rail.getByTestId('viewport-rulers');
+  await expect(rulers).toHaveAttribute('aria-pressed','false');
+  await expect(slider).toHaveValue('100');
   await expect(zoom).toHaveText('100%');const box=await canvas.boundingBox();expect(box).not.toBeNull();
   await page.mouse.move(box!.x+box!.width*.85,box!.y+box!.height*.2);await page.mouse.wheel(0,240);await expect(zoom).not.toHaveText('100%');
+  await expect(slider).not.toHaveValue('100');
+  await slider.press('End');await expect(zoom).toHaveText('800%');
+  await slider.press('Home');await expect(zoom).toHaveText('10%');
+  await rail.getByTestId('viewport-zoom-actual-size').press('Enter');await expect(slider).toHaveValue('100');
+  await rail.getByTestId('viewport-zoom-in').click();await expect(zoom).toHaveText('125%');
+  await rail.getByTestId('viewport-zoom-out').click();await expect(zoom).toHaveText('100%');
   await page.getByRole('button',{name:'Reset view',exact:true}).click();await expect(zoom).toHaveText('100%');
   const grid=page.getByRole('button',{name:'Toggle grid',exact:true});await expect(grid).toHaveAttribute('aria-pressed','true');const before=await canvas.screenshot();await grid.click();await expect(grid).toHaveAttribute('aria-pressed','false');
   expect((await canvas.screenshot()).equals(before),'Grid toggle must change the actual rendered viewport').toBe(false);
   await grid.click();await expect(grid).toHaveAttribute('aria-pressed','true');
+
+  await createBrowserDraft(page,'Own viewport rulers');
+  await rulers.press('Space');await expect(rulers).toHaveAttribute('aria-pressed','true');
+  const overlay=page.getByTestId('viewport-rulers-overlay');
+  const xCursor=overlay.getByTestId('viewport-ruler-x-cursor');
+  const yCursor=overlay.getByTestId('viewport-ruler-y-cursor');
+  const scene=(await canvas.boundingBox())!;
+  const x=scene.x+scene.width/2+60,y=scene.y+scene.height/2-30;
+  async function expectCoordinates(worldX:number,worldY:number){
+    await expect.poll(async()=>{
+      const [mx,my]=await Promise.all([xCursor.innerText(),yCursor.innerText()]);
+      return Math.max(Math.abs(Number(mx)-worldX),Math.abs(Number(my)-worldY));
+    }).toBeLessThanOrEqual(1);
+  }
+  await page.mouse.move(x,y);await expectCoordinates(60,30);
+  await page.mouse.down({button:'right'});
+  await page.mouse.move(x+20,y+10,{steps:4});
+  await page.mouse.up({button:'right'});
+  await page.mouse.move(x,y);await expectCoordinates(40,40);
+  await page.mouse.wheel(0,-240);await expect(zoom).not.toHaveText('100%');
+  await expectCoordinates(40,40);
+  await grid.hover();await expect(xCursor).toHaveCount(0);await expect(yCursor).toHaveCount(0);
+  await expect(overlay).toBeVisible();await expect(grid).toHaveAttribute('aria-pressed','true');
+  await rulers.press('Space');await expect(overlay).toHaveCount(0);
 });

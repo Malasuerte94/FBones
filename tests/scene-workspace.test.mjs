@@ -7,7 +7,17 @@ globalThis.document={title:''};
 let model,calls,nextEditResult,nextEditNoop;
 globalThis.__TAURI__={core:{invoke:async(command,args)=>{
   calls.push({command,args});
-  if(command==='evaluate_project')return{revision:model.revision,documentId:model.documentId,poseEpoch:42,time:args.request.time,mode:args.request.mode,bones:model.bones.map(b=>({id:b.id,world:{x:10,y:0,a:1,b:0,c:0,d:1}}))};
+  if(command==='evaluate_project'){
+    const {time,mode,animationId,deformTargets}=args.request;
+    const bones=model.bones.map(b=>({id:b.id,world:{x:10,y:0,a:1,b:0,c:0,d:1}}));
+    const deformPose=(deformTargets??[]).map(id=>{
+      const attachment=model.slots.flatMap(slot=>slot.attachments).find(row=>row.id===id);
+      const binding=attachment.mesh??attachment.clipping;
+      return {attachment:id,offsets:binding.vertices.flatMap(vertex=>vertex.positions.map(()=>0)),worldVertices:binding.vertices.map(vertex=>vertex.positions.slice(0,2))};
+    });
+    return {revision:model.revision,documentId:model.documentId,poseEpoch:42,time,mode,bones,
+      ...(animationId===undefined?{}:{animationId,localBones:model.bones,deformPose})};
+  }
   if(command==='edit_rig'){
     assert.equal(args.expectedRevision,model.revision);
     if(nextEditNoop){nextEditNoop=false;return model;}
@@ -34,7 +44,7 @@ test('inactive row selection and Ctrl/Shift ranges keep activation and persisten
   w.selectAttachment(0,{toggle:true});assert.deepEqual(w.selectedAttachmentIds,[1]);
   w.selectAttachment(0,{shift:true,ordered:[0,1]});assert.deepEqual(w.selectedAttachmentIds,[0,1]);
   assert.equal(JSON.stringify(model),before);assert.equal(calls.length,0);
-  w.treeFilters.attachment=false;assert.equal(w.selectedAttachmentId,0);
+  w.setTreeFilter('attachment',false);assert.equal(w.selectedAttachmentId,0);
 });
 test('paperclip activates/clears without selecting another inspected row',async()=>{
   const w=useWorkspace();w.project=model;w.selectAttachment(1);
@@ -88,6 +98,37 @@ function addInactiveClip(weighted=true){
  model={...model,bones:[...model.bones,{id:1,parent:0,name:'tip',x:30,y:0,rotation:0,length:40}],slots:model.slots.map(s=>({...s,attachments:[...s.attachments,clip]}))};
  return clip;
 }
+test('numeric Deform Auto Key uses the certified f32 frame of its native pose',async()=>{
+ const clipping=addInactiveClip(false);
+ const fps=7;
+ const frame=.4403275400400162;
+ const storedFrame=Math.fround(frame/fps*fps);
+ assert.notEqual(storedFrame,Math.fround(frame));
+ model={...model,animationFps:fps,animations:[{id:1,name:'Own deformation',duration:24,tracks:[]}]};
+ const w=useWorkspace();
+ try{
+   w.project=model;
+   await w.setEditorMode('animate');
+   w.animationId=1;
+   w.animationAutoKey=true;
+   w.beginClippingEdit(clipping.id);
+   w.selectedVertex=0;
+   w.animationFrame=frame;
+   await nextTick();
+   const begin=calls.length;
+   const vertices=[{vertex:0,x:8,y:0}];
+   assert.equal(await w.editRig({type:'moveClippingVertices',id:clipping.id,vertices}),true,w.notice);
+   const [evaluation,authoring]=calls.slice(begin);
+   assert.equal(calls.length-begin,2);
+   assert.equal(evaluation.command,'evaluate_project');
+   assert.equal(evaluation.args.request.time,frame/fps);
+   assert.equal(authoring.command,'edit_rig');
+   assert.equal(authoring.args.poseEpoch,42);
+   assert.deepEqual(authoring.args.edit,{type:'setAnimationDeformVertices',animation:1,attachment:clipping.id,frame:storedFrame,vertices});
+   assert.equal(w.animationFrame,frame);
+   assert.equal(w.selectedVertex,0);
+ }finally{w.$dispose();}
+});
 test('real clip binding target, bound influence and weights mode are independent from image projection and active pointer',()=>{
  const clip=addInactiveClip(),w=useWorkspace();w.project=model;w.selectAttachment(2);
  assert.equal(w.selectedBinding,clip.clipping);assert.equal(w.selectedSlot.mesh,null);

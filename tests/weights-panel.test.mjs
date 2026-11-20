@@ -41,12 +41,22 @@ test('rigid clipping shows zero bound members and same-slot attachment changes d
  const env=await setup(fixture(false));const {w,app,find}=env;const before=JSON.stringify(w.project);
  assert.equal(find('weights-target').text,'mask 0');assert.equal(checkbox(env,0).props.checked,false);assert.equal(checkbox(env,1).props.checked,false);
  assert.equal(find('weights-auto').props.disabled,true);assert.equal(find('weights-unbind').props.disabled,true);assert.equal(find('weights-normalize').props.disabled,true);
+ assert.equal(find('weights-prune').props.disabled,true);
  checkbox(env,1).props.onChange({target:{checked:true}});await nextTick();assert.equal(checkbox(env,1).props.checked,true);
  w.selectAttachment(1);await nextTick();assert.equal(checkbox(env,1).props.checked,false);assert.equal(find('weights-target').text,'mask 1');
  assert.equal(w.influence,null);assert.equal(JSON.stringify(w.project),before);assert.deepEqual(env.calls,[]);app.unmount();
 });
 test('inactive clipping controls address its stable attachment ID for Bind Auto numeric Normalize and Unbind',async()=>{
  const env=await setup();const {w,calls,find,app}=env;const before=JSON.stringify(w.project);
+ const prune=find('weights-prune');assert.equal(prune.props.disabled,false);
+ const pruneHint=flatten(env.target).find(n=>n.props.id===prune.props['aria-describedby']);
+ assert.equal(pruneHint?.text,'Preview removing small weight influences across selected attachments.');
+ const weld=find('weights-weld');assert.equal(weld.props.disabled,true);assert.equal(weld.props.onClick,undefined);
+ const weldReason=flatten(env.target).find(n=>n.props.id===weld.props['aria-describedby']);
+ assert.equal(weldReason?.text,'Matching weights across meshes is planned.');
+ const smooth=find('weights-smooth');assert.equal(smooth.props.disabled,true);
+ const smoothReason=flatten(env.target).find(n=>n.props.id===smooth.props['aria-describedby']);
+ assert.equal(smoothReason?.text,'Smooth weights is available for weighted meshes in Setup.');
  find('weights-bind').props.onClick();find('weights-auto').props.onClick();find('weights-normalize').props.onClick();find('weights-unbind').props.onClick();
  w.selectedVertex=0;await nextTick();const number=flatten(env.target).find(n=>n.props.type==='number'&&n.props['aria-label']==='Weight root');assert.ok(number);
  number.props.onChange({target:{value:'50'}});number.props.onChange({target:{value:'-1'}});assert.ok(w.inspectorError);number.props.onChange({target:{value:'50'}});assert.equal(w.inspectorError,'');
@@ -132,12 +142,34 @@ test('untouched formatted fractional weights and Escape never round native preci
 
 test('Auto panel uses explicit vertex/candidate scopes while Bind checkboxes stay independent',async()=>{
  const env=await setup(),{w,find,calls,app}=env;
+ w.editRig=async edit=>{
+  calls.push(structuredClone(edit));
+  // Each native response replaces the summary, even when its revision stays the same.
+  const reply=JSON.parse(JSON.stringify(w.project));
+  if(edit.scope){
+   const {vertices}=reply.slots[0].attachments[1].clipping;
+   for(const vertex of edit.scope.vertices)vertices[vertex].weights=[0,1];
+   reply.revision++;
+   reply.dirty=true;
+  }
+  w.project=reply;
+  return true;
+ };
  w.selectWeightVertices([0,2],2);w.chooseInfluence(1);await nextTick();
  assert.ok(find('weights-auto-scope').text.includes('2 vertices'));assert.ok(find('weights-auto-scope').text.includes('1 influences'));
- checkbox(env,0).props.onChange({target:{checked:false}});find('weights-auto').props.onClick();
+ checkbox(env,0).props.onChange({target:{checked:false}});await nextTick();
+ assert.equal(checkbox(env,0).props.checked,false);
+ await find('weights-auto').props.onClick();await nextTick();
  assert.deepEqual(calls,[{type:'autoAttachmentWeights',id:0,scope:{vertices:[0,2],bones:[1]}}]);
- assert.deepEqual(w.selectedBinding.bones,[0,1]);find('weights-all-vertices').props.onClick();find('weights-all-influences').props.onClick();await nextTick();
- find('weights-auto').props.onClick();assert.deepEqual(calls.at(-1),{type:'autoAttachmentWeights',id:0});app.unmount();
+ assert.equal(w.project.revision,6);
+ assert.equal(checkbox(env,0).props.checked,false,'a weight-only reply preserves the pending Bind change');
+ assert.deepEqual(w.selectedBinding.bones,[0,1]);
+ find('weights-all-vertices').props.onClick();find('weights-all-influences').props.onClick();await nextTick();
+ await find('weights-auto').props.onClick();await nextTick();
+ assert.deepEqual(calls.at(-1),{type:'autoAttachmentWeights',id:0});
+ assert.equal(w.project.revision,6);
+ assert.equal(checkbox(env,0).props.checked,false,'a fresh summary at the same revision also preserves the draft');
+ app.unmount();
 });
 test('mixed group numeric input commits one captured batch and old-group handlers cannot touch a new selection',async()=>{
  const model=fixture();for(const a of model.slots[0].attachments)if(a.clipping)a.clipping.vertices[1].weights=[.2,.8];

@@ -99,6 +99,14 @@ pub struct WeightChange {
     pub value: f32,
 }
 
+#[cfg(feature = "scene-editing")]
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PasteWeightRow {
+    pub vertex: usize,
+    pub weight_bits: Vec<u32>,
+}
+
 /// Ephemeral Auto selection/protection, never a canonical project field.
 /// Public bone values are stable session IDs; the Scene bridge resolves them.
 #[cfg(feature = "scene-editing")]
@@ -107,6 +115,23 @@ pub struct WeightChange {
 pub struct AutoWeightScope {
     pub vertices: Option<Vec<usize>>,
     pub bones: Option<Vec<u64>>,
+    pub locked_bones: Option<Vec<u64>>,
+}
+
+#[cfg(feature = "scene-editing")]
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PruneWeightsRequest {
+    pub targets: Vec<PruneWeightsTarget>,
+    pub max_influences: usize,
+    pub threshold: f32,
+}
+
+#[cfg(feature = "scene-editing")]
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PruneWeightsTarget {
+    pub id: u64,
     pub locked_bones: Option<Vec<u64>>,
 }
 
@@ -119,6 +144,13 @@ pub struct WorldPoint {
 pub struct BoneColorEdit {
     pub id: u64,
     pub color: u32,
+}
+#[cfg(feature = "scene-editing")]
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct BoneRename {
+    pub id: u64,
+    pub name: String,
 }
 #[derive(Clone, Debug)]
 pub struct ImagePlacement {
@@ -133,6 +165,14 @@ pub struct ImagePlacement {
 fn default_true() -> bool {
     true
 }
+#[cfg(feature = "scene-editing")]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AnimationOffsetRange {
+    pub start: f32,
+    pub end: f32,
+}
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(
     tag = "type",
@@ -190,6 +230,18 @@ pub enum RigEdit {
         sequence: Option<crate::animation_sequence::SettingsInput>,
     },
     #[cfg(feature = "scene-editing")]
+    SetLinkedMeshInheritance {
+        id: u64,
+        #[serde(rename = "inheritTimelines")]
+        inherit_timelines: bool,
+    },
+    #[cfg(feature = "scene-editing")]
+    CreateLinkedMesh {
+        source: u64,
+        slot: u64,
+        name: String,
+    },
+    #[cfg(feature = "scene-editing")]
     SetAnimationEventKeys {
         animation: u64,
         keys: Vec<crate::animation_events::EventKeyInput>,
@@ -215,6 +267,18 @@ pub enum RigEdit {
     #[cfg(feature = "scene-editing")]
     DeleteAnimation {
         id: u64,
+    },
+    #[cfg(feature = "scene-editing")]
+    StoreAnimationKeys {
+        animation: u64,
+    },
+    #[cfg(feature = "scene-editing")]
+    ClearStoredAnimationKeys {
+        animation: u64,
+    },
+    #[cfg(feature = "scene-editing")]
+    SwapStoredAnimationKeys {
+        animation: u64,
     },
     #[cfg(feature = "scene-editing")]
     SetAnimationKey {
@@ -279,11 +343,35 @@ pub enum RigEdit {
         animation: u64,
         keys: Vec<u64>,
         delta_frames: f32,
+        #[serde(default)]
+        shift: bool,
+    },
+    #[cfg(feature = "scene-editing")]
+    ScaleAnimationKeys {
+        animation: u64,
+        keys: Vec<u64>,
+        anchor_frame: f32,
+        from_edge_frame: f32,
+        to_edge_frame: f32,
+    },
+    #[cfg(feature = "scene-editing")]
+    OffsetAnimationKeys {
+        animation: u64,
+        key: u64,
+        delta_frames: f32,
+        #[serde(default)]
+        continue_offset: bool,
+        #[serde(default)]
+        loop_range: Option<AnimationOffsetRange>,
     },
     #[cfg(feature = "scene-editing")]
     BindAttachment {
         id: u64,
         bones: Vec<u64>,
+    },
+    #[cfg(feature = "scene-editing")]
+    UpdateAttachmentBindings {
+        id: u64,
     },
     #[cfg(feature = "scene-editing")]
     SetAttachmentWeight {
@@ -307,6 +395,33 @@ pub enum RigEdit {
         id: u64,
         #[serde(default)]
         locked_bones: Option<Vec<u64>>,
+    },
+    #[cfg(feature = "scene-editing")]
+    SmoothAttachmentWeights {
+        id: u64,
+        #[serde(default)]
+        vertices: Option<Vec<usize>>,
+        #[serde(default)]
+        locked_bones: Option<Vec<u64>>,
+    },
+    #[cfg(feature = "scene-editing")]
+    SwapAttachmentWeights {
+        id: u64,
+        bones: [u64; 2],
+        #[serde(default)]
+        locked_bones: Option<Vec<u64>>,
+    },
+    #[cfg(feature = "scene-editing")]
+    PasteAttachmentWeights {
+        id: u64,
+        bones: Vec<u64>,
+        rows: Vec<PasteWeightRow>,
+        #[serde(default)]
+        locked_bones: Option<Vec<u64>>,
+    },
+    #[cfg(feature = "scene-editing")]
+    PruneAttachmentWeights {
+        request: PruneWeightsRequest,
     },
     #[cfg(feature = "scene-editing")]
     AutoAttachmentWeights {
@@ -438,11 +553,58 @@ pub enum RigEdit {
     #[cfg(feature = "scene-editing")]
     UpdateAttachment {
         id: u64,
-        x: f32,
-        y: f32,
-        rotation: f32,
-        scale_x: f32,
-        scale_y: f32,
+        #[serde(default)]
+        x: Option<f32>,
+        #[serde(default)]
+        y: Option<f32>,
+        #[serde(default)]
+        rotation: Option<f32>,
+        #[serde(default)]
+        scale_x: Option<f32>,
+        #[serde(default)]
+        scale_y: Option<f32>,
+    },
+    #[cfg(feature = "scene-editing")]
+    SetRegionPosition {
+        id: u64,
+        x: Option<f64>,
+        y: Option<f64>,
+    },
+    #[cfg(feature = "scene-editing")]
+    TranslateBoneWithCompensation {
+        id: u64,
+        dx: f64,
+        dy: f64,
+        compensate_bones: bool,
+        compensate_images: bool,
+    },
+    #[cfg(feature = "scene-editing")]
+    RotateBoneWithCompensation {
+        id: u64,
+        mode: RotationCompensationMode,
+        angle: f64,
+        compensate_bones: bool,
+        compensate_images: bool,
+    },
+    #[cfg(feature = "scene-editing")]
+    ScaleBoneWithCompensation {
+        id: u64,
+        mode: ScaleCompensationMode,
+        #[serde(default)]
+        x: Option<f32>,
+        #[serde(default)]
+        y: Option<f32>,
+        compensate_bones: bool,
+        compensate_images: bool,
+    },
+    #[cfg(feature = "scene-editing")]
+    ShearBoneWithCompensation {
+        id: u64,
+        mode: RotationCompensationMode,
+        axis: BoneWorldAxis,
+        angle: f32,
+        compensate_bones: bool,
+        compensate_images: bool,
     },
     #[cfg(feature = "scene-editing")]
     #[serde(skip_deserializing)]
@@ -475,6 +637,53 @@ pub enum RigEdit {
         shear_x: Option<f32>,
         #[serde(default)]
         shear_y: Option<f32>,
+    },
+    #[cfg(feature = "scene-editing")]
+    RenameBones {
+        renames: Vec<BoneRename>,
+    },
+    #[cfg(feature = "scene-editing")]
+    SetBoneParentPosition {
+        id: u64,
+        #[serde(default)]
+        x: Option<f32>,
+        #[serde(default)]
+        y: Option<f32>,
+        #[serde(default)]
+        compensate_bones: bool,
+        #[serde(default)]
+        compensate_images: bool,
+    },
+    #[cfg(feature = "scene-editing")]
+    SetBoneLocalPosition {
+        id: u64,
+        #[serde(default)]
+        x: Option<f64>,
+        #[serde(default)]
+        y: Option<f64>,
+        #[serde(default)]
+        compensate_bones: bool,
+        #[serde(default)]
+        compensate_images: bool,
+    },
+    #[cfg(feature = "scene-editing")]
+    SetBoneWorldPosition {
+        id: u64,
+        axis: BoneWorldAxis,
+        position: f64,
+        #[serde(default)]
+        compensate_bones: bool,
+        #[serde(default)]
+        compensate_images: bool,
+    },
+    #[cfg(feature = "scene-editing")]
+    SetBoneWorldRotation {
+        id: u64,
+        angle: f64,
+        #[serde(default)]
+        compensate_bones: bool,
+        #[serde(default)]
+        compensate_images: bool,
     },
     SetImagesRoot {
         path: String,
@@ -634,6 +843,15 @@ pub enum RigEdit {
     ResetMesh {
         id: u64,
     },
+    #[cfg(feature = "scene-editing")]
+    GenerateMeshVertices {
+        id: u64,
+    },
+    #[cfg(feature = "scene-editing")]
+    ReplaceMeshOutline {
+        id: u64,
+        uvs: Vec<[f32; 2]>,
+    },
     BindMesh {
         id: u64,
         bones: Vec<u64>,
@@ -688,6 +906,27 @@ pub enum TransformMode {
     Scale,
     Shear,
     Pose,
+}
+#[cfg(feature = "scene-editing")]
+#[derive(Clone, Copy, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum BoneWorldAxis {
+    X,
+    Y,
+}
+#[cfg(feature = "scene-editing")]
+#[derive(Clone, Copy, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RotationCompensationMode {
+    LocalAbsolute,
+    WorldDelta,
+}
+#[cfg(feature = "scene-editing")]
+#[derive(Clone, Copy, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ScaleCompensationMode {
+    LocalAbsolute,
+    LocalFactor,
 }
 #[derive(Clone, Copy, Debug)]
 pub struct Pose {
@@ -1745,6 +1984,8 @@ impl RigHistory {
             | RigEdit::SetAnimationEventKeys { .. }
             | RigEdit::SetAnimationSequenceKeys { .. }
             | RigEdit::SetAttachmentSequence { .. }
+            | RigEdit::SetLinkedMeshInheritance { .. }
+            | RigEdit::CreateLinkedMesh { .. }
             | RigEdit::SetAttachmentColor { .. }
             | RigEdit::SetSlotDarkColor { .. }
             | RigEdit::CreateAnimation { .. }
@@ -1752,6 +1993,9 @@ impl RigHistory {
             | RigEdit::SetAnimationFps { .. }
             | RigEdit::RenameAnimation { .. }
             | RigEdit::DeleteAnimation { .. }
+            | RigEdit::StoreAnimationKeys { .. }
+            | RigEdit::ClearStoredAnimationKeys { .. }
+            | RigEdit::SwapStoredAnimationKeys { .. }
             | RigEdit::SetAnimationKey { .. }
             | RigEdit::SetAnimationKeys { .. }
             | RigEdit::SetAnimationSlotKeys { .. }
@@ -1761,11 +2005,20 @@ impl RigHistory {
             | RigEdit::SetAnimationDeformVertices { .. }
             | RigEdit::DeleteAnimationKeys { .. }
             | RigEdit::MoveAnimationKeys { .. }
+            | RigEdit::ScaleAnimationKeys { .. }
+            | RigEdit::OffsetAnimationKeys { .. }
+            | RigEdit::GenerateMeshVertices { .. }
+            | RigEdit::ReplaceMeshOutline { .. }
             | RigEdit::TransformAttachments { .. }
             | RigEdit::BindAttachment { .. }
+            | RigEdit::UpdateAttachmentBindings { .. }
             | RigEdit::SetAttachmentWeight { .. }
             | RigEdit::PaintAttachmentWeights { .. }
             | RigEdit::NormalizeAttachmentWeights { .. }
+            | RigEdit::SmoothAttachmentWeights { .. }
+            | RigEdit::SwapAttachmentWeights { .. }
+            | RigEdit::PasteAttachmentWeights { .. }
+            | RigEdit::PruneAttachmentWeights { .. }
             | RigEdit::AutoAttachmentWeights { .. }
             | RigEdit::MoveClippingVertices { .. }
             | RigEdit::InsertClippingVertex { .. }
@@ -1787,8 +2040,18 @@ impl RigHistory {
             | RigEdit::DeleteAttachment { .. }
             | RigEdit::MoveAttachment { .. }
             | RigEdit::ReparentSelection { .. }
+            | RigEdit::RenameBones { .. }
             | RigEdit::AttachmentEdit { .. }
             | RigEdit::UpdateAttachment { .. }
+            | RigEdit::SetRegionPosition { .. }
+            | RigEdit::SetBoneParentPosition { .. }
+            | RigEdit::SetBoneLocalPosition { .. }
+            | RigEdit::SetBoneWorldPosition { .. }
+            | RigEdit::SetBoneWorldRotation { .. }
+            | RigEdit::TranslateBoneWithCompensation { .. }
+            | RigEdit::RotateBoneWithCompensation { .. }
+            | RigEdit::ScaleBoneWithCompensation { .. }
+            | RigEdit::ShearBoneWithCompensation { .. }
             | RigEdit::AddAttachments { .. } => {
                 return Err(invalid("This command requires the typed scene history."))
             }

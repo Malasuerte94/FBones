@@ -1,6 +1,43 @@
 use super::*;
 use crate::minimal::scene::*;
 pub(super) const EVENT_VALUE: u32 = u32::MAX - 1;
+type RawConstraintKey = (f32, Vec<f32>, u32, Vec<[f32; 4]>);
+
+fn controls(raw: &[RawConstraintKey], i: usize) -> Result<Vec<[f32; 4]>> {
+    let next = raw.get(i + 1).ok_or(FormatError::UnsupportedProfile)?;
+    Ok(raw[i]
+        .3
+        .iter()
+        .zip(&next.3)
+        .map(|(a, b)| [a[2], a[3], b[0], b[1]])
+        .collect())
+}
+
+fn path_keys<const N: usize>(raw: &[RawConstraintKey]) -> Result<Vec<PathKeyframe<N>>> {
+    raw.iter()
+        .enumerate()
+        .map(|(i, (frame, values, code, _))| {
+            Ok(PathKeyframe {
+                frame: *frame,
+                values: values
+                    .as_slice()
+                    .try_into()
+                    .map_err(|_| FormatError::UnsupportedProfile)?,
+                curve: match code {
+                    0 => PathKeyCurve::Linear,
+                    2 => PathKeyCurve::Stepped,
+                    1 => PathKeyCurve::Bezier {
+                        controls: controls(raw, i)?
+                            .try_into()
+                            .map_err(|_| FormatError::UnsupportedProfile)?,
+                    },
+                    _ => return unsupported(),
+                },
+            })
+        })
+        .collect()
+}
+
 impl Reader<'_> {
     pub(super) fn constraint_event_track(&mut self, kind: u32) -> Result<BTreeMap<u32, Value>> {
         let keys = self.generic(204, |r| {
@@ -40,6 +77,7 @@ impl Reader<'_> {
                 let dimension = match kind {
                     7 => 5,
                     8 => 6,
+                    11 => 3,
                     30 => 0,
                     _ => 1,
                 };
@@ -54,6 +92,7 @@ impl Reader<'_> {
                 let axes = match kind {
                     7 => 2,
                     8 => 6,
+                    11 => 3,
                     30 => 0,
                     _ => 1,
                 };
@@ -74,17 +113,6 @@ impl Reader<'_> {
             if kind == 12 {
                 return Ok(GenericValue::EventKeys(events));
             }
-            let controls = |i: usize| -> Result<Vec<[f32; 4]>> {
-                let Some(next) = raw.get(i + 1) else {
-                    return unsupported();
-                };
-                Ok(raw[i]
-                    .3
-                    .iter()
-                    .zip(&next.3)
-                    .map(|(a, b)| [a[2], a[3], b[0], b[1]])
-                    .collect())
-            };
             let track = match kind {
                 7 => {
                     let mut keys = Vec::new();
@@ -107,7 +135,7 @@ impl Reader<'_> {
                                 0 => IkKeyCurve::Linear,
                                 2 => IkKeyCurve::Stepped,
                                 1 => IkKeyCurve::Bezier {
-                                    controls: controls(i)?
+                                    controls: controls(&raw, i)?
                                         .try_into()
                                         .map_err(|_| FormatError::UnsupportedProfile)?,
                                 },
@@ -133,7 +161,7 @@ impl Reader<'_> {
                                 0 => TransformMixCurve::Linear,
                                 2 => TransformMixCurve::Stepped,
                                 1 => TransformMixCurve::Bezier {
-                                    controls: controls(i)?
+                                    controls: controls(&raw, i)?
                                         .try_into()
                                         .map_err(|_| FormatError::UnsupportedProfile)?,
                                 },
@@ -146,6 +174,18 @@ impl Reader<'_> {
                         keys,
                     }
                 }
+                9 => ConstraintTimeline::PathPosition {
+                    constraint: 0,
+                    keys: path_keys(&raw)?,
+                },
+                10 => ConstraintTimeline::PathSpacing {
+                    constraint: 0,
+                    keys: path_keys(&raw)?,
+                },
+                11 => ConstraintTimeline::PathMix {
+                    constraint: 0,
+                    keys: path_keys(&raw)?,
+                },
                 30 => ConstraintTimeline::PhysicsReset {
                     constraint: 0,
                     keys: raw
@@ -163,7 +203,7 @@ impl Reader<'_> {
                                 0 => PhysicsCurve::Linear,
                                 2 => PhysicsCurve::Stepped,
                                 1 => PhysicsCurve::Bezier {
-                                    controls: controls(i)?[0],
+                                    controls: controls(&raw, i)?[0],
                                 },
                                 _ => return unsupported(),
                             },
@@ -181,6 +221,7 @@ impl Reader<'_> {
         let class = match kind {
             7 => 56,
             8 => 65,
+            9..=11 => 72,
             12 => 35,
             _ => 121,
         };

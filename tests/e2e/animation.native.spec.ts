@@ -20,6 +20,38 @@ async function seek(page:Page,frame:number){const field=page.getByTestId('timeli
 async function xField(page:Page,value:number){const field=page.getByTestId('animate-bone-x');await field.fill(String(value));await field.press('Enter');await expect(field).toHaveValue(String(value));}
 function clip(project:ProjectSummary){return project.animations!.find(a=>a.name==='anticipation')!;}
 function keys(project:ProjectSummary){return clip(project).tracks.find(t=>t.channel==='translate')!.keys;}
+async function autoKeyCurveFixture(page: Page, native: NativeSession) {
+  let project = await native.invoke<ProjectSummary>('create_project', {name: 'Own interior Auto Key', discardChanges: true});
+  project = await native.invoke<ProjectSummary>('edit_rig', {
+    expectedRevision: project.revision,
+    edit: {type: 'create', parent: project.bones[0]!.id, x: 20, y: 3, rotation: 0, length: 45},
+  });
+  const bone = project.editedBone!;
+  project = await native.invoke<ProjectSummary>('edit_rig', {
+    expectedRevision: project.revision, edit: {type: 'createAnimation', name: 'anticipation'},
+  });
+  const animation = clip(project).id;
+  await native.invoke<ProjectSummary>('edit_rig', {
+    expectedRevision: project.revision,
+    edit: {type: 'setAnimationKeys', animation, keys: [
+      {bone, channel: 'translate', frame: 0, values: [0, 2], curve: 'bezier', controls: [[10, 12, 20, 48], [8, 4, 22, 0]]},
+      {bone, channel: 'translate', frame: 30, values: [60, 2], curve: 'linear'},
+      {bone, channel: 'rotate', frame: 0, values: [0, 0], curve: 'stepped'},
+      {bone, channel: 'rotate', frame: 30, values: [32, 0], curve: 'linear'},
+    ]},
+  });
+  await openNativeEditor(page);
+  const boneRow = page.locator(`[data-tree-kind="bone"][data-tree-id="${bone}"]`).getByRole('treeitem');
+  await boneRow.click();
+  await page.getByTestId('editor-mode-animate').click();
+  await expect(page.getByTestId('animation-tools')).toBeVisible();
+  await page.getByTestId('animation-select').selectOption(String(animation));
+  await expect(page.getByTestId('timeline-auto-key')).toHaveAttribute('aria-pressed', 'true');
+  await seek(page, 15);
+  await expect.poll(() => renderedX(page, bone)).toBeCloseTo(50, 3);
+  const before = (await native.snapshot())!;
+  return {animation, before, bone, boneRow};
+}
 function authoring(native:NativeSession,start:number){return native.calls.slice(start).filter(c=>c.command==='edit_rig');}
 async function renderedX(page:Page,id:number){return page.evaluate(id=>{const app=document.querySelector('#app') as HTMLElement&{__vue_app__:{config:{globalProperties:{$pinia:{_s:Map<string,{renderedBones:BoneView[]}>}}}}};return app.__vue_app__.config.globalProperties.$pinia._s.get('workspace')!.renderedBones.find(b=>b.id===id)?.evaluatedWorld?.x;},id);}
 async function threeKeys(page:Page,native:NativeSession){
@@ -130,28 +162,97 @@ test('@native manually keying an unchanged frame retains its existing stepped or
  const keyButton=page.getByTestId('timeline-key-translate');await keyButton.click();await expect(keyButton).toBeEnabled();const unchanged=(await native.snapshot())!;expect(semantic(unchanged)).toEqual(semantic(bezier));expect(keys(unchanged)[0]!.controls).toEqual(controls);expect(unchanged.bones).toEqual(f.setup);
 });
 
-test('@native an Animate viewport drag freezes the native keyed pose and authors one key; changing frame cancels the next gesture',async({page,native})=>{
- const f=await fixture(page,native);await page.getByTestId('timeline-key-translate').click();await expect.poll(async()=>keys((await native.snapshot())!).map(k=>k.frame)).toEqual([0]);
- await seek(page,30);await xField(page,80);await expect.poll(async()=>keys((await native.snapshot())!).map(k=>k.frame)).toEqual([0,30]);await seek(page,15);await expect.poll(()=>renderedX(page,f.bone)).toBeCloseTo(50,3);
- const before=(await native.snapshot())!,start=native.calls.length,canvas=page.getByTestId('viewport').locator('canvas'),box=(await canvas.boundingBox())!;
- // Own fixture has an identity root, default100% viewport and selected child.
- // Its native interpolated origin is(50,5), distinct from authoredSetup(20,5).
- const origin={x:box.x+box.width/2+50,y:box.y+box.height/2-5};await page.mouse.move(origin.x,origin.y);await page.mouse.down();
- await expect.poll(()=>native.calls.slice(start).filter(c=>c.command==='evaluate_project'&&c.result!==undefined).length).toBe(1);
- const frozenCall=native.calls.slice(start).find(c=>c.command==='evaluate_project')!,frozen=frozenCall.result as EvaluationSnapshot;
- expect(frozenCall.args.expectedRevision).toBe(before.revision);expect(frozenCall.args.request).toMatchObject({animationId:clip(before).id,mode:'none',time:.5});expect(frozen.localBones!.find(b=>b.id===f.bone)!.x).toBeCloseTo(50,4);
- await page.mouse.move(origin.x+25,origin.y-12,{steps:6});expect(await native.snapshot()).toEqual(before);await page.mouse.up();
- await expect.poll(async()=>keys((await native.snapshot())!).map(k=>k.frame)).toEqual([0,15,30]);const after=(await native.snapshot())!,edit=authoring(native,start);
- expect(edit).toHaveLength(1);expect(edit[0]!.args.poseEpoch).toBe(frozen.poseEpoch);expect((edit[0]!.args.edit as {type:string}).type).toBe('setAnimationKeys');expect(after.revision).toBe(before.revision+1);expect(after.bones).toEqual(before.bones);
- const moved=keys(after).find(k=>k.frame===15)!;expect(moved.values[0]).toBeCloseTo(55,3);expect(moved.values[1]).toBeCloseTo(12,3);await expect.poll(()=>renderedX(page,f.bone)).toBeCloseTo(75,3);
- expect(native.calls.slice(start).filter(c=>c.command==='evaluate_project')).toHaveLength(1);
- await page.getByRole('button',{name:'Undo',exact:true}).click();await expect.poll(async()=>keys((await native.snapshot())!).map(k=>k.frame)).toEqual([0,30]);await expect.poll(()=>renderedX(page,f.bone)).toBeCloseTo(50,3);
- await page.getByRole('button',{name:'Redo',exact:true}).click();await expect.poll(async()=>keys((await native.snapshot())!).map(k=>k.frame)).toEqual([0,15,30]);await expect.poll(()=>renderedX(page,f.bone)).toBeCloseTo(75,3);
- const stable=(await native.snapshot())!,cancelStart=native.calls.length,next={x:box.x+box.width/2+75,y:box.y+box.height/2-17};await page.mouse.move(next.x,next.y);await page.mouse.down();
- await expect.poll(()=>native.calls.slice(cancelStart).filter(c=>c.command==='evaluate_project'&&c.result!==undefined).length).toBe(1);
- // Real keyboard input changes the active pose while this mouse gesture is held.
- await page.keyboard.press('ArrowRight');await expect(page.getByTestId('timeline-current')).toHaveValue('16');await page.mouse.move(next.x+20,next.y,{steps:3});await page.mouse.up();
- expect(authoring(native,cancelStart)).toHaveLength(0);expect(await native.snapshot()).toEqual(stable);expect((await native.snapshot())!.bones).toEqual(f.setup);
+test('@native a frozen viewport Auto Key drag splits interior Bezier lanes and a frame change cancels the next drag', async ({page, native}) => {
+  const {animation, before, bone, boneRow} = await autoKeyCurveFixture(page, native);
+  const start = native.calls.length;
+  const canvas = page.getByTestId('viewport').locator('canvas');
+  const box = (await canvas.boundingBox())!;
+  // Identity parent and default zoom. The interpolated origin is (50, 5).
+  const origin = {x: box.x + box.width / 2 + 50, y: box.y + box.height / 2 - 5};
+  await page.mouse.move(origin.x, origin.y);
+  await page.mouse.down();
+  await expect.poll(() => native.calls.slice(start).filter(call => call.command === 'evaluate_project' && call.result !== undefined).length).toBe(1);
+  const frozenCall = native.calls.slice(start).find(call => call.command === 'evaluate_project')!;
+  const frozen = frozenCall.result as EvaluationSnapshot;
+  expect(frozenCall.args).toMatchObject({expectedRevision: before.revision, request: {animationId: animation, mode: 'none', time: .5}});
+  expect(frozen.localBones!.find(row => row.id === bone)).toMatchObject({x: 50, y: 5});
+
+  await page.mouse.move(origin.x + 25, origin.y - 12, {steps: 6});
+  await expect.poll(() => renderedX(page, bone)).toBeCloseTo(75, 3);
+  expect(authoring(native, start)).toHaveLength(0);
+  expect(await native.snapshot()).toEqual(before);
+  await page.mouse.up();
+  await expect.poll(async () => keys((await native.snapshot())!).map(key => key.frame)).toEqual([0, 15, 30]);
+  const after = (await native.snapshot())!;
+  const edits = authoring(native, start);
+  expect(edits).toHaveLength(1);
+  expect(edits[0]!.args).toMatchObject({
+    expectedRevision: before.revision, poseEpoch: frozen.poseEpoch,
+    boneAutoKey: {source: 'viewportPose', lanes: [[true, true]]},
+    edit: {type: 'setAnimationKeys', animation, keys: [{bone, channel: 'translate', frame: 15, values: [55, 14]}]},
+  });
+  expect(native.calls.slice(start).filter(call => call.command === 'evaluate_project')).toHaveLength(1);
+  expect(after.revision).toBe(before.revision + 1);
+  expect(after.bones).toEqual(before.bones);
+  expect(clip(after).tracks.find(track => track.channel === 'rotate')).toEqual(clip(before).tracks.find(track => track.channel === 'rotate'));
+  expect(keys(after)[0]).toEqual({...keys(before)[0], controls: [[5, 6, 10, 43], [4, 3, 9.5, 14.5]]});
+  expect(keys(after)[1]).toMatchObject({values: [55, 14], curve: 'bezier', controls: [[20, 67, 25, 54], [20.5, 13.5, 26, 1]]});
+  expect(keys(after)[2]).toEqual(keys(before)[1]);
+  await expect(page.getByTestId('timeline-current')).toHaveValue('15');
+  await expect(boneRow).toHaveAttribute('aria-selected', 'true');
+  await expect.poll(() => renderedX(page, bone)).toBeCloseTo(75, 3);
+
+  await page.getByRole('button', {name: 'Undo', exact: true}).click();
+  await expect.poll(async () => (await native.snapshot())!.animations).toEqual(before.animations);
+  await expect.poll(() => renderedX(page, bone)).toBeCloseTo(50, 3);
+  await page.getByRole('button', {name: 'Redo', exact: true}).click();
+  await expect.poll(async () => (await native.snapshot())!.animations).toEqual(after.animations);
+  await expect.poll(() => renderedX(page, bone)).toBeCloseTo(75, 3);
+  await expect(page.getByTestId('timeline-current')).toHaveValue('15');
+
+  const stable = (await native.snapshot())!;
+  const cancelStart = native.calls.length;
+  await page.mouse.move(origin.x + 25, origin.y - 12);
+  await page.mouse.down();
+  await expect.poll(() => native.calls.slice(cancelStart).filter(call => call.command === 'evaluate_project' && call.result !== undefined).length).toBe(1);
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByTestId('timeline-current')).toHaveValue('16');
+  await page.mouse.move(origin.x + 45, origin.y - 12, {steps: 3});
+  await page.mouse.up();
+  expect(authoring(native, cancelStart)).toHaveLength(0);
+  expect(await native.snapshot()).toEqual(stable);
+});
+
+test('@native numeric Auto Key changes one interior Bezier lane and preserves the clean companion curve', async ({page, native}) => {
+  const {animation, before, bone, boneRow} = await autoKeyCurveFixture(page, native);
+  const start = native.calls.length;
+  await xField(page, 75);
+  await expect.poll(async () => keys((await native.snapshot())!).map(key => key.frame)).toEqual([0, 15, 30]);
+  const after = (await native.snapshot())!;
+  const edits = authoring(native, start);
+  expect(edits).toHaveLength(1);
+  expect(edits[0]!.args.poseEpoch).toBeUndefined();
+  expect(edits[0]!.args).toMatchObject({
+    expectedRevision: before.revision, boneAutoKey: {source: 'numericField', lanes: [[true, false]]},
+    edit: {type: 'setAnimationKeys', animation, keys: [{bone, channel: 'translate', frame: 15, values: [55, 0]}]},
+  });
+  expect(native.calls.slice(start).filter(call => call.command === 'evaluate_project')).toHaveLength(0);
+  expect(after.revision).toBe(before.revision + 1);
+  expect(after.bones).toEqual(before.bones);
+  expect(clip(after).tracks.find(track => track.channel === 'rotate')).toEqual(clip(before).tracks.find(track => track.channel === 'rotate'));
+  expect(keys(after)[0]).toEqual({...keys(before)[0], controls: [[5, 6, 10, 43], [4, 3, 9.5, 2.5]]});
+  expect(keys(after)[1]).toMatchObject({values: [55, 2], curve: 'bezier', controls: [[20, 67, 25, 54], [20.5, 1.5, 26, 1]]});
+  expect(keys(after)[2]).toEqual(keys(before)[1]);
+  await expect(page.getByTestId('timeline-current')).toHaveValue('15');
+  await expect(boneRow).toHaveAttribute('aria-selected', 'true');
+
+  await page.getByRole('button', {name: 'Undo', exact: true}).click();
+  await expect.poll(async () => (await native.snapshot())!.animations).toEqual(before.animations);
+  await expect.poll(() => renderedX(page, bone)).toBeCloseTo(50, 3);
+  await page.getByRole('button', {name: 'Redo', exact: true}).click();
+  await expect.poll(async () => (await native.snapshot())!.animations).toEqual(after.animations);
+  await expect.poll(() => renderedX(page, bone)).toBeCloseTo(75, 3);
+  await expect(page.getByTestId('timeline-current')).toHaveValue('15');
 });
 
 test('@native reopened animation key Undo and Redo preserve the explicitly selected child and its visible tracks',async({page,native})=>{

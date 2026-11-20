@@ -169,9 +169,11 @@ function parseData(input: unknown): RuntimeData {
   ids(data.animations, 'Animations');
   for (const clip of data.animations) {
     if (typeof clip.name !== 'string' || !clip.name || animationNames.has(clip.name)) fail('Animation names must be distinct and nonempty.');
+    if (clip.folder !== undefined && (typeof clip.folder !== 'string' || !clip.folder || !clip.name.startsWith(`${clip.folder}/`))) fail('An animation folder must match its qualified name.');
     animationNames.add(clip.name);
     if (!finite(clip.duration) || clip.duration < 0 || clip.duration > 1_000_000) fail('Animation duration is out of range.');
-    const allowedClip = new Set(['id','name','duration','tracks','splitModes','slotTracks','drawOrder','deformTracks','constraintTracks','eventTracks','sequenceTracks']);
+    if (clip.slotSplitModes !== undefined) fail('Independent RGB2 and Alpha timelines require a newer runtime.');
+    const allowedClip = new Set(['id','name','folder','duration','tracks','splitModes','slotTracks','drawOrder','deformTracks','constraintTracks','eventTracks','sequenceTracks']);
     if (Object.keys(clip).some(key => !allowedClip.has(key))) fail('Unknown animation timelines require a newer runtime.');
     array(clip.tracks, 'Bone tracks');
     for (const name of ['slotTracks','drawOrder','deformTracks','constraintTracks','eventTracks','sequenceTracks'] as const) if (clip[name] !== undefined) array(clip[name], name);
@@ -188,7 +190,7 @@ function parseData(input: unknown): RuntimeData {
       if (own.includes(family) && (own.includes(family + 'X') || own.includes(family + 'Y'))) fail('Combined and split channels cannot overlap for the same bone.');
     }
     for (const track of clip.slotTracks ?? []) {
-      if (!slots.has(track.slot) || !['rgba','attachment'].includes(track.channel)) fail('Unsupported slot timeline target/channel.');
+      if (!slots.has(track.slot) || (track.channel !== 'rgba' && track.channel !== 'attachment')) fail('Unsupported slot timeline target/channel.');
       unique(track.slot, track.channel, 'slot'); keys(track, clip.duration);
       if (track.channel === 'attachment') {
         for (const key of track.keys) if (key.attachment !== null && attachments.get(key.attachment) !== track.slot) fail('A keyed attachment must belong to its slot.');

@@ -66,7 +66,9 @@ pub fn deform_coordinate_count(attachment: &SceneAttachment) -> Result<usize, Fo
     let (vertices, bones, weighted) = match attachment {
         SceneAttachment::Mesh(m) => (m.vertices.len(), m.bones.len(), m.weighted),
         SceneAttachment::Clipping(c) => (c.vertices.len(), c.bones.len(), c.weighted),
-        SceneAttachment::Region(_) => return Err(FormatError::UnsupportedProfile),
+        SceneAttachment::Region(_) | SceneAttachment::Path(_) => {
+            return Err(FormatError::UnsupportedProfile)
+        }
     };
     vertices
         .checked_mul(if weighted { bones } else { 1 })

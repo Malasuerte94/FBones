@@ -9,10 +9,17 @@ import {effectScope,ref,shallowRef,proxyRefs} from 'vue';
 import {useAnimationWorkspace} from '../src/composables/useAnimationWorkspace.ts';
 
 const appScript=readFileSync(new URL('../src/App.vue',import.meta.url),'utf8').match(/<script setup lang="ts">([\s\S]*?)<\/script>/)[1];
-const ast=ts.createSourceFile('App.ts',appScript,ts.ScriptTarget.Latest,true),declaration=ast.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text==='keyboard');
-assert.ok(declaration,'the application keyboard entry point must be tested');
-const handlerJs=ts.transpileModule(declaration.getText(ast),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
-const keyboardFor=(w,updater={installing:{value:false}})=>new Function('w','constraintCreator','clippingCreator','eventCreator','desktop','updater','mcp',handlerJs+';return keyboard;')(w,{value:null},{value:false},{value:false},true,updater,{state:{value:{enabled:false}},visible:{value:false}});
+const ast=ts.createSourceFile('App.ts',appScript,ts.ScriptTarget.Latest,true);
+const keyboardSource=['keyboard','handleWeightClipboard'].map(name=>{
+ const declaration=ast.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text===name);
+ assert.ok(declaration,`the application keyboard path must include ${name}`);
+ return declaration.getText(ast);
+}).join('\n');
+const handlerJs=ts.transpileModule(keyboardSource,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+const keyboardFor=(w,updater={installing:{value:false}})=>new Function(
+ 'w','creatorModalOpen','linkedMeshCreator','closeCreators','desktop','linuxDesktop','updater','mcp','viewsMinimized','findReplaceOpen','gifDialog',
+ handlerJs+';return keyboard;',
+)(w,{value:false},{value:false},()=>{},true,false,updater,{state:{value:{enabled:false}},visible:{value:false}},{value:false},{value:false},{value:false});
 const copy=value=>JSON.parse(JSON.stringify(value));
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 function typedReply(source,command){
@@ -125,7 +132,7 @@ test('newer explicit zero deform offsets and Setup draw-order revert survive pen
   deform.w.deformAnimationEdit({type:'moveMesh',id:7,dx:3,dy:4},deform.w.animationBones.value);const before=copy(deform.w.deformDraft.value.get(9));assert.ok(before.some(value=>value!==0));const release=deform.defer(),pending=deform.w.insertDeformKey(9);
   // Arrange an exact explicit zero-offset draft at the public working-state
   // boundary; this checks retention, not a browser vertex gesture or inverse math.
-  deform.w.deformDraft.value=new Map([[9,before.map(()=>0)]]);release(true);await pending;assert.deepEqual(deform.project.value.animations[0].deformTracks[0].keys[0].offsets,before);assert.deepEqual(deform.w.animationDeformPose.value.find(p=>p.attachment===9).offsets,before.map(()=>0));
+  deform.w.deformDraft.value=new Map([[9,before.map(()=>0)]]);release(true);await pending;assert.deepEqual(deform.project.value.animations[0].deformTracks[0].keys[0].offsets,before.map(Math.fround));assert.deepEqual(deform.w.animationDeformPose.value.find(p=>p.attachment===9).offsets,before.map(()=>0));
  }finally{deform.close();}
  const order=fixture();try{
   await order.w.setAnimationDrawOrder([8,7]);const release=order.defer(),pending=order.w.insertDrawOrderKey();await order.w.setAnimationDrawOrder(null);release(true);await pending;assert.deepEqual(order.project.value.animations[0].drawOrder[0].order,[8,7]);assert.deepEqual(order.w.animationDrawOrder.value,[7,8]);

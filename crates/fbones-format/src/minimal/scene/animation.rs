@@ -2,7 +2,7 @@
 #[derive(Clone, Debug, PartialEq)]
 pub struct Animation {
     pub name: String,
-    pub split_modes: Vec<BoneSplitConfig>,
+    pub split_modes: Vec<SplitModeConfig>,
     pub tracks: Vec<BoneTimeline>,
     pub slot_tracks: Vec<SlotTimeline>,
     pub sequence_tracks: Vec<super::SequenceTimeline>,
@@ -24,6 +24,20 @@ impl Animation {
             constraint_tracks: Vec::new(),
             event_tracks: Vec::new(),
         }
+    }
+
+    pub fn bone_split_modes(&self) -> impl Iterator<Item = &BoneSplitConfig> {
+        self.split_modes.iter().filter_map(|row| match row {
+            SplitModeConfig::Bone(row) => Some(row),
+            SplitModeConfig::Slot(_) => None,
+        })
+    }
+
+    pub fn slot_split_mode(&self, slot: usize) -> Option<SlotSplitMode> {
+        self.split_modes.iter().find_map(|row| match row {
+            SplitModeConfig::Slot(row) if row.slot == slot => Some(row.mode),
+            _ => None,
+        })
     }
 
     pub fn deform_track_permutation(
@@ -116,11 +130,69 @@ pub enum SlotTimeline {
         slot: usize,
         keys: Vec<SlotRgbaKey>,
     },
+    Rgb2 {
+        slot: usize,
+        /// Light RGB followed by dark RGB. Alpha is authored separately.
+        keys: Vec<SlotColorKey<6>>,
+    },
+    Alpha {
+        slot: usize,
+        keys: Vec<SlotColorKey<1>>,
+    },
 }
 impl SlotTimeline {
     pub fn slot(&self) -> usize {
         match self {
-            Self::Attachment { slot, .. } | Self::Rgba { slot, .. } => *slot,
+            Self::Attachment { slot, .. }
+            | Self::Rgba { slot, .. }
+            | Self::Rgb2 { slot, .. }
+            | Self::Alpha { slot, .. } => *slot,
+        }
+    }
+
+    pub(in crate::minimal) fn wire(&self) -> u32 {
+        match self {
+            Self::Rgba { .. } => 4,
+            Self::Attachment { .. } => 5,
+            Self::Rgb2 { .. } => 20,
+            Self::Alpha { .. } => 21,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct SlotColorKey<const N: usize> {
+    pub frame: f32,
+    pub values: [f32; N],
+    pub curve: SlotColorCurve<N>,
+}
+impl<const N: usize> PartialEq for SlotColorKey<N> {
+    fn eq(&self, other: &Self) -> bool {
+        self.frame.to_bits() == other.frame.to_bits()
+            && self.values.map(f32::to_bits) == other.values.map(f32::to_bits)
+            && self.curve == other.curve
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum SlotColorCurve<const N: usize> {
+    Linear,
+    Stepped,
+    /// The outgoing segment in absolute editor-frame/value coordinates.
+    Bezier {
+        controls: [[f32; 4]; N],
+    },
+}
+impl<const N: usize> PartialEq for SlotColorCurve<N> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Linear, Self::Linear) | (Self::Stepped, Self::Stepped) => true,
+            (Self::Bezier { controls: a }, Self::Bezier { controls: b }) => a
+                .iter()
+                .flatten()
+                .map(|v| v.to_bits())
+                .eq(b.iter().flatten().map(|v| v.to_bits())),
+            _ => false,
         }
     }
 }
@@ -263,6 +335,37 @@ pub struct BoneSplitConfig {
     pub mode: BoneSplitMode,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SplitModeConfig {
+    Bone(BoneSplitConfig),
+    Slot(SlotSplitConfig),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SlotSplitConfig {
+    pub slot: usize,
+    pub mode: SlotSplitMode,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SlotSplitMode {
+    RgbAlpha,
+}
+impl SlotSplitMode {
+    pub fn wire(self) -> u32 {
+        match self {
+            Self::RgbAlpha => 8,
+        }
+    }
+
+    pub fn from_wire(value: u32) -> Result<Self, crate::FormatError> {
+        match value {
+            8 => Ok(Self::RgbAlpha),
+            _ => Err(crate::FormatError::UnsupportedProfile),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct BoneTimeline {
     pub bone: usize,
@@ -307,26 +410,27 @@ impl PartialEq for KeyCurve {
 }
 impl Eq for KeyCurve {}
 
+pub(super) fn animation_label(index: usize) -> String {
+    if index == 0 {
+        "animation".into()
+    } else {
+        format!("animation-{index}")
+    }
+}
+
 pub(super) fn records(
     animations: &[Animation],
     slots: &[super::SceneSlot],
     project: &super::SceneProject,
 ) -> Vec<super::super::Object> {
     use super::super::{group, object, text, Field::*, Object, Record};
-    let label = |i: usize| {
-        if i == 0 {
-            "animation".into()
-        } else {
-            format!("animation-{i}")
-        }
-    };
     animations
         .iter()
         .enumerate()
         .map(|(i, a)| {
             Object::Record(Record {
                 class: 18,
-                label: Some(label(i)),
+                label: Some(animation_label(i)),
                 fields: vec![
                     (1, text(&a.name)),
                     (5, Bool(true)),
@@ -338,10 +442,17 @@ pub(super) fn records(
                         object(if a.split_modes.is_empty() {
                             Object::Empty116
                         } else {
-                            Object::BoneSplitModes(
+                            Object::SplitModes(
                                 a.split_modes
                                     .iter()
-                                    .map(|row| (format!("bone-{}", row.bone), row.mode.wire()))
+                                    .map(|row| match row {
+                                        SplitModeConfig::Bone(row) => {
+                                            (12, format!("bone-{}", row.bone), row.mode.wire())
+                                        }
+                                        SplitModeConfig::Slot(row) => {
+                                            (13, format!("slot-{}", row.slot), row.mode.wire())
+                                        }
+                                    })
                                     .collect(),
                             )
                         }),
@@ -538,11 +649,13 @@ pub(super) fn records(
                     (0, DomainLink(11, "skeleton".into())),
                     (
                         7,
-                        object(if i == 0 {
+                        object(if let Some(folders) = &project.animation_folders {
+                            super::animation_folders::animation_group_link(folders, i)
+                        } else if i == 0 {
                             group(
                                 Some("animation-group"),
                                 (0..animations.len())
-                                    .map(|j| Object::Link(18, label(j)))
+                                    .map(|j| Object::Link(18, animation_label(j)))
                                     .collect(),
                             )
                         } else {

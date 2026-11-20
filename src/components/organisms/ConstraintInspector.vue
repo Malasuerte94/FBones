@@ -13,7 +13,10 @@ import AppIcon from '../atoms/AppIcon.vue';
 import NumericSliderRow from '../molecules/NumericSliderRow.vue';
 import ConstraintBatchInspector from './ConstraintBatchInspector.vue';
 const props=defineProps<{constraintId?:number}>();
-const w=useWorkspace(),{t,te}=useI18n(),animate=computed(()=>w.editorMode==='animate'),setupConstraint=computed(()=>props.constraintId===undefined?w.selectedConstraint:w.constraints.find(c=>c.id===props.constraintId)??null),constraint=computed<ConstraintView|null>(()=>{const c=setupConstraint.value;return c&&animate.value?w.animationConstraint(c.id):c;});
+const w=useWorkspace(),{t,te}=useI18n(),animate=computed(()=>w.editorMode==='animate'),setupConstraint=computed(()=>props.constraintId===undefined?w.selectedConstraint:w.constraints.find(c=>c.id===props.constraintId)??null),constraint=computed<ConstraintView|null>(()=>{const c=setupConstraint.value;return c&&animate.value?w.animationConstraint(c.id)??c:c;});
+const pathTarget=computed(()=>{const c=constraint.value;return c?.type==='path'?w.sceneSlots.find(slot=>slot.id===c.slot):undefined;});
+const activePath=computed(()=>pathTarget.value?.attachments.find(attachment=>attachment.id===pathTarget.value?.activeAttachmentId&&attachment.type==='path'));
+const pathBones=computed(()=>{const c=constraint.value;return c?.type==='path'?c.bones.map(id=>w.project?.bones.find(bone=>bone.id===id)?.name).filter(Boolean).join(', '):'';});
 const batch=computed(()=>props.constraintId===undefined&&w.selectedConstraintIds.length>1);
 const batchKey=computed(()=>`${w.project?.documentId}:${w.selectedConstraintIds.join(',')}`);
 const matching=ref(false);
@@ -26,7 +29,7 @@ async function match(section:'offsets'|'properties',id=constraint.value?.id){
  matching.value=true;
  try{await w.matchTransform(id,section);}finally{matching.value=false;}
 }
-function edit(patch:Partial<ConstraintInput>,revision?:number){const id=constraint.value?.id;return id===undefined?Promise.resolve(false):animate.value?w.setConstraintAnimationFields(id,patch,revision):w.editConstraintById(id,patch,revision);}
+function edit(patch:Partial<ConstraintInput>,revision?:number){const c=constraint.value;return !c||c.type==='path'?Promise.resolve(false):animate.value?w.setConstraintAnimationFields(c.id,patch,revision):w.editConstraintById(c.id,patch,revision);}
 const channelNames=['rotate','x','y','scaleX','scaleY','shearY'] as const;
 function transformRows(kind:'offset'|'mix'){
  const c=constraint.value;if(c?.type!=='transform')return[];
@@ -39,8 +42,9 @@ const offsetRows=computed(()=>transformRows('offset')),mixRows=computed(()=>tran
 const physicsSetup=['x','y','rotate','scaleX','shearX','limit','fps'] as const;
 const physicsDynamic=['inertia','strength','damping','mass','wind','gravity','mix'] as const;
 const display=(value:number)=>Number(value.toPrecision(8));
+const pathPercent=(value:number)=>`${Number((value*100).toPrecision(7))}%`;
 const fieldContext=computed(()=>`${w.project?.documentId}:${constraint.value?.id}:${w.project?.revision}:${w.editorMode}:${w.animationId}:${w.animationFrame}`);
-function insertAnimationKey(property?:typeof physicsDynamic[number]|'reset'){const c=constraint.value;if(!c)return;return w.insertConstraintAnimationKeys({constraintId:c.id,kind:c.type==='ik'?'ik':c.type==='transform'?'transformMix':property==='reset'?'physicsReset':'physics',...(property&&property!=='reset'?{property}:{})});}
+function insertAnimationKey(property?:typeof physicsDynamic[number]|'reset'){const c=constraint.value;if(!c||c.type==='path')return;return w.insertConstraintAnimationKeys({constraintId:c.id,kind:c.type==='ik'?'ik':c.type==='transform'?'transformMix':property==='reset'?'physicsReset':'physics',...(property&&property!=='reset'?{property}:{})});}
 const physicsColor:Record<string,'accent'|'motion'|'bone'|'warning'|'danger'|'muted'|'inertia'>={x:'accent',y:'accent',rotate:'motion',scaleX:'danger',shearX:'bone',limit:'warning',fps:'muted',inertia:'inertia',strength:'motion',damping:'warning',mass:'accent',wind:'accent',gravity:'accent',mix:'inertia'};
 function physicsRange(key:string):{min:number;max:number;step:number}{
  const value=Number(fieldValues()[key]),magnitude=Number.isFinite(value)?Math.abs(value):0;
@@ -54,7 +58,7 @@ function cancelSlider(key:string){editor.draft[key]=String(fieldValues()[key]??0
 const physicsInactive=computed(()=>{const c=constraint.value;return c?.type==='physics'&&[c.x,c.y,c.rotate??0,c.scaleX,c.shearX].every(v=>v===0);});
 const physicsZeroLength=computed(()=>{const c=constraint.value;return c?.type==='physics'&&(c.rotate??0)+c.scaleX+c.shearX>0&&w.project?.bones.find(b=>b.id===c.bone)?.length===0;});
 function fieldValues():Record<string,SceneFieldValue>{
- const c=constraint.value;if(!c)return{};const values:Record<string,SceneFieldValue>={name:c.name};
+ const c=constraint.value;if(!c||c.type==='path')return{};const values:Record<string,SceneFieldValue>={name:c.name};
  if(c.type==='ik'){values.mix=display(c.mix*100);values.softness=c.softness;}
  else if(c.type==='transform'){c.offsets.forEach((value,i)=>{values[`offset:${i}`]=value;});c.mix.forEach((value,i)=>{values[`mix:${i}`]=display(value*100);});}
  else{for(const field of physicsSetup)values[field]=field==='fps'?display(1/c.step):field==='limit'?c.limit:display((c[field]??0)*100);for(const field of physicsDynamic)values[field]=display(field==='damping'?(1-c.damping)*100:['inertia','mass','mix'].includes(field)?c[field]*100:c[field]);}
@@ -62,14 +66,14 @@ function fieldValues():Record<string,SceneFieldValue>{
 }
 function targetAllowed(id:number){const c=constraint.value;return c?.type!=='ik'||canTargetIk(w.project?.bones??[],c.bones,id);}
 function patchField(key:string,value:SceneFieldValue):Partial<ConstraintInput>{
- const c=constraint.value;if(!c)return{};if(key==='name')return{name:String(value)};
+ const c=constraint.value;if(!c||c.type==='path')return{};if(key==='name')return{name:String(value)};
  const n=Number(value);
  if(c.type==='ik')return key==='mix'?{mix:n/100}:{softness:n};
  if(c.type==='transform'){const[kind,index]=key.split(':'),copy=[...(kind==='offset'?c.offsets:c.mix)] as TransformChannels;copy[Number(index)]=kind==='mix'?n/100:n;return kind==='offset'?{offsets:copy}:{mix:copy};}
  if(key==='fps')return{step:1/n};
  return{[key]:key==='damping'?1-n/100:key==='limit'||['strength','wind','gravity'].includes(key)?n:n/100};
 }
-const editor=useSceneFieldEditor({current:()=>{if(batch.value)return null;const c=constraint.value,p=w.project;return c&&p?{id:c.id,documentId:p.documentId,revision:p.revision,editable:w.canEdit,values:fieldValues()}:null;},numeric:key=>key!=='name',invalidMessage:()=>t('invalidTransform'),edit:(key,value,revision)=>{if(key==='fps'&&Number(value)<=0){w.inspectorError=t('invalidPhysicsRate');w.showNotice(w.inspectorError,true);return Promise.resolve(false);}return edit(patchField(key,value),revision);}});
+const editor=useSceneFieldEditor({current:()=>{if(batch.value)return null;const c=constraint.value,p=w.project;return c&&c.type!=='path'&&p?{id:c.id,documentId:p.documentId,revision:p.revision,editable:w.canEdit,values:fieldValues()}:null;},numeric:key=>key!=='name',invalidMessage:()=>t('invalidTransform'),edit:(key,value,revision)=>{if(key==='fps'&&Number(value)<=0){w.inspectorError=t('invalidPhysicsRate');w.showNotice(w.inspectorError,true);return Promise.resolve(false);}return edit(patchField(key,value),revision);}});
 watch(()=>[w.editorMode,w.animationId,w.animationFrame],()=>editor.reset());
 function boolean(key:string,event:Event){void edit({[key]:(event.target as HTMLInputElement).checked});}
 async function member(event:Event){const select=event.target as HTMLSelectElement,c=constraint.value,ids=Array.from(select.selectedOptions,option=>Number(option.value)),next=c?.type==='ik'?orderedIkMembers(w.project?.bones??[],ids)??ids:c?.type==='transform'?retainedTransformMembers(c.bones,ids):ids;if(!await edit({bones:next})){const current=constraint.value;if(current?.id===c?.id)for(const option of select.options)option.selected=current?.type!=='physics'&&!!current?.bones.includes(Number(option.value));}}
@@ -79,8 +83,25 @@ function global(field:typeof physicsDynamic[number],event:Event){const c=constra
 <template>
  <ConstraintBatchInspector v-if="batch" :key="batchKey"/>
  <section v-else-if="constraint" class="inspector-form border-b border-line p-2" data-testid="constraint-inspector" :data-constraint-id="constraint.id">
-  <h3 class="mb-3 flex items-center gap-1.5 text-xs font-medium text-accent"><AppIcon :name="constraint.type" class="!size-3.5"/>{{t('constraint_'+constraint.type)}}</h3>
-  <fieldset :disabled="!w.canEdit||(w.busy&&!w.editing)||matching" class="space-y-3">
+  <h3 class="mb-3 flex items-center gap-1.5 text-xs font-medium text-accent"><AppIcon :name="constraint.type==='path'?'curve':constraint.type" class="!size-3.5"/>{{t('constraint_'+constraint.type)}}</h3>
+  <div v-if="constraint.type==='path'" data-testid="path-constraint-settings">
+   <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1 text-xs text-muted">
+    <dt>{{t('constraintName')}}</dt><dd class="break-words text-ink" data-testid="path-constraint-name">{{constraint.name}}</dd>
+    <dt>{{t('pathConstraintSlot')}}</dt><dd class="break-words text-ink" data-testid="path-constraint-slot">{{pathTarget?.name}}</dd>
+    <template v-if="activePath"><dt>{{t('activeAttachment')}}</dt><dd class="break-words text-ink" data-testid="path-constraint-attachment">{{activePath.name}}</dd></template>
+    <dt>{{t('constrainedBones')}}</dt><dd class="break-words text-ink" data-testid="path-constraint-bones">{{pathBones}}</dd>
+    <dt>{{t('pathConstraintPosition')}}</dt><dd class="tabular-nums text-ink"><span data-testid="path-constraint-position">{{constraint.positionMode==='percent'?pathPercent(constraint.position):display(constraint.position)}}</span> · <span data-testid="path-constraint-position-mode">{{t('pathConstraintMode_'+constraint.positionMode)}}</span></dd>
+    <dt>{{t('pathConstraintSpacing')}}</dt><dd class="tabular-nums text-ink"><span data-testid="path-constraint-spacing">{{constraint.spacingMode==='percent'?pathPercent(constraint.spacing):display(constraint.spacing)}}</span> · <span data-testid="path-constraint-spacing-mode">{{t('pathConstraintMode_'+constraint.spacingMode)}}</span></dd>
+    <dt>{{t('pathConstraintRotateMode')}}</dt><dd class="tabular-nums text-ink" data-testid="path-constraint-rotate-mode">{{t('pathConstraintMode_'+constraint.rotateMode)}}</dd>
+    <dt>{{t('pathConstraintRotation')}}</dt><dd class="tabular-nums text-ink" data-testid="path-constraint-rotation">{{display(constraint.rotation)}}°</dd>
+    <dt>{{t('pathConstraintMixRotate')}}</dt><dd class="tabular-nums text-ink" data-testid="path-constraint-mix-rotate">{{pathPercent(constraint.mixRotate)}}</dd>
+    <dt>{{t('pathConstraintMixX')}}</dt><dd class="tabular-nums text-ink" data-testid="path-constraint-mix-x">{{pathPercent(constraint.mixX)}}</dd>
+    <dt>{{t('pathConstraintMixY')}}</dt><dd class="tabular-nums text-ink" data-testid="path-constraint-mix-y">{{pathPercent(constraint.mixY)}}</dd>
+    <dt>{{t('evaluationOrder')}}</dt><dd class="tabular-nums text-ink">{{constraint.order+1}}</dd>
+   </dl>
+   <p class="mt-2 text-[10px] leading-4 text-muted">{{t('pathConstraintReadOnly')}}</p>
+  </div>
+  <fieldset v-else :disabled="!w.canEdit||(w.busy&&!w.editing)||matching" class="space-y-3">
    <label class="block text-xs text-muted">{{t('constraintName')}}<input :disabled="w.busy||animate" v-model="editor.draft.name" class="editor-input mt-1 w-full" maxlength="120" data-testid="constraint-name" @change="editor.commit('name')" @keydown.enter.prevent="editor.enter($event,'name')" @keydown.esc.prevent="editor.escape"/></label>
    <label class="block text-xs text-muted">{{t(constraint.type==='physics'?'physicsBone':constraint.type==='transform'?'constraintSource':'constraintTarget')}}<select :disabled="w.busy||animate" :value="constraint.type==='physics'?constraint.bone:constraint.type==='transform'?constraint.source:constraint.target" class="editor-input mt-1 w-full" data-testid="constraint-reference" @change="reference(constraint.type==='physics'?'bone':constraint.type==='transform'?'source':'target',$event)"><option v-for="bone in w.project?.bones" :key="bone.id" :value="bone.id" :disabled="!targetAllowed(bone.id)">{{bone.name}}</option></select></label>
    <label v-if="constraint.type!=='physics'" class="block text-xs text-muted">{{t('constrainedBones')}}<select :disabled="w.busy||animate" multiple class="editor-input mt-1 w-full" :size="Math.min(4,w.project?.bones.length??1)" :aria-label="t('constrainedBones')" data-testid="constraint-members" @change="member"><option v-for="bone in w.project?.bones" :key="bone.id" :value="bone.id" :selected="constraint.bones.includes(bone.id)">{{bone.name}}</option></select></label>

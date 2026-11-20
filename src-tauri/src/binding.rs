@@ -1,5 +1,7 @@
 //! Shared dense binding arithmetic for image meshes and clipping polygons.
 //! Geometry type and image resources play no part in a binding-row translation.
+#[cfg(feature = "scene-editing")]
+use crate::rig::PasteWeightRow;
 use crate::{
     project::AppError,
     rig::{local, Pose},
@@ -399,6 +401,430 @@ pub(crate) fn normalize_locked(
         correct_unlocked(&mut row.weights, &locked, None)?;
     }
     *binding.vertices = rows;
+    Ok(())
+}
+
+/// Remove positive editable influences while retaining the dense binding layout.
+#[cfg(feature = "scene-editing")]
+pub(crate) fn prune_weights(
+    binding: DenseBindingMut<'_>,
+    poses: &[Pose],
+    locked_bones: &[usize],
+    max_influences: usize,
+    threshold: f32,
+) -> Result<usize, AppError> {
+    let source = binding.as_ref();
+    validate(source, poses)?;
+    if !source.weighted || !(1..=128).contains(&max_influences) || !(0.0..=1.0).contains(&threshold) {
+        return Err(invalid(
+            "Choose a weighted attachment, an influence limit from 1 to 128, and a weight threshold from 0 to 1.",
+        ));
+    }
+    let locked = lock_mask(source, locked_bones)?;
+    let cap_conflict = || invalid("Increase the influence limit or unlock weights before pruning.");
+    let mut ranked = Vec::with_capacity(source.bones.len());
+    let mut changes = Vec::new();
+    let mut removed = 0;
+
+    for (vertex, row) in source.vertices.iter().enumerate() {
+        ranked.clear();
+        let mut protected = 0;
+        let mut eligible = 0;
+        for (column, (&weight, &locked)) in row.weights.iter().zip(&locked).enumerate() {
+            if weight > 1.0 {
+                return Err(invalid("Use weights between 0 and 1 to prune a binding."));
+            }
+            if weight == 0.0 {
+                continue;
+            }
+            if locked {
+                protected += 1;
+            } else {
+                ranked.push(column);
+                eligible += usize::from(weight >= threshold);
+            }
+        }
+        let slots = max_influences.checked_sub(protected).ok_or_else(cap_conflict)?;
+        if ranked.is_empty() {
+            continue;
+        }
+        if slots == 0 {
+            return Err(cap_conflict());
+        }
+        let keep = eligible.min(slots).max(1);
+        if keep == ranked.len() {
+            continue;
+        }
+
+        let editable_mass: f64 = ranked.iter().map(|&i| f64::from(row.weights[i])).sum();
+        ranked.sort_unstable_by(|&a, &b| {
+            row.weights[b]
+                .total_cmp(&row.weights[a])
+                .then_with(|| a.cmp(&b))
+        });
+        let (survivors, pruned) = ranked.split_at(keep);
+        let retained_mass: f64 = survivors.iter().map(|&i| f64::from(row.weights[i])).sum();
+        let scale = editable_mass / retained_mass;
+        let mut weights = row.weights.clone();
+        for &i in pruned {
+            weights[i] = 0.0;
+        }
+        // Near-unit input mass can put an ideal proportional result above one.
+        for &i in survivors {
+            weights[i] = (f64::from(row.weights[i]) * scale).min(1.0) as f32;
+        }
+
+        // The codec uses an ordered f32 sum. Correct boundary roundoff on a
+        // surviving lane while retaining the original mass as closely as possible.
+        let sum: f32 = weights.iter().sum();
+        if (sum - 1.0).abs() > 0.0001 {
+            let old_sum: f32 = row.weights.iter().sum();
+            let strongest = survivors[0];
+            weights[strongest] =
+                (weights[strongest] + (old_sum - sum)).clamp(row.weights[strongest], 1.0);
+            if (weights.iter().sum::<f32>() - 1.0).abs() > 0.0001 {
+                return Err(invalid("Pruning would exceed the stored weight row tolerance."));
+            }
+        }
+        removed += pruned.len();
+        changes.push((vertex, weights));
+    }
+
+    for (vertex, weights) in changes {
+        binding.vertices[vertex].weights = weights;
+    }
+    Ok(removed)
+}
+
+/// Exchange two weight columns without moving their authored binding positions.
+#[cfg(feature = "scene-editing")]
+pub(crate) fn swap_weights(
+    binding: DenseBindingMut<'_>,
+    bones: [usize; 2],
+    poses: &[Pose],
+    locked_bones: &[usize],
+) -> Result<(), AppError> {
+    let source = binding.as_ref();
+    validate(source, poses)?;
+    if !source.weighted || bones[0] == bones[1] {
+        return Err(invalid("Choose two distinct bound influences to swap."));
+    }
+    let column = |bone| {
+        source
+            .bones
+            .iter()
+            .position(|&bound| bound == bone)
+            .ok_or_else(|| invalid("Choose two distinct bound influences to swap."))
+    };
+    let (first, second) = (column(bones[0])?, column(bones[1])?);
+    let locked = lock_mask(source, locked_bones)?;
+    if locked[first] || locked[second] {
+        return Err(invalid("Unlock both influences before swapping their weights."));
+    }
+
+    // A permutation can change the rounding of f32 sums near the storage
+    // tolerance. Reject it before mutation instead of changing any weight bits.
+    for row in source.vertices {
+        let sum: f32 = row
+            .weights
+            .iter()
+            .enumerate()
+            .map(|(i, &weight)| {
+                if i == first {
+                    row.weights[second]
+                } else if i == second {
+                    row.weights[first]
+                } else {
+                    weight
+                }
+            })
+            .sum();
+        if (sum - 1.0).abs() > 0.0001 {
+            return Err(invalid("Swapping would exceed the stored weight row tolerance."));
+        }
+    }
+    for row in binding.vertices {
+        row.weights.swap(first, second);
+    }
+    Ok(())
+}
+
+/// Paste exact weight words into a binding with the same bone membership.
+#[cfg(feature = "scene-editing")]
+pub(crate) fn paste_weights(
+    binding: DenseBindingMut<'_>,
+    poses: &[Pose],
+    source_bones: &[usize],
+    rows: &[PasteWeightRow],
+    locked_bones: &[usize],
+) -> Result<(), AppError> {
+    let target = binding.as_ref();
+    validate(target, poses)?;
+    let different_bones = || invalid("Paste weights onto the same set of binding bones.");
+    if !target.weighted || source_bones.len() != target.bones.len() {
+        return Err(different_bones());
+    }
+    // Matching every distinct target bone at equal width also rejects duplicates.
+    let columns = target
+        .bones
+        .iter()
+        .map(|bone| {
+            source_bones
+                .iter()
+                .position(|source| source == bone)
+                .ok_or_else(different_bones)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let locked = lock_mask(target, locked_bones)?;
+    let bad_rows = || invalid("Choose distinct existing destination vertices for pasted weights.");
+    if rows.is_empty() || rows.len() > target.vertices.len() {
+        return Err(bad_rows());
+    }
+    let mut seen = vec![false; target.vertices.len()];
+    let mut replacements = Vec::with_capacity(rows.len());
+    for row in rows {
+        let entry = seen.get_mut(row.vertex).ok_or_else(bad_rows)?;
+        if *entry {
+            return Err(bad_rows());
+        }
+        *entry = true;
+        if row.weight_bits.len() != columns.len() {
+            return Err(invalid("Paste one weight for each bound bone."));
+        }
+        let weights: Vec<_> = columns
+            .iter()
+            .map(|&column| f32::from_bits(row.weight_bits[column]))
+            .collect();
+        if weights.iter().any(|w| !(0.0..=1.0).contains(w))
+            || (weights.iter().sum::<f32>() - 1.0).abs() > 0.0001
+        {
+            return Err(invalid("Paste valid normalized weights in the target binding order."));
+        }
+        if weights
+            .iter()
+            .zip(&target.vertices[row.vertex].weights)
+            .zip(&locked)
+            .any(|((new, old), &locked)| locked && new.to_bits() != old.to_bits())
+        {
+            return Err(invalid("Pasted weights would change a locked influence."));
+        }
+        replacements.push((row.vertex, weights));
+    }
+    for (vertex, weights) in replacements {
+        binding.vertices[vertex].weights = weights;
+    }
+    Ok(())
+}
+
+/// Rebind each dense row to its current point under the supplied frozen poses.
+#[cfg(feature = "scene-editing")]
+pub(crate) fn update_bindings(binding: DenseBindingMut<'_>, poses: &[Pose]) -> Result<(), AppError> {
+    let source = binding.as_ref();
+    validate(source, poses)?;
+    if !source.weighted {
+        return Err(invalid("Choose a weighted attachment to update its bindings."));
+    }
+    let mut transforms = Vec::with_capacity(source.bones.len());
+    for &bone in source.bones {
+        let pose = poses[bone];
+        let inverse = pose.inverse()?;
+        if [pose.x, pose.y, inverse.a, inverse.b, inverse.c, inverse.d]
+            .iter()
+            .any(|v| !v.is_finite())
+        {
+            return Err(invalid("Binding transforms must have finite inverses."));
+        }
+        transforms.push((pose, inverse));
+    }
+
+    let points_agree = |first: [f64; 2], second: [f64; 2], rounding_steps: f64| {
+        first.into_iter().zip(second).all(|(a, b)| {
+            let scale = a.abs().max(b.abs()).max(1.0);
+            a.is_finite()
+                && b.is_finite()
+                && (a - b).abs() <= rounding_steps * f64::from(f32::EPSILON) * scale
+        })
+    };
+    // The viewport projects and blends the stored inputs as doubles.
+    let rendered_row = |row: &Vertex| {
+        let mut first = None;
+        let mut coherent = true;
+        let mut displayed = [0.0; 2];
+        for ((pair, &weight), (pose, _)) in row
+            .positions
+            .chunks_exact(2)
+            .zip(&row.weights)
+            .zip(&transforms)
+        {
+            let x = f64::from(pair[0]);
+            let y = f64::from(pair[1]);
+            let point = [
+                f64::from(pose.x) + f64::from(pose.a) * x + f64::from(pose.c) * y,
+                f64::from(pose.y) + f64::from(pose.b) * x + f64::from(pose.d) * y,
+            ];
+            // Allow for the stored local coordinates and inverse coefficients.
+            coherent &= points_agree(*first.get_or_insert(point), point, 8.0);
+            if weight != 0.0 {
+                displayed[0] += point[0] * f64::from(weight);
+                displayed[1] += point[1] * f64::from(weight);
+            }
+        }
+        (displayed, coherent)
+    };
+
+    let mut rows = source.vertices.to_vec();
+    for (old, row) in source.vertices.iter().zip(&mut rows) {
+        let before = world_vertex(old, source.bones, poses);
+        if before.iter().any(|v| !v.is_finite()) {
+            return Err(invalid("Current binding positions must be finite."));
+        }
+        let (displayed_before, coherent) = rendered_row(old);
+        // Preserve co-located fields when repeated skinning introduces rounding.
+        if coherent {
+            continue;
+        }
+
+        // Accepted f32 rows can have a stored mass slightly different from one.
+        // Dividing the evaluated point by that mass gives each lane's target.
+        let mass: f64 = old.weights.iter().map(|&weight| f64::from(weight)).sum();
+        let target = before.map(|value| f64::from(value) / mass);
+        for (positions, (pose, inverse)) in row.positions.chunks_exact_mut(2).zip(&transforms) {
+            let dx = target[0] - f64::from(pose.x);
+            let dy = target[1] - f64::from(pose.y);
+            positions[0] = (f64::from(inverse.a) * dx + f64::from(inverse.c) * dy) as f32;
+            positions[1] = (f64::from(inverse.b) * dx + f64::from(inverse.d) * dy) as f32;
+        }
+
+        let after = world_vertex(row, source.bones, poses);
+        let (displayed_after, coherent) = rendered_row(row);
+        // Allow for the local/affine round trip and one f32 addition for each
+        // positive influence in the ordered skin sum.
+        let positive = old.weights.iter().filter(|&&weight| weight > 0.0).count();
+        let rounding_steps = 4.0 + positive as f64 / 2.0;
+        if !coherent
+            || !points_agree(before.map(f64::from), after.map(f64::from), rounding_steps)
+            || !points_agree(displayed_before, displayed_after, 4.0)
+        {
+            return Err(invalid("Updating these bindings would move the attachment."));
+        }
+    }
+    *binding.vertices = rows;
+    Ok(())
+}
+
+/// Smooth the selected Mesh rows using the authored hull and manual edges.
+/// All averages read the same input. Only the destination's unlocked mass is
+/// redistributed, and all binding coordinates stay authored as-is.
+#[cfg(feature = "scene-editing")]
+pub(crate) fn smooth_mesh(
+    mesh: &mut fbones_format::minimal::meshes::Mesh,
+    poses: &[Pose],
+    vertices: Option<&[usize]>,
+    locked_bones: &[usize],
+) -> Result<(), AppError> {
+    let binding = DenseBindingRef {
+        weighted: mesh.weighted,
+        bones: &mesh.bones,
+        vertices: &mesh.vertices,
+    };
+    validate(binding, poses)?;
+    if !binding.weighted || binding.bones.len() < 2 {
+        return Err(invalid("Bind at least two bones before smoothing weights."));
+    }
+    let locked = lock_mask(binding, locked_bones)?;
+    let target: Vec<usize> = if let Some(vertices) = vertices {
+        if vertices.is_empty() || vertices.len() > mesh.vertices.len() {
+            return Err(invalid("Choose a nonempty set of existing mesh vertices."));
+        }
+        let mut seen = vec![false; mesh.vertices.len()];
+        for &vertex in vertices {
+            let entry = seen
+                .get_mut(vertex)
+                .ok_or_else(|| invalid("A scoped vertex no longer exists."))?;
+            if *entry {
+                return Err(invalid("A vertex scope cannot contain duplicates."));
+            }
+            *entry = true;
+        }
+        vertices.to_vec()
+    } else {
+        (0..mesh.vertices.len()).collect()
+    };
+    if !(3..=mesh.vertices.len()).contains(&mesh.hull)
+        || !mesh.edges.len().is_multiple_of(2)
+        || mesh.edges.len() > crate::mesh::MAX_EDGE_INDICES
+    {
+        return Err(invalid("Use a valid mesh hull and manual edges."));
+    }
+    let mut neighbors = vec![Vec::new(); mesh.vertices.len()];
+    let mut connect = |a: usize, b: usize| {
+        neighbors[a].push(b);
+        neighbors[b].push(a);
+    };
+    for a in 0..mesh.hull {
+        connect(a, (a + 1) % mesh.hull);
+    }
+    for pair in mesh.edges.chunks_exact(2) {
+        let (a, b) = (pair[0] as usize, pair[1] as usize);
+        if a >= mesh.vertices.len() || b >= mesh.vertices.len() || a == b {
+            return Err(invalid("A mesh edge references an invalid vertex."));
+        }
+        connect(a, b);
+    }
+    for row in &mut neighbors {
+        row.sort_unstable();
+        row.dedup();
+    }
+    let unlocked: Vec<_> = (0..mesh.bones.len()).filter(|&col| !locked[col]).collect();
+    if unlocked.len() < 2 {
+        return Ok(());
+    }
+
+    let mut rows = mesh.vertices.clone();
+    let mut scores = vec![0.0; unlocked.len()];
+    for vertex in target {
+        let old = &mesh.vertices[vertex].weights;
+        let adjacent = &neighbors[vertex];
+        if adjacent.iter().all(|&neighbor| {
+            unlocked
+                .iter()
+                .all(|&col| mesh.vertices[neighbor].weights[col] == old[col])
+        }) {
+            continue;
+        }
+        let protected: f64 = old
+            .iter()
+            .zip(&locked)
+            .filter(|(_, locked)| **locked)
+            .map(|(weight, _)| f64::from(*weight))
+            .sum();
+        let remaining = 1.0 - protected;
+        if remaining <= 0.0 {
+            continue;
+        }
+        for (&col, score) in unlocked.iter().zip(&mut scores) {
+            *score = f64::from(old[col]);
+            for &neighbor in adjacent {
+                *score += f64::from(mesh.vertices[neighbor].weights[col]);
+            }
+        }
+        // The common neighborhood divisor cancels during normalization.
+        let total: f64 = scores.iter().sum();
+        if total <= 0.0 {
+            continue;
+        }
+        let next = &mut rows[vertex].weights;
+        for (&col, score) in unlocked.iter().zip(&scores) {
+            let weight = (score / total * remaining) as f32;
+            if weight != old[col] {
+                next[col] = weight;
+            }
+        }
+        if next.as_slice() != old.as_slice() {
+            correct_unlocked(next, &locked, None)?;
+        }
+    }
+    mesh.vertices = rows;
     Ok(())
 }
 

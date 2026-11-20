@@ -1,5 +1,5 @@
 import type {BoneView} from './project.ts';
-import type {SlotAnimationTrack} from './animationSlots.ts';
+import type {SlotAnimationTrack,SlotSplitMode} from './animationSlots.ts';
 import type {DeformTrack,DrawOrderKey} from './animationGeometry.ts';
 import type {ConstraintAnimationTrack} from './animationConstraints.ts';
 import type {EventTrack} from './animationEvents.ts';
@@ -31,14 +31,18 @@ export type AnimationCurve='linear'|'stepped'|'bezier';
 export type BezierControls=[[number,number,number,number],[number,number,number,number]];
 export interface AnimationKey {id:number;frame:number;values:[number,number];curve:AnimationCurve;controls?:BezierControls|null}
 export interface AnimationTrack {bone:number;channel:AnimationChannel;keys:AnimationKey[]}
-export interface AnimationView {id:number;name:string;duration:number;tracks:AnimationTrack[];splitModes?:{bone:number;mode:1|2}[];slotTracks?:SlotAnimationTrack[];drawOrder?:DrawOrderKey[];deformTracks?:DeformTrack[];constraintTracks?:ConstraintAnimationTrack[];eventTracks?:EventTrack[];sequenceTracks?:SequenceTrack[]}
+export interface AnimationView {id:number;name:string;folder?:string;duration:number;tracks:AnimationTrack[];splitModes?:{bone:number;mode:1|2}[];slotSplitModes?:SlotSplitMode[];slotTracks?:SlotAnimationTrack[];drawOrder?:DrawOrderKey[];deformTracks?:DeformTrack[];constraintTracks?:ConstraintAnimationTrack[];eventTracks?:EventTrack[];sequenceTracks?:SequenceTrack[]}
 export interface AnimationKeyInput {bone:number;channel:AnimationChannel;frame:number;values:[number,number];curve:AnimationCurve;controls?:BezierControls|null;keyId?:number}
+/** Current-pose authoring intent paired with value-only `setAnimationKeys`. */
+export interface BoneAutoKey {
+  source:'numericField'|'viewportPose';
+  lanes:[boolean,boolean][];
+}
 /** Wire frame addresses are f32 even when a caller computed the same time in f64. */
 export function sameAnimationFrame(a:number,b:number):boolean{return Math.fround(a)===Math.fround(b);}
 
-/** Finite f32 as an exact signed integer in units of 2^-149. Used only for a
- * crossed control polygon outside the old sufficient interval rule. */
-function f32TimeUnits(value:number):bigint{
+/** Finite f32 as an exact signed integer in units of 2^-149. */
+export function f32TimeUnits(value:number):bigint{
  const view=new DataView(new ArrayBuffer(4));view.setFloat32(0,value);
  const bits=view.getUint32(0),exponent=(bits>>>23)&255;
  const magnitude=BigInt((bits&0x7fffff)|(exponent?0x800000:0))<<BigInt(exponent?exponent-1:0);
@@ -57,11 +61,17 @@ export function bezierTimeMonotone(first:number,last:number,outgoing:number,inco
 }
 
 const cubic=(a:number,b:number,c:number,d:number,t:number)=>{const s=1-t;return s*s*s*a+3*s*s*t*b+3*s*t*t*c+t*t*t*d;};
+/** Invert the monotone absolute frame coordinate of a Bézier segment. */
+export function bezierParameterAtFrame(frame:number,first:number,last:number,outgoing:number,incoming:number,preferExactHit=false):number{
+  let low=0,high=1;
+  for(let i=0;i<48;i++){const t=(low+high)/2;if(cubic(first,outgoing,incoming,last,t)<frame)low=t;else high=t;}
+  if(preferExactHit&&cubic(first,outgoing,incoming,last,high)===frame)return high;
+  return (low+high)/2;
+}
 /** Invert the stored absolute frame coordinate, then evaluate its value. */
 export function bezierValue(frame:number,first:number,last:number,start:number,end:number,controls:readonly number[]):number{
-  let low=0,high=1;
-  for(let i=0;i<48;i++){const t=(low+high)/2;if(cubic(first,controls[0]!,controls[2]!,last,t)<frame)low=t;else high=t;}
-  return cubic(start,controls[1]!,controls[3]!,end,(low+high)/2);
+  const t=bezierParameterAtFrame(frame,first,last,controls[0]!,controls[2]!);
+  return cubic(start,controls[1]!,controls[3]!,end,t);
 }
 
 /** The accepted editor profile stores frame numbers, not runtime JSON seconds.

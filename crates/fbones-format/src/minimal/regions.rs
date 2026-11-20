@@ -227,6 +227,12 @@ pub fn decode_regions(payload: &[u8]) -> Result<RegionProject, FormatError> {
     reader::decode_region_profile(payload)
 }
 
+pub fn decode_regions_with_diagnostics(
+    payload: &[u8],
+) -> Result<RegionProject, crate::ProfileDecodeError> {
+    reader::decode_region_profile_with_diagnostics(payload)
+}
+
 pub(super) fn slot_records(slots: &[Slot]) -> Vec<Object> {
     use Field::*;
     slots

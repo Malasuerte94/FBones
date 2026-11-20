@@ -1,12 +1,15 @@
 import {computed,shallowRef,watch,type Ref,type ShallowRef} from 'vue';
 import {sameAnimationFrame,type AnimationView,type AnimationCurve} from '../domain/animation.ts';
-import {sampleSlotPoses,projectSlotPoses,unpackRgba,type Rgba,type Rgb,type DarkBezierControls,type SlotAnimationDraft,type SlotAnimationKeyInput,type SlotAnimationChannel,type SlotBezierControls} from '../domain/animationSlots.ts';
-import type {ProjectSummary,RigEdit} from '../domain/project.ts';
+import {sampleSlotPoses,projectSlotPoses,unpackRgba,hasSplitSlotColor,type Rgba,type Rgb,type DarkBezierControls,type SlotAnimationDraft,type SlotAnimationKeyInput,type SlotAnimationChannel,type SlotBezierControls} from '../domain/animationSlots.ts';
+import {errorMessage,type ProjectSummary,type RigEdit} from '../domain/project.ts';
+import {projectTimelineSlotTracks} from '../domain/animationTimeline.ts';
+import {planLightRgbaKeySubdivision} from '../domain/keyShownPose.ts';
 
 interface Options {
  project:ShallowRef<ProjectSummary|null>;active:Readonly<Ref<AnimationView|null>>;
  frame:Ref<number>;mode:Ref<'setup'|'animate'>;autoKey:Ref<boolean>;
- edit:(edit:RigEdit)=>Promise<boolean>;pause:()=>void;
+ edit:(edit:RigEdit,expectedRevision?:number)=>Promise<boolean>;pause:()=>void;
+ notice:(message:string,error?:boolean)=>void;
 }
 export function shiftSlotAnimationKey(key:SlotAnimationKeyInput,delta:number,storedSource=false):SlotAnimationKeyInput {
  const frame=(value:number)=>storedSource?Math.fround(value):value;
@@ -16,11 +19,7 @@ export function useSlotAnimationWorkspace(o:Options){
  const slotAnimationDraft=shallowRef<ReadonlyMap<number,SlotAnimationDraft>>(new Map());
  const slotAnimationPose=computed(()=>sampleSlotPoses(o.project.value?.slots??[],o.active.value?.slotTracks??[],o.frame.value,slotAnimationDraft.value));
  const slotAnimationSlots=computed(()=>o.project.value?.sceneEditing?projectSlotPoses(o.project.value.slots??[],slotAnimationPose.value):o.project.value?.slots??[]);
- const animationSlotTracks=computed(()=>o.active.value?.slotTracks?.map(track=>{
-  if(track.channel==='attachment')return{id:`slot:${track.slot}:attachment`,slotId:track.slot,channel:track.channel,keys:track.keys.map(key=>({...key,values:[],interpolation:'stepped' as const}))};
-  const enabled=o.project.value?.slots?.find(s=>s.id===track.slot)?.tintBlack;
-  return{id:`slot:${track.slot}:rgba`,slotId:track.slot,channel:track.channel,keys:track.keys.map(key=>({...key,values:enabled?[...key.values,...(key.darkValues??[0,0,0])]:key.values,...(enabled&&key.controls&&key.darkControls?{controls:[...key.controls,...key.darkControls]}:{}),interpolation:key.curve}))};
- })??[]);
+ const animationSlotTracks=computed(()=>projectTimelineSlotTracks(o.active.value,o.project.value?.slots??[]));
  function clearSlotAnimationDraft(){if(slotAnimationDraft.value.size)slotAnimationDraft.value=new Map();}
  function animationSlotColor(slotId:number):Rgba{return [...(slotAnimationPose.value.find(p=>p.slot===slotId)?.color??unpackRgba(o.project.value?.slots?.find(s=>s.id===slotId)?.color??0xffffffff))];}
  function animationSlotDarkColor(slotId:number):Rgb{return [...(slotAnimationPose.value.find(p=>p.slot===slotId)?.dark??unpackRgba(o.project.value?.slots?.find(s=>s.id===slotId)?.darkColor??0xff).slice(0,3))] as Rgb;}
@@ -41,9 +40,19 @@ export function useSlotAnimationWorkspace(o:Options){
    if(target!==null&&!slot.attachments?.some(a=>a.id===target))throw new Error('The attachment must belong to this slot.');
    return {slot:slotId,channel,frame:o.frame.value,attachment:target};
   }
+  if(hasSplitSlotColor(clip,slotId))throw new Error('Imported RGB2 and Alpha color tracks are read-only.');
   const track=clip.slotTracks?.find(t=>t.slot===slotId&&t.channel==='rgba');
   const existing=track?.channel==='rgba'?track.keys.slice().reverse().find(k=>sameAnimationFrame(k.frame,o.frame.value)):undefined;
   return {slot:slotId,channel,frame:o.frame.value,values:validColor(color??pose.color),...(dark!==undefined||pose.dark!==undefined||existing?.darkValues!==undefined?{darkValues:validDark(dark??pose.dark??[0,0,0])}:{}),curve:existing?.curve??'linear',...(existing?.controls?{controls:existing.controls}:{}),...(existing?.darkControls?{darkControls:existing.darkControls}:{})};
+ }
+ function currentLightColorEdit(clip:AnimationView,key:Extract<SlotAnimationKeyInput,{channel:'rgba'}>):RigEdit|null {
+  const model=o.project.value,slot=model?.slots?.find(candidate=>candidate.id===key.slot);
+  const track=clip.slotTracks?.find(candidate=>candidate.slot===key.slot&&candidate.channel==='rgba');
+  const planned=model?.sceneEditing&&slot&&!slot.tintBlack&&track?.channel==='rgba'
+   ? planLightRgbaKeySubdivision(track,key.frame,key.values,false,unpackRgba(slot.color??0xffffffff))
+   : null;
+  const keys=planned??[key];
+  return keys.length?{type:'setAnimationSlotKeys',animation:clip.id,keys}:null;
  }
  function slotAnimationEdit(edit:RigEdit):RigEdit|null {
   o.pause();const clip=current();
@@ -55,29 +64,45 @@ export function useSlotAnimationWorkspace(o:Options){
   const key=edit.type==='setActiveAttachment'?keyInput(edit.slot,'attachment',undefined,edit.attachment):edit.type==='setSlotColor'?keyInput(edit.id,'rgba',unpackRgba(edit.color)):edit.type==='setSlotDarkColor'?keyInput(edit.id,'rgba',undefined,undefined,unpackRgba(edit.color).slice(0,3) as Rgb):null;
   if(!key)throw new Error('This edit is not an animated slot property.');
   if(!o.autoKey.value){const next=new Map(slotAnimationDraft.value),old=next.get(key.slot)??{};next.set(key.slot,key.channel==='attachment'?{...old,attachment:key.attachment}:edit.type==='setSlotDarkColor'?{...old,dark:[...key.darkValues!]}:{...old,color:[...key.values]});slotAnimationDraft.value=next;return null;}
+  if(edit.type==='setSlotColor'&&key.channel==='rgba')return currentLightColorEdit(clip,key);
   return {type:'setAnimationSlotKeys',animation:clip.id,keys:[key]};
  }
  async function setSlotAnimationColor(slotId:number,values:Rgba):Promise<boolean>{
-  o.pause();const clip=current(),key=keyInput(slotId,'rgba',values);
-  if(key.channel!=='rgba')return false;
-  if(!o.autoKey.value){const next=new Map(slotAnimationDraft.value);next.set(slotId,{...next.get(slotId),color:[...key.values]});slotAnimationDraft.value=next;return true;}
-  return o.edit({type:'setAnimationSlotKeys',animation:clip.id,keys:[key]});
+  o.pause();
+  try{
+   const revision=o.project.value?.revision,clip=current(),key=keyInput(slotId,'rgba',values);
+   if(key.channel!=='rgba')return false;
+   if(!o.autoKey.value){const next=new Map(slotAnimationDraft.value);next.set(slotId,{...next.get(slotId),color:[...key.values]});slotAnimationDraft.value=next;return true;}
+   const edit=currentLightColorEdit(clip,key);
+   return !edit||await o.edit(edit,revision);
+  }catch(error){o.notice(errorMessage(error),true);return false;}
  }
  async function setSlotAnimationDarkColor(slotId:number,values:Rgb):Promise<boolean>{
-  o.pause();const clip=current();if(!o.project.value?.slots?.find(s=>s.id===slotId)?.tintBlack)throw new Error('Enable Tint Black in Setup before editing its animated RGB.');
-  const key=keyInput(slotId,'rgba',undefined,undefined,validDark(values));if(key.channel!=='rgba')return false;
-  if(!o.autoKey.value){slotAnimationDraft.value=new Map(slotAnimationDraft.value).set(slotId,{...slotAnimationDraft.value.get(slotId),dark:[...key.darkValues!]});return true;}
-  return o.edit({type:'setAnimationSlotKeys',animation:clip.id,keys:[key]});
+  o.pause();
+  try{
+   const clip=current();if(!o.project.value?.slots?.find(s=>s.id===slotId)?.tintBlack)throw new Error('Enable Tint Black in Setup before editing its animated RGB.');
+   const key=keyInput(slotId,'rgba',undefined,undefined,validDark(values));if(key.channel!=='rgba')return false;
+   if(!o.autoKey.value){slotAnimationDraft.value=new Map(slotAnimationDraft.value).set(slotId,{...slotAnimationDraft.value.get(slotId),dark:[...key.darkValues!]});return true;}
+   return o.edit({type:'setAnimationSlotKeys',animation:clip.id,keys:[key]});
+  }catch(error){o.notice(errorMessage(error),true);return false;}
  }
  async function insertSlotAnimationKeys(change:{slotId:number;channel:SlotAnimationChannel}){
-  o.pause();const clip=current();
-  await o.edit({type:'setAnimationSlotKeys',animation:clip.id,keys:[keyInput(change.slotId,change.channel)]});
+  o.pause();
+  try{
+   const revision=o.project.value?.revision,clip=current(),key=keyInput(change.slotId,change.channel);
+   if(key.channel==='attachment'){
+    await o.edit({type:'setAnimationSlotKeys',animation:clip.id,keys:[key]});
+    return;
+   }
+   const edit=currentLightColorEdit(clip,key);
+   if(edit)await o.edit(edit,revision);
+  }catch(error){o.notice(errorMessage(error),true);}
  }
  function slotKeysForIds(ids:readonly number[]):SlotAnimationKeyInput[]{
   const keys:SlotAnimationKeyInput[]=[];
   for(const track of o.active.value?.slotTracks??[]){
    if(track.channel==='attachment')for(const key of track.keys){if(ids.includes(key.id))keys.push({slot:track.slot,channel:track.channel,keyId:key.id,frame:key.frame,attachment:key.attachment});}
-   else for(const key of track.keys){if(ids.includes(key.id))keys.push({slot:track.slot,channel:track.channel,keyId:key.id,frame:key.frame,values:[...key.values],...(key.darkValues?{darkValues:[...key.darkValues] as Rgb}:{}),curve:key.curve,...(key.controls?{controls:structuredClone(key.controls)}:{}),...(key.darkControls?{darkControls:structuredClone(key.darkControls)}:{})});}
+   else if(track.channel==='rgba')for(const key of track.keys){if(ids.includes(key.id))keys.push({slot:track.slot,channel:track.channel,keyId:key.id,frame:key.frame,values:[...key.values],...(key.darkValues?{darkValues:[...key.darkValues] as Rgb}:{}),curve:key.curve,...(key.controls?{controls:structuredClone(key.controls)}:{}),...(key.darkControls?{darkControls:structuredClone(key.darkControls)}:{})});}
   }
   return keys;
  }

@@ -139,6 +139,9 @@ fn key_payloads(f: &SceneFrame, a: usize) -> BTreeMap<u64, String> {
                     );
                 }
             }
+            SlotTimeline::Rgb2 { .. } | SlotTimeline::Alpha { .. } => {
+                unreachable!("The mixed-order fixture uses combined RGBA.")
+            }
         }
     }
     for (t, track) in clip.deform_tracks.iter().enumerate() {

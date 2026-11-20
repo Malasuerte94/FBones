@@ -27,7 +27,15 @@ export async function attachNativeSession(page:Page,session:NativeSession){
     await page.exposeBinding('__fbonesE2EInvoke',async(_source,command:string,args:Record<string,unknown>={})=>command==='frontend_ready'?null:session.invoke(command,args));
     await page.addInitScript(()=>{
       const own=globalThis as typeof globalThis&{__fbonesE2EInvoke(command:string,args?:Record<string,unknown>):Promise<unknown>;__TAURI__?:unknown};
-      own.__TAURI__={core:{invoke:(command:string,args?:Record<string,unknown>)=>own.__fbonesE2EInvoke(command,args)},event:{listen:async()=>()=>{}},window:{getCurrentWindow:()=>({setTitle:async(title:string)=>{document.title=title;},onCloseRequested:async()=>()=>{},destroy:async()=>{}})}};
+      let maximized=false;
+      const resizeListeners=new Set<()=>void>();
+      const window={
+        setTitle:async(title:string)=>{document.title=title;},onCloseRequested:async()=>()=>{},destroy:async()=>{},
+        isDecorated:async()=>false,isMaximized:async()=>maximized,minimize:async()=>{},
+        toggleMaximize:async()=>{maximized=!maximized;resizeListeners.forEach(listener=>listener());},
+        onResized:async(listener:()=>void)=>{resizeListeners.add(listener);return()=>{resizeListeners.delete(listener);};},
+      };
+      own.__TAURI__={core:{invoke:(command:string,args?:Record<string,unknown>)=>own.__fbonesE2EInvoke(command,args)},event:{listen:async()=>()=>{}},window:{getCurrentWindow:()=>window}};
     });
 }
 

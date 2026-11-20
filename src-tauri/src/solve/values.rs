@@ -13,6 +13,11 @@ pub enum ConstraintValue {
     Transform {
         mixes: [f64; 6],
     },
+    Path {
+        position: f64,
+        spacing: f64,
+        mixes: [f64; 3],
+    },
     Physics {
         inertia: f64,
         strength: f64,
@@ -35,6 +40,11 @@ impl From<&Constraint> for ConstraintValue {
             },
             Constraint::Transform(c) => Self::Transform {
                 mixes: c.mix.map(f64::from),
+            },
+            Constraint::Path(c) => Self::Path {
+                position: c.position.into(),
+                spacing: c.spacing.into(),
+                mixes: [c.mix_rotate, c.mix_x, c.mix_y].map(f64::from),
             },
             Constraint::Physics(c) => Self::Physics {
                 inertia: c.inertia.into(),
@@ -59,6 +69,18 @@ impl ConstraintValue {
             }
             (Self::Transform { mixes }, Constraint::Transform(_)) => {
                 mixes.iter().all(|v| v.is_finite() && v.abs() <= 1_000_000.)
+            }
+            (
+                Self::Path {
+                    position,
+                    spacing,
+                    mixes,
+                },
+                Constraint::Path(_),
+            ) => {
+                position.is_finite()
+                    && spacing.is_finite()
+                    && mixes.iter().all(|value| value.is_finite())
             }
             (
                 Self::Physics {

@@ -162,6 +162,12 @@ pub(crate) fn move_keys(
     wanted: &HashSet<u64>,
     delta: f32,
 ) -> Result<(), AppError> {
+    if !frame.animation_draw_key_ids[a]
+        .iter()
+        .any(|id| wanted.contains(id))
+    {
+        return Ok(());
+    }
     let mut moved = frame.project.animations[a]
         .draw_order
         .iter()
@@ -169,7 +175,7 @@ pub(crate) fn move_keys(
         .zip(frame.animation_draw_key_ids[a].iter().copied())
         .map(|(mut key, id)| {
             if wanted.contains(&id) {
-                key.frame = animation::checked_frame(key.frame + delta)?;
+                key.frame = animation::moved_frame(key.frame, delta)?;
             }
             Ok((key, id))
         })

@@ -1,6 +1,6 @@
-import {test,expect,openNativeEditor,type NativeSession} from './fixtures/native-session';
+import {test,expect,newNativeProject,openNativeEditor,type NativeSession} from './fixtures/native-session';
 import type {Locator,Page,TestInfo} from '@playwright/test';
-import type {BoneView,PhysicsConstraintInput,ProjectSummary} from '../../src/domain/project';
+import type {BoneView,EvaluationSnapshot,PhysicsConstraintInput,ProjectSummary} from '../../src/domain/project';
 import {copyFile,writeFile} from 'node:fs/promises';
 
 type Physics=PhysicsConstraintInput&{id:number;order:number};
@@ -135,4 +135,94 @@ test('@native Physics View creates zero-length XY fallback on its active bone se
  await page.getByTestId('physics-preview-reset').click();await expect(page.getByTestId('physics-simulate')).not.toBeChecked();const frozen=(await native.snapshot())!;await dragStart(page,ids.a,50);expect(await native.snapshot()).toEqual(frozen);await page.mouse.up();
  await expect.poll(async()=>(await native.snapshot())!.bones.find(b=>b.id===ids.a)!.y).toBeCloseTo(50,2);await expect(page.getByTestId('physics-simulate')).not.toBeChecked();expect(Math.max(...await angles(page,[ids.b,ids.c,ids.d]))).toBeLessThan(.0001);
  const authored=(await native.snapshot())!,saved=await save(page,native,'explicit-off-physics.fbones');expect(saved.bones).toEqual(authored.bones);expect(saved.constraints).toEqual(authored.constraints);await expect(page.getByTestId('physics-simulate')).not.toBeChecked();await artifact(page,info,saved,{before,created,frozen,authored,saved});
+});
+
+test('@native default preset gravity rotates an authored bone in live Setup and Animate Play without baking on save', async ({page, native}) => {
+ const clipName = 'Default gravity motion';
+ const fileName = 'default-gravity.fbones';
+ await openNativeEditor(page);
+ await newNativeProject(page, 'Default gravity workflow');
+ const root = (await native.snapshot())!.bones[0]!.id;
+ await selectBones(page, [root]);
+ await page.getByRole('button', {name: 'Add bone', exact: true}).click();
+ await expect.poll(async () => (await native.snapshot())!.bones.length).toBe(2);
+ const bone = (await native.snapshot())!.bones[1]!.id;
+ const length = page.getByTestId('bone-length');
+ await length.fill('80');
+ await length.press('Enter');
+ await expect.poll(async () => (await native.snapshot())!.bones.find(item => item.id === bone)?.length).toBe(80);
+ const setupBones = (await native.snapshot())!.bones;
+ expect(setupBones.find(item => item.id === bone)?.rotation).toBe(0);
+ const renderedY = async (id: number) => (await worlds(page)).find(item => item.id === id)?.world?.b;
+ await expect.poll(() => renderedY(bone)).toBeCloseTo(0, 6);
+
+ await selectBones(page, [bone]);
+ await newFromTree(page);
+ await expect.poll(async () => physics((await native.snapshot())!).length).toBe(1);
+ const preset = physics((await native.snapshot())!)[0]!;
+ expect(preset).toMatchObject({bone, x: 0, y: 0, rotate: 1, gravity: 0});
+ const gravity = (await inspect(page, preset.id)).getByTestId('physics-gravity');
+ await gravity.fill('10');
+ await gravity.press('Enter');
+ await expect.poll(async () => physics((await native.snapshot())!)[0]!.gravity).toBe(10);
+ await expect(page.getByTestId('physics-simulate')).toBeChecked();
+ await expect.poll(() => renderedY(bone)).toBeLessThan(-0.01);
+ expect((await native.snapshot())!.bones).toEqual(setupBones);
+
+ await page.getByTestId('editor-mode-animate').click();
+ await page.getByTestId('animation-create').click();
+ const name = page.getByTestId('animation-name');
+ await name.fill(clipName);
+ await name.press('Enter');
+ const clip = (project: ProjectSummary) => project.animations!.find(item => item.name === clipName);
+ await expect.poll(async () => clip((await native.snapshot())!)?.name).toBe(clipName);
+ await expect(page.getByTestId('animation-select')).toHaveValue(String(clip((await native.snapshot())!)!.id));
+ const keyTranslate = page.getByTestId('timeline-key-translate');
+ const current = page.getByTestId('timeline-current');
+ const seek = async (frame: number) => {
+  await current.fill(String(frame));
+  await current.press('Enter');
+  await expect(current).toHaveValue(String(frame));
+ };
+ // Give the clip a duration without moving the bone or creating a competing torque.
+ await boneRow(page, bone).click();
+ await keyTranslate.click();
+ await expect.poll(async () => clip((await native.snapshot())!)?.tracks[0]?.keys.map(key => key.frame)).toEqual([0]);
+ await seek(30);
+ await keyTranslate.click();
+ const keyFrames = (project: ProjectSummary) => clip(project)?.tracks[0]?.keys.map(key => key.frame);
+ await expect.poll(async () => keyFrames((await native.snapshot())!)).toEqual([0, 30]);
+ const authored = (await native.snapshot())!;
+ const expectedY = async (project: ProjectSummary, id: number) => {
+  const result = await native.invoke<EvaluationSnapshot>('evaluate_project', {
+   expectedRevision: project.revision,
+   request: {mode: 'replay', time: 30 / Math.fround(project.animationFps ?? 30), animationId: clip(project)!.id},
+  });
+  return result.bones.find(item => item.id === id)!.world.b;
+ };
+ const nativeY = await expectedY(authored, bone);
+ expect(nativeY).toBeLessThan(-0.01);
+ await seek(0);
+ await expect.poll(() => renderedY(bone)).toBeCloseTo(0, 6);
+ const repeat = page.getByTestId('timeline-repeat');
+ await expect(repeat).toHaveAttribute('aria-pressed', 'true');
+ await repeat.click();
+ await page.getByTestId('timeline-play').click();
+ await expect(current).toHaveValue('30');
+ await expect(page.getByTestId('timeline-play')).toHaveAccessibleName('Play');
+ await expect.poll(() => renderedY(bone)).toBeCloseTo(nativeY, 5);
+ expect(await native.snapshot()).toEqual(authored);
+
+ const saved = await save(page, native, fileName);
+ const opened = await reopen(page, native, fileName);
+ const reopenedBone = physics(opened)[0]!.bone;
+ expect(opened.constraints).toEqual(saved.constraints);
+ expect(opened.bones).toEqual(setupBones);
+ const keys = (project: ProjectSummary) => clip(project)!.tracks[0]!.keys.map(({id: _, ...key}) => key);
+ expect(keys(opened)).toEqual(keys(saved));
+ await page.getByTestId('editor-mode-animate').click();
+ await page.getByTestId('animation-select').selectOption(String(clip(opened)!.id));
+ await seek(30);
+ expect(await expectedY(opened, reopenedBone)).toBeCloseTo(nativeY, 5);
+ await expect.poll(() => renderedY(reopenedBone)).toBeCloseTo(nativeY, 5);
 });

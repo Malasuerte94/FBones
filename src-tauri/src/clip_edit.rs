@@ -3,6 +3,7 @@ use crate::{
     binding,
     project::AppError,
     rig::{Pose, VertexMove, WorldPoint},
+    triangulation::cross,
 };
 #[cfg(test)]
 use fbones_format::minimal::meshes::Vertex;
@@ -19,53 +20,48 @@ pub(crate) fn world_vertices(c: &Clipping, poses: &[Pose]) -> Vec<[f32; 2]> {
         .map(|v| binding::world_vertex(v, &c.bones, poses))
         .collect()
 }
-fn cross(a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> f64 {
-    (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+fn near_zero(value: f64, tolerance: f64) -> bool {
+    value == 0.0 || value.abs() < tolerance
 }
-fn on_segment(a: [f64; 2], b: [f64; 2], p: [f64; 2]) -> bool {
-    cross(a, b, p).abs() < 1e-8
-        && (0..2).all(|i| p[i] >= a[i].min(b[i]) - 1e-8 && p[i] <= a[i].max(b[i]) + 1e-8)
-}
-fn intersects(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2]) -> bool {
+fn intersects(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2], tolerance: f64) -> bool {
     let (x, y, u, v) = (
         cross(a, b, c),
         cross(a, b, d),
         cross(c, d, a),
         cross(c, d, b),
     );
+    let on_segment = |from: [f64; 2], to: [f64; 2], p: [f64; 2], side| {
+        near_zero(side, tolerance)
+            && (0..2).all(|i| {
+                p[i] >= from[i].min(to[i]) - tolerance && p[i] <= from[i].max(to[i]) + tolerance
+            })
+    };
     ((x > 0.0 && y < 0.0) || (x < 0.0 && y > 0.0)) && ((u > 0.0 && v < 0.0) || (u < 0.0 && v > 0.0))
-        || on_segment(a, b, c)
-        || on_segment(a, b, d)
-        || on_segment(c, d, a)
-        || on_segment(c, d, b)
+        || on_segment(a, b, c, x)
+        || on_segment(a, b, d, y)
+        || on_segment(c, d, a, u)
+        || on_segment(c, d, b, v)
 }
-pub(crate) fn validate_polygon(c: &Clipping, poses: &[Pose]) -> Result<(), AppError> {
-    let points = world_vertices(c, poses);
-    let n = points.len();
-    if !(3..=256).contains(&n)
-        || points
-            .iter()
-            .flatten()
-            .any(|v| !v.is_finite() || v.abs() > 1_000_000.0)
-    {
-        return Err(invalid());
-    }
-    let p: Vec<_> = points.iter().map(|p| p.map(f64::from)).collect();
+
+/// Check an ordered polygon in the caller's coordinate space. Adjacent sides
+/// may share their endpoint, including straight runs without backtracking.
+pub(crate) fn is_simple_polygon(p: &[[f64; 2]], tolerance: f64, min_distance: f64) -> bool {
+    let n = p.len();
     let mut area = 0.0;
     for i in 0..n {
         let j = (i + 1) % n;
         let previous = (i + n - 1) % n;
-        if cross(p[previous], p[i], p[j]).abs() < 1e-8
+        if near_zero(cross(p[previous], p[i], p[j]), tolerance)
             && (p[i][0] - p[previous][0]) * (p[j][0] - p[i][0])
                 + (p[i][1] - p[previous][1]) * (p[j][1] - p[i][1])
                 < 0.0
         {
-            return Err(invalid());
+            return false;
         }
         area += p[i][0] * p[j][1] - p[i][1] * p[j][0];
         for k in 0..i {
-            if (p[i][0] - p[k][0]).hypot(p[i][1] - p[k][1]) < 1e-6 {
-                return Err(invalid());
+            if p[i] == p[k] || (p[i][0] - p[k][0]).hypot(p[i][1] - p[k][1]) < min_distance {
+                return false;
             }
         }
         for k in i + 1..n {
@@ -73,12 +69,26 @@ pub(crate) fn validate_polygon(c: &Clipping, poses: &[Pose]) -> Result<(), AppEr
             if j == k || l == i {
                 continue;
             }
-            if intersects(p[i], p[j], p[k], p[l]) {
-                return Err(invalid());
+            if intersects(p[i], p[j], p[k], p[l], tolerance) {
+                return false;
             }
         }
     }
-    if area.abs() < 1e-8 {
+    n >= 3 && !near_zero(area, tolerance)
+}
+
+pub(crate) fn validate_polygon(c: &Clipping, poses: &[Pose]) -> Result<(), AppError> {
+    let points = world_vertices(c, poses);
+    if !(3..=256).contains(&points.len())
+        || points
+            .iter()
+            .flatten()
+            .any(|v| !v.is_finite() || v.abs() > 1_000_000.0)
+    {
+        return Err(invalid());
+    }
+    let points: Vec<_> = points.into_iter().map(|p| p.map(f64::from)).collect();
+    if !is_simple_polygon(&points, 1e-8, 1e-6) {
         return Err(invalid());
     }
     Ok(())

@@ -22,6 +22,7 @@ pub struct SceneWire {
 pub struct WireConstraintDeclarations {
     pub ik: Vec<usize>,
     pub transform: Vec<usize>,
+    pub path: Vec<usize>,
     pub physics: Vec<usize>,
 }
 /// Canonical declaration order, independent of the reverse execution group.
@@ -36,6 +37,7 @@ pub fn canonical_constraint_declarations(p: &SceneProject) -> WireConstraintDecl
     WireConstraintDeclarations {
         ik: family(56),
         transform: family(65),
+        path: family(72),
         physics: family(121),
     }
 }
@@ -53,6 +55,7 @@ fn normalized_declarations(
     for (actual, expected) in [
         (&declarations.ik, &canonical.ik),
         (&declarations.transform, &canonical.transform),
+        (&declarations.path, &canonical.path),
         (&declarations.physics, &canonical.physics),
     ] {
         if actual.len() > 128
@@ -99,6 +102,7 @@ pub enum WireStringOwner {
     Slot(usize),
     Attachment(AttachmentAddress),
     Animation(usize),
+    AnimationFolder(usize),
     Constraint(usize),
     Event(usize),
 }
@@ -122,11 +126,16 @@ pub enum WireAnimationOwner {
 pub enum WireSlotChannel {
     Attachment,
     Rgba,
+    Rgb2,
+    Alpha,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum WireConstraintChannel {
     Ik,
     TransformMix,
+    PathPosition,
+    PathSpacing,
+    PathMix,
     Physics(PhysicsProperty),
     PhysicsReset,
 }
@@ -165,6 +174,7 @@ impl WireStringOwner {
             Self::Attachment(a) => format!("attachment-{}-{}", a.slot, a.attachment),
             Self::Animation(0) => "animation".into(),
             Self::Animation(i) => format!("animation-{i}"),
+            Self::AnimationFolder(i) => super::animation_folders::folder_group_label(*i),
             Self::Constraint(i) => format!("constraint-{i}"),
             Self::Event(i) => format!("event-{i}"),
         }
@@ -182,9 +192,16 @@ impl WireStringOwner {
                 .is_some_and(|a| match a {
                     SceneAttachment::Region(_) => matches!(tag, 1 | 13),
                     SceneAttachment::Mesh(_) => matches!(tag, 1 | 14),
-                    SceneAttachment::Clipping(_) => tag == 1,
+                    SceneAttachment::Clipping(_) | SceneAttachment::Path(_) => tag == 1,
                 }),
             Self::Animation(i) => *i < p.animations.len() && tag == 1,
+            Self::AnimationFolder(i) => {
+                tag == 1
+                    && p.animation_folders
+                        .as_ref()
+                        .and_then(|layout| layout.folders().nth(*i))
+                        .is_some()
+            }
             Self::Constraint(i) => *i < p.constraints.len() && tag == 1,
             Self::Event(i) => *i < p.events.len() && matches!(tag, 2 | 5 | 6),
         }
@@ -215,6 +232,12 @@ impl WireTrack {
                     Constraint::Ik(c) => c.target,
                     Constraint::Transform(c) => c.source,
                     Constraint::Physics(c) => c.bone,
+                    Constraint::Path(c) => {
+                        p.slots
+                            .get(c.slot)
+                            .ok_or(FormatError::UnsupportedProfile)?
+                            .bone
+                    }
                 },
             ),
             Self::Event { .. } => return Ok(WireAnimationOwner::Events),
@@ -237,6 +260,9 @@ impl WireTrack {
         let channel = match t {
             ConstraintTimeline::Ik { .. } => WireConstraintChannel::Ik,
             ConstraintTimeline::TransformMix { .. } => WireConstraintChannel::TransformMix,
+            ConstraintTimeline::PathPosition { .. } => WireConstraintChannel::PathPosition,
+            ConstraintTimeline::PathSpacing { .. } => WireConstraintChannel::PathSpacing,
+            ConstraintTimeline::PathMix { .. } => WireConstraintChannel::PathMix,
             ConstraintTimeline::Physics { property, .. } => {
                 WireConstraintChannel::Physics(*property)
             }
@@ -253,6 +279,8 @@ impl WireTrack {
             channel: match t {
                 SlotTimeline::Attachment { .. } => WireSlotChannel::Attachment,
                 SlotTimeline::Rgba { .. } => WireSlotChannel::Rgba,
+                SlotTimeline::Rgb2 { .. } => WireSlotChannel::Rgb2,
+                SlotTimeline::Alpha { .. } => WireSlotChannel::Alpha,
             },
         }
     }
@@ -608,11 +636,10 @@ pub fn string_field_value<'a>(
             }
         }
         (WireStringOwner::Animation(i), 1) => &p.animations.get(*i)?.name,
-        (WireStringOwner::Constraint(i), 1) => match p.constraints.get(*i)? {
-            Constraint::Ik(c) => &c.name,
-            Constraint::Transform(c) => &c.name,
-            Constraint::Physics(c) => &c.name,
-        },
+        (WireStringOwner::AnimationFolder(i), 1) => {
+            &p.animation_folders.as_ref()?.folders().nth(*i)?.name
+        }
+        (WireStringOwner::Constraint(i), 1) => p.constraints.get(*i)?.name(),
         (WireStringOwner::Event(i), 2) => &p.events.get(*i)?.name,
         (WireStringOwner::Event(i), 5) => &p.events.get(*i)?.string,
         (WireStringOwner::Event(i), 6) => &p.events.get(*i)?.audio,

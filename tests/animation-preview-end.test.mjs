@@ -34,6 +34,20 @@ test('Once includes the final image interval and Hold at zero stays static',()=>
  for(const mode of [1,2])assert.equal(animationPreviewEnd(clip(0,[track([key(0,mode)])]),[slot(1)],24).end,3);
 });
 
+test('reverse and ping-pong previews include a terminal interval or one complete cycle',()=>{
+ const slots=[slot(4)];
+ assert.equal(animationPreviewEnd(clip(0,[track([key(0,4,1)])]),slots,24).end,9);
+ assert.equal(animationPreviewEnd(clip(0,[track([key(0,5,1)])]),slots,24).end,12);
+ for(const mode of [3,6]){
+  assert.equal(animationPreviewEnd(clip(0,[track([key(0,mode,1)])]),slots,24).end,18);
+  assert.equal(animationPreviewEnd(clip(0,[track([key(0,mode)])]),[slot(1)],24).end,3);
+  assert.equal(animationPreviewEnd(clip(0,[track([key(0,mode)])]),[slot(2)],24).end,6);
+ }
+ const child=slot(6,8,11);
+ Object.assign(child.attachments[0],{type:'mesh',linkedMeshSourceId:10,linkedMeshInheritsTimelines:true});
+ assert.equal(animationPreviewEnd(clip(0,[track([key(0,6,1)])]),[...slots,child],24).end,30);
+});
+
 test('the final running key can extend a positive clip while a later Hold supersedes earlier loops',()=>{
  const slots=[slot()];
  assert.equal(animationPreviewEnd(clip(30,[track([key(30)])]),slots,24).end,39);
@@ -47,6 +61,18 @@ test('multiple inactive or missing-image targets contribute only their maximum t
  assert.deepEqual(animationPreviewEnd(animation,slots,24),{end:12,extended:true,exceedsBudget:false},'periods9 and12 use12, not their common period36');
  assert.equal(animationPreviewEnd(clip(2,[track([key(0)]),track([key(2)],11,8)]),slots,24).end,14);
  assert.equal(slots[0].visible,false);assert.equal(slots[1].attachments[0].imageAvailable,false);
+});
+
+test('linked Sequence previews use each receiving count and ignore stored shadow tails while inherited',()=>{
+ const child=slot(5,8,11);
+ const target=child.attachments[0];
+ Object.assign(target,{type:'mesh',linkedMeshSourceId:10,linkedMeshInheritsTimelines:true});
+ const source=track([key(0,2,2)]);
+ const dormant=track([key(2,2,1,1)],11,8);
+ assert.equal(animationPreviewEnd(clip(2,[source,dormant]),[slot(),child],24).end,15);
+ assert.equal(animationPreviewEnd(clip(2,[track([key(0,1,2)]),dormant]),[slot(),child],24).end,9);
+ target.linkedMeshInheritsTimelines=false;
+ assert.equal(animationPreviewEnd(clip(2,[source,dormant]),[slot(),child],24).end,122);
 });
 
 test('f32 key time, FPS and delay recovery define the f64 tail without changing JSON decimals',()=>{
@@ -88,7 +114,7 @@ test('large and late finite automatic extents report the budget without silently
 test('invalid clocks, final-key carriers and target/profile mismatches reject instead of inventing a duration',()=>{
  for(const fps of [0,-1,NaN,Infinity,1e300,1e-100])assert.throws(()=>animationPreviewEnd(clip(),[],fps));
  for(const duration of [-1,NaN,Infinity,1e300])assert.throws(()=>animationPreviewEnd(clip(duration),[],24));
- for(const patch of [{mode:3},{index:3},{index:.5},{frame:-1},{frame:NaN},{frame:1_000_001},...[0,-1,NaN,Infinity,1e300,1e-100].map(delay=>({delay}))])assert.throws(()=>animationPreviewEnd(clip(0,[track([{...key(0),...patch}])]),[slot()],24));
+ for(const patch of [{mode:7},{index:3},{index:.5},{frame:-1},{frame:NaN},{frame:1_000_001},...[0,-1,NaN,Infinity,1e300,1e-100].map(delay=>({delay}))])assert.throws(()=>animationPreviewEnd(clip(0,[track([{...key(0),...patch}])]),[slot()],24));
  for(const count of [0,4097,1.5])assert.throws(()=>animationPreviewEnd(clip(0,[track([key(0)])]),[slot(count)],24));
  assert.throws(()=>animationPreviewEnd(clip(0,[track([key(0)],999)]),[slot()],24));
  assert.throws(()=>animationPreviewEnd(clip(0,[track([key(0)],10,999)]),[slot()],24));

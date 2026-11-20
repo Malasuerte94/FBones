@@ -5,8 +5,8 @@ use crate::{
     scene_edit::SceneFrame,
 };
 use fbones_format::minimal::scene::{
-    Animation, Constraint, ConstraintTimeline, IkKeyCurve, IkKeyframe, PhysicsCurve,
-    PhysicsKeyframe, PhysicsProperty, PhysicsResetKeyframe, TransformMixCurve,
+    Animation, Constraint, ConstraintTimeline, IkKeyCurve, IkKeyframe, PathKeyCurve, PathKeyframe,
+    PhysicsCurve, PhysicsKeyframe, PhysicsProperty, PhysicsResetKeyframe, TransformMixCurve,
     TransformMixKeyframe,
 };
 use serde::{Deserialize, Serialize};
@@ -88,6 +88,48 @@ pub enum ConstraintKeyInput {
         #[serde(default, rename = "keyId")]
         key_id: Option<u64>,
     },
+    PathPosition {
+        constraint: u64,
+        frame: f32,
+        values: [f32; 1],
+        curve: CurveInput,
+        #[serde(default)]
+        controls: Option<[[f32; 4]; 1]>,
+        #[serde(default, rename = "valueBits")]
+        value_bits: Option<[u32; 1]>,
+        #[serde(default, rename = "controlsBits")]
+        controls_bits: Option<[[u32; 4]; 1]>,
+        #[serde(default, rename = "keyId")]
+        key_id: Option<u64>,
+    },
+    PathSpacing {
+        constraint: u64,
+        frame: f32,
+        values: [f32; 1],
+        curve: CurveInput,
+        #[serde(default)]
+        controls: Option<[[f32; 4]; 1]>,
+        #[serde(default, rename = "valueBits")]
+        value_bits: Option<[u32; 1]>,
+        #[serde(default, rename = "controlsBits")]
+        controls_bits: Option<[[u32; 4]; 1]>,
+        #[serde(default, rename = "keyId")]
+        key_id: Option<u64>,
+    },
+    PathMix {
+        constraint: u64,
+        frame: f32,
+        values: [f32; 3],
+        curve: CurveInput,
+        #[serde(default)]
+        controls: Option<[[f32; 4]; 3]>,
+        #[serde(default, rename = "valueBits")]
+        value_bits: Option<[u32; 3]>,
+        #[serde(default, rename = "controlsBits")]
+        controls_bits: Option<[[u32; 4]; 3]>,
+        #[serde(default, rename = "keyId")]
+        key_id: Option<u64>,
+    },
     Physics {
         constraint: u64,
         property: PropertyInput,
@@ -157,6 +199,22 @@ struct Key {
     curve: CurveInput,
     controls: Option<Vec<[f32; 4]>>,
 }
+fn unpack_path_key<const N: usize>(
+    frame: f32,
+    values: [f32; N],
+    curve: CurveInput,
+    controls: Option<[[f32; 4]; N]>,
+    value_bits: Option<[u32; N]>,
+    controls_bits: Option<[[u32; 4]; N]>,
+) -> Result<Key, AppError> {
+    Ok(Key {
+        frame,
+        values: restore(values.to_vec(), value_bits.map(Vec::from))?,
+        flags: [false; 3],
+        curve,
+        controls: restore_controls(controls.map(Vec::from), controls_bits.map(Vec::from))?,
+    })
+}
 impl ConstraintKeyInput {
     pub(crate) fn context(&self) -> (u64, f32) {
         match self {
@@ -164,6 +222,15 @@ impl ConstraintKeyInput {
                 constraint, frame, ..
             }
             | Self::TransformMix {
+                constraint, frame, ..
+            }
+            | Self::PathPosition {
+                constraint, frame, ..
+            }
+            | Self::PathSpacing {
+                constraint, frame, ..
+            }
+            | Self::PathMix {
                 constraint, frame, ..
             }
             | Self::Physics {
@@ -228,6 +295,51 @@ impl ConstraintKeyInput {
                     )?,
                 },
             ),
+            Self::PathPosition {
+                constraint,
+                frame,
+                values,
+                curve,
+                controls,
+                value_bits,
+                controls_bits,
+                key_id,
+            } => (
+                constraint,
+                9,
+                key_id,
+                unpack_path_key(frame, values, curve, controls, value_bits, controls_bits)?,
+            ),
+            Self::PathSpacing {
+                constraint,
+                frame,
+                values,
+                curve,
+                controls,
+                value_bits,
+                controls_bits,
+                key_id,
+            } => (
+                constraint,
+                10,
+                key_id,
+                unpack_path_key(frame, values, curve, controls, value_bits, controls_bits)?,
+            ),
+            Self::PathMix {
+                constraint,
+                frame,
+                values,
+                curve,
+                controls,
+                value_bits,
+                controls_bits,
+                key_id,
+            } => (
+                constraint,
+                11,
+                key_id,
+                unpack_path_key(frame, values, curve, controls, value_bits, controls_bits)?,
+            ),
             Self::Physics {
                 constraint,
                 property,
@@ -276,6 +388,9 @@ fn key_count(track: &ConstraintTimeline) -> usize {
     match track {
         ConstraintTimeline::Ik { keys, .. } => keys.len(),
         ConstraintTimeline::TransformMix { keys, .. } => keys.len(),
+        ConstraintTimeline::PathPosition { keys, .. }
+        | ConstraintTimeline::PathSpacing { keys, .. } => keys.len(),
+        ConstraintTimeline::PathMix { keys, .. } => keys.len(),
         ConstraintTimeline::Physics { keys, .. } => keys.len(),
         ConstraintTimeline::PhysicsReset { keys, .. } => keys.len(),
     }
@@ -284,8 +399,25 @@ fn key_frame(track: &ConstraintTimeline, i: usize) -> f32 {
     match track {
         ConstraintTimeline::Ik { keys, .. } => keys[i].frame,
         ConstraintTimeline::TransformMix { keys, .. } => keys[i].frame,
+        ConstraintTimeline::PathPosition { keys, .. }
+        | ConstraintTimeline::PathSpacing { keys, .. } => keys[i].frame,
+        ConstraintTimeline::PathMix { keys, .. } => keys[i].frame,
         ConstraintTimeline::Physics { keys, .. } => keys[i].frame,
         ConstraintTimeline::PhysicsReset { keys, .. } => keys[i].frame,
+    }
+}
+fn path_key<const N: usize>(key: &PathKeyframe<N>) -> Key {
+    let (curve, controls) = match key.curve {
+        PathKeyCurve::Linear => (CurveInput::Linear, None),
+        PathKeyCurve::Stepped => (CurveInput::Stepped, None),
+        PathKeyCurve::Bezier { controls } => (CurveInput::Bezier, Some(controls.to_vec())),
+    };
+    Key {
+        frame: key.frame,
+        values: key.values.to_vec(),
+        flags: [false; 3],
+        curve,
+        controls,
     }
 }
 fn key_at(track: &ConstraintTimeline, i: usize) -> Key {
@@ -322,6 +454,9 @@ fn key_at(track: &ConstraintTimeline, i: usize) -> Key {
                 controls,
             }
         }
+        ConstraintTimeline::PathPosition { keys, .. }
+        | ConstraintTimeline::PathSpacing { keys, .. } => path_key(&keys[i]),
+        ConstraintTimeline::PathMix { keys, .. } => path_key(&keys[i]),
         ConstraintTimeline::Physics { keys, .. } => {
             let k = &keys[i];
             let (curve, controls) = match k.curve {
@@ -370,6 +505,23 @@ fn sampling_keys(track: &ConstraintTimeline, position: f64) -> Vec<Key> {
     out
 }
 
+fn pack_path_keys<const N: usize>(values: Vec<Key>) -> Vec<PathKeyframe<N>> {
+    values
+        .into_iter()
+        .map(|key| PathKeyframe {
+            frame: key.frame,
+            values: key.values.try_into().unwrap(),
+            curve: match key.curve {
+                CurveInput::Linear => PathKeyCurve::Linear,
+                CurveInput::Stepped => PathKeyCurve::Stepped,
+                CurveInput::Bezier => PathKeyCurve::Bezier {
+                    controls: key.controls.unwrap().try_into().unwrap(),
+                },
+            },
+        })
+        .collect()
+}
+
 fn pack(constraint: usize, kind: u32, values: Vec<Key>) -> ConstraintTimeline {
     match kind {
         7 => ConstraintTimeline::Ik {
@@ -409,6 +561,18 @@ fn pack(constraint: usize, kind: u32, values: Vec<Key>) -> ConstraintTimeline {
                     },
                 })
                 .collect(),
+        },
+        9 => ConstraintTimeline::PathPosition {
+            constraint,
+            keys: pack_path_keys(values),
+        },
+        10 => ConstraintTimeline::PathSpacing {
+            constraint,
+            keys: pack_path_keys(values),
+        },
+        11 => ConstraintTimeline::PathMix {
+            constraint,
+            keys: pack_path_keys(values),
         },
         30 => ConstraintTimeline::PhysicsReset {
             constraint,
@@ -494,6 +658,9 @@ pub(crate) fn views(frame: &SceneFrame, a: usize) -> Vec<ConstraintTrackView> {
                 channel: match kind {
                     7 => "ik",
                     8 => "transformMix",
+                    9 => "pathPosition",
+                    10 => "pathSpacing",
+                    11 => "pathMix",
                     30 => "physicsReset",
                     _ => "physics",
                 },
@@ -512,7 +679,7 @@ pub(crate) fn views(frame: &SceneFrame, a: usize) -> Vec<ConstraintTrackView> {
                         stretch: (kind == 7).then_some(k.flags[0]),
                         compress: (kind == 7).then_some(k.flags[1]),
                         bend_positive: (kind == 7).then_some(k.flags[2]),
-                        values: (kind == 8).then_some(k.values.clone()),
+                        values: (8..=11).contains(&kind).then_some(k.values.clone()),
                         value: (23..30).contains(&kind).then(|| k.values[0]),
                         curve: (kind != 30).then(|| curve_name(k.curve)),
                         controls: k.controls.map(|v| {
@@ -576,7 +743,8 @@ fn validate_keys(values: &[Key], kind: u32) -> Result<(), AppError> {
                 let count = match kind {
                     7 => 2,
                     8 => 6,
-                    23..=29 => 1,
+                    9 | 10 | 23..=29 => 1,
+                    11 => 3,
                     _ => 0,
                 };
                 if axes.len() != count
@@ -755,18 +923,21 @@ pub(crate) fn move_keys(
 ) -> Result<(), AppError> {
     for t in 0..frame.project.animations[a].constraint_tracks.len() {
         let track = &frame.project.animations[a].constraint_tracks[t];
+        let ids = &frame.animation_constraint_key_ids[a][t];
+        if !ids.iter().any(|id| selected.contains(id)) {
+            continue;
+        }
         let mut list = keys(track);
         let old = list.clone();
-        let old_ids = frame.animation_constraint_key_ids[a][t].clone();
-        for (k, id) in list.iter_mut().zip(&old_ids) {
+        for (k, id) in list.iter_mut().zip(ids) {
             if selected.contains(id) {
-                k.frame = animation::checked_frame(k.frame + delta)?;
+                k.frame = animation::moved_frame(k.frame, delta)?;
             }
         }
         let mut order = (0..list.len()).collect::<Vec<_>>();
         order.sort_by(|i, j| list[*i].frame.total_cmp(&list[*j].frame));
         let mut sorted = order.iter().map(|i| list[*i].clone()).collect::<Vec<_>>();
-        let ids = order.iter().map(|i| old_ids[*i]).collect::<Vec<_>>();
+        let sorted_ids = order.iter().map(|i| ids[*i]).collect::<Vec<_>>();
         if sorted.windows(2).enumerate().any(|(i, v)| {
             v[0].frame == v[1].frame && old[order[i]].frame != old[order[i + 1]].frame
         }) {
@@ -774,8 +945,8 @@ pub(crate) fn move_keys(
         }
         for (i, key) in old.iter().enumerate() {
             if let Some(controls) = &key.controls {
-                let at = ids.iter().position(|id| *id == old_ids[i]).unwrap();
-                if ids.get(at + 1) != old_ids.get(i + 1) {
+                let at = sorted_ids.iter().position(|id| *id == ids[i]).unwrap();
+                if sorted_ids.get(at + 1) != ids.get(i + 1) {
                     return Err(invalid(
                         "Move constraint Bezier segments without changing their neighbors.",
                     ));
@@ -784,8 +955,7 @@ pub(crate) fn move_keys(
                 let right_delta = sorted[at + 1].frame - old[i + 1].frame;
                 let mut controls = controls.clone();
                 for axis in &mut controls {
-                    axis[0] += left_delta;
-                    axis[2] += right_delta;
+                    animation::move_control_times(axis, left_delta, right_delta);
                 }
                 sorted[at].controls = Some(controls);
             }
@@ -793,7 +963,7 @@ pub(crate) fn move_keys(
         validate_keys(&sorted, track.kind())?;
         frame.project.animations[a].constraint_tracks[t] =
             pack(track.constraint(), track.kind(), sorted);
-        frame.animation_constraint_key_ids[a][t] = ids;
+        frame.animation_constraint_key_ids[a][t] = sorted_ids;
     }
     Ok(())
 }
@@ -808,7 +978,7 @@ pub(crate) fn remap(before: &SceneFrame, next: &mut SceneFrame) -> Result<(), Ap
                 .ok_or_else(|| {
                     invalid("Delete this constraint's animation keys before deleting its target.")
                 })?;
-            *track = pack(c, track.kind(), keys(track));
+            track.set_constraint(c);
         }
     }
     Ok(())
@@ -834,6 +1004,13 @@ pub enum ConstraintPose {
     Transform {
         constraint: u64,
         mixes: [f64; 6],
+    },
+    /// Sampled Path values. This profile does not accept temporary Path drafts.
+    Path {
+        constraint: u64,
+        position: f64,
+        spacing: f64,
+        mixes: [f64; 3],
     },
     Physics {
         constraint: u64,
@@ -973,6 +1150,7 @@ impl ConstraintPose {
         match self {
             Self::Ik { constraint, .. }
             | Self::Transform { constraint, .. }
+            | Self::Path { constraint, .. }
             | Self::Physics { constraint, .. } => *constraint,
         }
     }
@@ -995,6 +1173,16 @@ impl ConstraintPose {
             Self::Transform { mixes, .. } => {
                 crate::solve::ConstraintValue::Transform { mixes: *mixes }
             }
+            Self::Path {
+                position,
+                spacing,
+                mixes,
+                ..
+            } => crate::solve::ConstraintValue::Path {
+                position: *position,
+                spacing: *spacing,
+                mixes: *mixes,
+            },
             Self::Physics {
                 inertia,
                 strength,
@@ -1035,6 +1223,15 @@ impl ConstraintPose {
             Self::Transform { mixes, .. } => {
                 std::iter::once(8).chain(mixes.map(f64::to_bits)).collect()
             }
+            Self::Path {
+                position,
+                spacing,
+                mixes,
+                ..
+            } => std::iter::once(9)
+                .chain([position.to_bits(), spacing.to_bits()])
+                .chain(mixes.map(f64::to_bits))
+                .collect(),
             Self::Physics {
                 inertia,
                 strength,
@@ -1133,6 +1330,12 @@ pub(crate) fn sample(
                 constraint: *id,
                 mixes: c.mix.map(f64::from),
             },
+            Constraint::Path(c) => ConstraintPose::Path {
+                constraint: *id,
+                position: c.position.into(),
+                spacing: c.spacing.into(),
+                mixes: [c.mix_rotate, c.mix_x, c.mix_y].map(f64::from),
+            },
             Constraint::Physics(c) => ConstraintPose::Physics {
                 constraint: *id,
                 inertia: c.inertia.into(),
@@ -1178,6 +1381,18 @@ pub(crate) fn sample(
                     ConstraintTimeline::TransformMix { .. },
                     ConstraintPose::Transform { mixes, .. },
                 ) => {
+                    *mixes = values.try_into().unwrap();
+                }
+                (
+                    ConstraintTimeline::PathPosition { .. },
+                    ConstraintPose::Path { position, .. },
+                ) => {
+                    *position = values[0];
+                }
+                (ConstraintTimeline::PathSpacing { .. }, ConstraintPose::Path { spacing, .. }) => {
+                    *spacing = values[0];
+                }
+                (ConstraintTimeline::PathMix { .. }, ConstraintPose::Path { mixes, .. }) => {
                     *mixes = values.try_into().unwrap();
                 }
                 (

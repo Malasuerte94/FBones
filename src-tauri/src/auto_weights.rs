@@ -25,6 +25,7 @@
 //! Already posed bindings may move when weights change.
 use crate::{project::AppError, rig::Pose};
 use fbones_format::minimal::{meshes::Mesh, Bone};
+use std::{cmp::Ordering, collections::BinaryHeap};
 
 const MAX_VERTICES: usize = crate::mesh::MAX_VERTICES;
 const MAX_BONES: usize = 128;
@@ -120,7 +121,7 @@ fn graph(mesh: BindingTopology<'_>, points: &[Point]) -> Result<Graph, AppError>
     if !mesh.triangles.len().is_multiple_of(3)
         || !mesh.edges.len().is_multiple_of(2)
         || mesh.triangles.len() > crate::mesh::MAX_TRIANGLE_INDICES
-        || mesh.edges.len() > 4096
+        || mesh.edges.len() > crate::mesh::MAX_EDGE_INDICES
     {
         return Err(invalid("Use valid triangle and edge arrays."));
     }
@@ -179,32 +180,65 @@ fn components(graph: &Graph) -> Vec<Vec<usize>> {
     }
     result
 }
+
+struct TravelEntry {
+    vertex: usize,
+    distance: f64,
+}
+
+impl PartialEq for TravelEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.vertex == other.vertex && self.distance.to_bits() == other.distance.to_bits()
+    }
+}
+
+impl Eq for TravelEntry {}
+
+impl PartialOrd for TravelEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for TravelEntry {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // BinaryHeap pops its maximum. Reverse distance and vertex order.
+        other
+            .distance
+            .total_cmp(&self.distance)
+            .then_with(|| other.vertex.cmp(&self.vertex))
+    }
+}
+
 fn travel_distances(
     graph: &Graph,
     component: &[usize],
     mut distances: Vec<f64>,
     floor: f64,
 ) -> Vec<f64> {
-    let mut visited = vec![false; graph.len()];
-    for _ in component {
-        let next = component
-            .iter()
-            .copied()
-            .filter(|v| !visited[*v])
-            .min_by(|a, b| {
-                distances[*a]
-                    .total_cmp(&distances[*b])
-                    .then_with(|| a.cmp(b))
-            });
-        let Some(vertex) = next else { break };
-        if !distances[vertex].is_finite() {
-            break;
+    let mut queue: BinaryHeap<_> = component
+        .iter()
+        .copied()
+        .filter(|&vertex| distances[vertex].is_finite())
+        .map(|vertex| TravelEntry {
+            vertex,
+            distance: distances[vertex],
+        })
+        .collect();
+    while let Some(TravelEntry { vertex, distance }) = queue.pop() {
+        // Nonnegative edges settle each current distance once. Earlier entries
+        // for that vertex stay in the queue until popped.
+        if distance.to_bits() != distances[vertex].to_bits() {
+            continue;
         }
-        visited[vertex] = true;
         for (neighbor, length) in &graph[vertex] {
-            let candidate = distances[vertex] + length.max(floor);
+            let candidate = distance + length.max(floor);
             if candidate < distances[*neighbor] {
                 distances[*neighbor] = candidate;
+                queue.push(TravelEntry {
+                    vertex: *neighbor,
+                    distance: candidate,
+                });
             }
         }
     }
@@ -590,6 +624,51 @@ mod tests {
     use super::*;
     use crate::rig::{poses, zero};
     use fbones_format::minimal::{meshes::Vertex, regions::Region};
+
+    #[test]
+    fn travel_queue_preserves_total_distance_order_and_vertex_ties() {
+        let mut queue = BinaryHeap::from([
+            TravelEntry {
+                vertex: 0,
+                distance: 1.0,
+            },
+            TravelEntry {
+                vertex: 2,
+                distance: 0.0,
+            },
+            TravelEntry {
+                vertex: 1,
+                distance: 0.0,
+            },
+            TravelEntry {
+                vertex: 3,
+                distance: -0.0,
+            },
+        ]);
+        let vertices: Vec<_> = std::iter::from_fn(|| queue.pop().map(|entry| entry.vertex)).collect();
+        assert_eq!(vertices, [3, 1, 2, 0]);
+    }
+
+    #[test]
+    fn travel_uses_improved_entries_and_keeps_other_components_untouched() {
+        let graph = vec![
+            vec![(1, 5.0), (2, 1.0), (3, 1.0)],
+            vec![(0, 5.0), (2, 0.0), (3, 0.25), (4, 2.0)],
+            vec![(0, 1.0), (1, 0.0)],
+            vec![(0, 1.0), (1, 0.25)],
+            vec![(1, 2.0)],
+            vec![(6, 0.5)],
+            vec![(5, 0.5)],
+        ];
+        let infinity = f64::INFINITY;
+        let seeds = vec![0.0, infinity, infinity, 1.0, infinity, 2.0, infinity];
+        let distances = travel_distances(&graph, &[0, 1, 2, 3, 4], seeds, 0.25);
+        let expected = [0.0, 1.25, 1.0, 1.0, 3.25, 2.0, infinity];
+        assert_eq!(
+            distances.into_iter().map(f64::to_bits).collect::<Vec<_>>(),
+            expected.map(f64::to_bits)
+        );
+    }
 
     fn bone(x: f32, y: f32, length: f32) -> Bone {
         Bone {
@@ -1068,6 +1147,43 @@ mod tests {
         )
         .is_err());
         assert_eq!(invalid, before);
+    }
+    #[cfg(feature = "scene-editing")]
+    #[test]
+    fn scene_auto_accepts_dense_edges_and_rejects_oversized_topology_atomically() {
+        let bones = [bone(0., 0., 0.), bone(-30., 0., 0.), bone(30., 0., 0.)];
+        let poses = poses(&bones);
+        let original = crate::scene_large_mesh_fixture::mesh(32, 32, true);
+        let mut dense = original.clone();
+        let mut edges = std::collections::BTreeSet::new();
+        for face in dense.triangles.chunks_exact(3) {
+            for (a, b) in [(face[0], face[1]), (face[1], face[2]), (face[2], face[0])] {
+                edges.insert((a.min(b), a.max(b)));
+            }
+        }
+        dense.edges = edges
+            .into_iter()
+            .flat_map(|(a, b)| [u32::from(a), u32::from(b)])
+            .collect();
+        assert_eq!(dense.edges.len(), 5890);
+
+        let mut oversized = dense.clone();
+        let edge = [oversized.edges[0], oversized.edges[1]];
+        while oversized.edges.len() <= crate::mesh::MAX_EDGE_INDICES {
+            oversized.edges.extend(edge);
+        }
+        let before = oversized.clone();
+        let scope = AutoScope::default();
+        assert!(scoped(&mut oversized, &bones, &poses, &scope).is_err());
+        assert_eq!(oversized, before);
+
+        let mut hull_only = original.clone();
+        scoped(&mut hull_only, &bones, &poses, &scope).unwrap();
+        scoped(&mut dense, &bones, &poses, &scope).unwrap();
+        assert_ne!(weights(&dense), weights(&original));
+        assert_eq!(weights(&dense), weights(&hull_only));
+        assert_eq!(positions(&dense), positions(&original));
+        assert_normalized(&dense);
     }
     #[test]
     fn bent_connected_surface_uses_graph_distance_instead_of_cross_gap_proximity() {

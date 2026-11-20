@@ -1,9 +1,9 @@
 import type {BoneView,SlotView,AttachmentView,RigEdit,DenseBindingView} from './project.ts';
 import {worldRegions} from './images.ts';
 import {meshPoints,previewVertices,type Point} from './meshes.ts';
-import {worldBones,localPoint,transformPoint} from './rig.ts';
+import {worldBones,localPoint,transformPoint,inverseVector,type Affine} from './rig.ts';
 import {polygonContains} from './clipping.ts';
-import {bindingPoints,previewBindingVertices} from './binding.ts';
+import {bindingPoints,previewBindingVertices,type AttachmentGeometryContext} from './binding.ts';
 
 export function renderedAttachmentId(slot:SlotView):number|null{
   return slot.activeAttachmentId===undefined?(slot.visible&&slot.region?slot.id:null):slot.activeAttachmentId;
@@ -22,14 +22,31 @@ export function resolveAttachment(slots:readonly SlotView[],id:number,inspected?
 }
 /** Selection geometry is independent from activation, visibility and PNGs.
  * Clip handles use authored vertices, not its optional rendered convex hull. */
-export function attachmentGeometry(bones:readonly BoneView[],slot:SlotView,attachment:AttachmentView):Point[]{
-  if(attachment.clipping)return bindingPoints(bones,attachment.clipping);
-  if(attachment.mesh)return meshPoints(bones,attachment.mesh);
-  return attachment.region?imagePolygon(bones,{...slot,visible:true,region:attachment.region,mesh:null}):[];
+export function attachmentGeometry(bones:readonly BoneView[],slot:SlotView,attachment:AttachmentView,geometry?:AttachmentGeometryContext):Point[]{
+  const binding=attachment.clipping??attachment.mesh;
+  if(binding)return geometry?.pointsFor(binding)??bindingPoints(bones,binding);
+  return attachment.region?imagePolygon(bones,{...slot,visible:true,region:attachment.region,mesh:null},geometry):[];
 }
-export function selectedAttachmentGeometry(bones:readonly BoneView[],slots:readonly SlotView[],ids:readonly number[],inspected?:AttachmentView|null):Array<ResolvedAttachment&{points:Point[]}>{
-  return [...new Set(ids)].flatMap(id=>{const resolved=resolveAttachment(slots,id,inspected);if(!resolved)return[];const points=attachmentGeometry(bones,resolved.slot,resolved.attachment);return points.length?[{...resolved,points}]:[];});
+export function selectedAttachmentGeometry(bones:readonly BoneView[],slots:readonly SlotView[],ids:readonly number[],inspected?:AttachmentView|null,geometry?:AttachmentGeometryContext):Array<ResolvedAttachment&{points:Point[]}>{
+  return [...new Set(ids)].flatMap(id=>{const resolved=resolveAttachment(slots,id,inspected);if(!resolved)return[];const points=attachmentGeometry(bones,resolved.slot,resolved.attachment,geometry);return points.length?[{...resolved,points}]:[];});
 }
+
+/** Mean of the current world-space hull vertices of one inspected Scene Mesh. */
+export function meshHullCenter(bones:readonly BoneView[],slots:readonly SlotView[],inspected:AttachmentView):Point|null {
+  if(inspected.type!=='mesh')return null;
+  const resolved=resolveAttachment(slots,inspected.id);
+  if(!resolved?.slot.attachments||resolved.slot.id!==inspected.slot||resolved.attachment.slot!==inspected.slot||
+    resolved.attachment.type!=='mesh'||!resolved.attachment.mesh)return null;
+  const {mesh}=resolved.attachment,{hull}=mesh;
+  if(!Number.isInteger(hull)||hull<3||hull>mesh.vertices.length)return null;
+  try{
+    const points=bindingPoints(bones,{...mesh,vertices:mesh.vertices.slice(0,hull)});
+    let x=0,y=0;
+    for(const point of points){x+=point.x/hull;y+=point.y/hull;}
+    return Number.isFinite(x)&&Number.isFinite(y)?{x,y}:null;
+  }catch{return null;}
+}
+
 /** Replace only the addressed real binding; activation and sibling inventory
  * remain unchanged, including when the edited alternative is inactive. */
 export function previewAttachmentBinding(slots:readonly SlotView[],id:number,binding:DenseBindingView):SlotView[]{
@@ -41,9 +58,9 @@ export function previewAttachmentBinding(slots:readonly SlotView[],id:number,bin
     return{...slot,attachments,...(active?{region:active.region,mesh:active.mesh}:{})};
   });
 }
-export function imagePolygon(bones:readonly BoneView[],slot:SlotView):Point[]{
-  if(slot.mesh)return meshPoints(bones,slot.mesh);
-  const region=worldRegions(bones,[slot])[0];if(!region)return [];
+export function imagePolygon(bones:readonly BoneView[],slot:SlotView,geometry?:AttachmentGeometryContext):Point[]{
+  if(slot.mesh)return geometry?.pointsFor(slot.mesh)??meshPoints(bones,slot.mesh);
+  const region=worldRegions(bones,[slot],geometry?.evaluated)[0];if(!region)return [];
   const w=region.region.width/2,h=region.region.height/2;
   return[[-w,-h],[-w,h],[w,h],[w,-h]].map(([x,y])=>transformPoint(region,x!,y!));
 }
@@ -74,6 +91,34 @@ export function sceneImagesInBox(bones:readonly BoneView[],slots:readonly SlotVi
   });
 }
 export type AttachmentTransform=Extract<RigEdit,{type:'transformAttachments'}>;
+export type RegionPositionEdit=Extract<RigEdit,{type:'setRegionPosition'}>;
+export type RegionSnapTarget={id:number;region:Pick<NonNullable<AttachmentView['region']>,'x'|'y'>;owner:Affine};
+
+/** Snap absolute positions in the owner's space. Axis handles stay on their
+ * world axis, even when an oblique owner makes the half-unit grid incompatible. */
+export function snapRegionTranslation(target:RegionSnapTarget,delta:Point,axis:'x'|'y'|null){
+  const {id,region,owner}=target;
+  const local=inverseVector(owner,delta.x,delta.y);
+  const localTolerance=1e-9*Math.max(1,Math.abs(local.x),Math.abs(local.y));
+  const half=(origin:number,offset:number)=>Math.abs(offset)<=localTolerance?origin:Math.round((origin+offset)*2)/2;
+  const x=half(region.x,local.x),y=half(region.y,local.y);
+  const mx=x-region.x,my=y-region.y;
+  const applied={dx:owner.a*mx+owner.c*my,dy:owner.b*mx+owner.d*my};
+  const worldTolerance=1e-9*Math.max(1,Math.abs(applied.dx),Math.abs(applied.dy));
+  if(axis==='x'&&Math.abs(applied.dy)>worldTolerance||axis==='y'&&Math.abs(applied.dx)>worldTolerance)return undefined;
+  const edit:RegionPositionEdit={type:'setRegionPosition',id,...(mx?{x}:{}),...(my?{y}:{})};
+  if((mx&&(!Number.isFinite(x)||Math.abs(x)>1e6))||(my&&(!Number.isFinite(y)||Math.abs(y)>1e6)))return {delta:{dx:0,dy:0},edit:null};
+  return {delta:applied,edit:mx||my?edit:null};
+}
+
+export function previewRegionPosition(slots:readonly SlotView[],edit:RegionPositionEdit):SlotView[]{
+  return slots.map(slot=>{
+    if(slot.activeAttachmentId!==edit.id||!slot.region||!slot.attachments)return slot;
+    const region={...slot.region,x:edit.x??slot.region.x,y:edit.y??slot.region.y};
+    return {...slot,region,attachments:slot.attachments.map(attachment=>attachment.id===edit.id?{...attachment,region}:attachment)};
+  });
+}
+
 export function transformAttachmentPoint(point:Point,edit:AttachmentTransform):Point{
   if(edit.mode==='translate')return{x:point.x+edit.dx,y:point.y+edit.dy};
   if(edit.mode==='scale')return{x:edit.pivotX+(point.x-edit.pivotX)*edit.scaleX,y:edit.pivotY+(point.y-edit.pivotY)*edit.scaleY};

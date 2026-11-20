@@ -3,7 +3,7 @@
 use crate::project::AppError;
 use std::collections::{BTreeMap, BTreeSet};
 type Point = [f64; 2];
-const EPS: f64 = 1e-10;
+pub(crate) const EPS: f64 = 1e-10;
 fn invalid() -> AppError {
     AppError::new(
         "InvalidMesh",

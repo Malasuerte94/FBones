@@ -131,14 +131,27 @@ test('@native Direct cannot decrease partial sole unlocked mass when there is no
   expect(weightCalls(native,start,'setAttachmentWeight')[0]!.args.edit).toEqual({type:'setAttachmentWeight',id:f.inactive,vertex:0,bone:f.b,value:.5,lockedBones:[f.a]});
 });
 
-test('@native Auto with only a locked candidate is a no-op and does not consume the preceding edit undo',async({page,native})=>{
+test('@native Auto explains a locked-only scope and preserves the preceding edit undo',async({page,native})=>{
   const f=await fixture(native);await openNativeEditor(page);await selectWeights(page,f);const original=(await native.snapshot())!;
   await number(page,50);await expect.poll(async()=>binding((await native.snapshot())!,f.inactive).vertices[0]!.weights[1]).toBe(.5);
-  await lock(page,f.b);await page.locator(`[data-weight-bone="${f.b}"]`).getByRole('button',{name:'Influence B',exact:true}).click();
-  await expect(page.getByTestId('weights-auto-scope')).toHaveText('Auto: 1 vertices · 1 influences');
-  const before=(await native.snapshot())!,start=native.calls.length;await page.getByTestId('weights-auto').click();
-  await expect.poll(()=>weightCalls(native,start,'autoAttachmentWeights').length).toBe(1);expect(await native.snapshot()).toEqual(before);
-  expect(weightCalls(native,start,'autoAttachmentWeights')[0]!.args.edit).toEqual({type:'autoAttachmentWeights',id:f.inactive,scope:{vertices:[0],bones:[f.b],lockedBones:[f.b]}});
+  await lock(page,f.b);
+  const selectedBone=page.locator(`[data-weight-bone="${f.b}"]`).getByRole('button',{name:'Influence B',exact:true});
+  await selectedBone.click();
+  const scope=page.getByTestId('weights-auto-scope'),auto=page.getByTestId('weights-auto');
+  await expect(scope).toHaveText('Auto: 1 vertices · 1 influences');
+  await expect(auto).toBeEnabled();
+  const before=(await native.snapshot())!,start=native.calls.length;
+  await auto.click();
+  const feedback=page.getByRole('status').and(page.getByTestId('weights-auto-result'));
+  await expect(feedback).toHaveText('All bones in the Auto scope are locked.');
+  await expect(feedback).toBeVisible();
+  expect(weightCalls(native,start,'autoAttachmentWeights').map(call=>call.args.edit)).toEqual([
+    {type:'autoAttachmentWeights',id:f.inactive,scope:{vertices:[0],bones:[f.b],lockedBones:[f.b]}},
+  ]);
+  expect(await native.snapshot()).toEqual(before);
+  await expect(scope).toHaveText('Auto: 1 vertices · 1 influences');
+  await expect(selectedBone).toHaveAttribute('aria-pressed','true');
+  await expect(page.getByTestId(`weights-lock-${f.b}`)).toHaveAttribute('aria-pressed','true');
   await page.getByRole('button',{name:'Undo',exact:true}).click();await expect.poll(async()=>binding((await native.snapshot())!,f.inactive).vertices).toEqual(binding(original,f.inactive).vertices);
   await page.getByRole('button',{name:'Redo',exact:true}).click();await expect.poll(async()=>binding((await native.snapshot())!,f.inactive).vertices).toEqual(binding(before,f.inactive).vertices);
   preserved(before,(await native.snapshot())!,f.inactive,[0]);

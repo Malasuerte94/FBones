@@ -22,6 +22,7 @@ const {Client}=await import(pathToFileURL(path.join(sdkRoot,'dist/esm/client/ind
 const {StreamableHTTPClientTransport}=await import(pathToFileURL(path.join(sdkRoot,'dist/esm/client/streamableHttp.js')).href);
 const client=new Client({name:'FBones independent acceptance',version:'1.0.0'});
 const transport=new StreamableHTTPClientTransport(endpoint,{requestInit:{headers:{Authorization:`Bearer ${connection.token}`}}});
+const expectedToolCount=24,expectedEditCount=110;
 const calls=[],checks=[],toolsSeen=new Set();let project=null,revision=0;
 function check(name){checks.push(name);}
 async function tool(name,args={},expectError=false){
@@ -68,12 +69,12 @@ await writeNew(path.join(images,'square.png'),pngBytes);await writeNew(path.join
 const started=new Date().toISOString();let finished=false;
 try{
  await client.connect(transport);assert.equal(client.getServerVersion()?.name,'FBones');check('official-sdk initialize and initialized notification');
- const discovered=await client.listTools();assert.equal(discovered.tools.length,23);assert.equal(new Set(discovered.tools.map(t=>t.name)).size,23);
+ const discovered=await client.listTools();assert.equal(discovered.tools.length,expectedToolCount);assert.equal(new Set(discovered.tools.map(t=>t.name)).size,expectedToolCount);
  await writeNew(path.join(directory,'tools.json'),JSON.stringify(discovered,null,2)+'\n');
  const resources=await client.listResources();assert(resources.resources.some(r=>r.uri==='fbones://guide'));assert(resources.resources.some(r=>r.uri==='fbones://edit-schema'));
  const guide=await client.readResource({uri:'fbones://guide'});assert(guide.contents[0].text.includes('expectedRevision'));
- const schema=JSON.parse((await client.readResource({uri:'fbones://edit-schema'})).contents[0].text);assert.equal(schema.$defs.rig__RigEdit.oneOf.length,86);
- const prompts=await client.listPrompts();assert(prompts.prompts.some(p=>p.name==='rig-image'));const prompt=await client.getPrompt({name:'rig-image'});assert(prompt.messages.length);check('23 discoverable tools,86 edit variants,resources and prompt');
+ const schema=JSON.parse((await client.readResource({uri:'fbones://edit-schema'})).contents[0].text);assert.equal(schema.$defs.rig__RigEdit.oneOf.length,expectedEditCount);
+ const prompts=await client.listPrompts();assert(prompts.prompts.some(p=>p.name==='rig-image'));const prompt=await client.getPrompt({name:'rig-image'});assert(prompt.messages.length);check(`${expectedToolCount} discoverable tools, ${expectedEditCount} edit variants, resources and prompt`);
  await read();assert.equal(project,null,'Refusing a live editor containing an existing project.');
  await mutate('fbones_create_project',{name:'MCP acceptance rig'});assert.equal(project.bones.length,1);const root=project.bones[0].id;
  const initialRevision=revision;
@@ -106,12 +107,37 @@ try{
  frozen=await evaluate({mode:'none',time:0});await edit({type:'bindAttachment',id:attachment,bones:[root,child]},frozen.poseEpoch);assert(project.slots[0].mesh.weighted);
  frozen=await evaluate({mode:'none',time:0});await edit({type:'autoAttachmentWeights',id:attachment},frozen.poseEpoch);
  for(const vertex of project.slots[0].mesh.vertices)assert(Math.abs(vertex.weights.reduce((a,b)=>a+b,0)-1)<1e-6);check('slot/attachment trace previews and commits,stale pose rejection,binding and normalized Auto Weights');
+ const mesh=project.slots[0].mesh, firstWeights=mesh.vertices[0].weights;
+ const minorBone=mesh.bones[firstWeights[0]<=firstWeights[1]?0:1];
+ await edit({type:'setAttachmentWeight',id:attachment,vertex:0,bone:minorBone,value:0.25});
+ const beforePrune=structuredClone(project.slots[0].mesh.vertices), pruneRevision=revision;
+ const pruneRequest={targets:[{id:attachment}],maxInfluences:1,threshold:0};
+ frozen=await evaluate({mode:'none',time:0});
+ const prune=data(await tool('fbones_preview_prune_weights',{expectedRevision:pruneRevision,request:pruneRequest,poseEpoch:frozen.poseEpoch}));
+ assert.equal(prune.revision,pruneRevision);assert.equal(prune.poseEpoch,frozen.poseEpoch);assert(prune.removed>0);
+ assert.deepEqual((await read()).slots[0].mesh.vertices,beforePrune);assert.equal(revision,pruneRevision);
+ await edit({type:'pruneAttachmentWeights',request:pruneRequest},frozen.poseEpoch);
+ assert.equal(revision,pruneRevision+1);
+ const prunedRows=prune.targets.find(target=>target.id===attachment).rows;
+ assert(prunedRows.some(({vertex})=>vertex===0));
+ for(const {vertex,weights} of prunedRows)assert.deepEqual(project.slots[0].mesh.vertices[vertex],{...beforePrune[vertex],weights});
+ await edit({type:'undo'});assert.deepEqual(project.slots[0].mesh.vertices,beforePrune);
+ check('read-only Prune preview, matching Apply and one-step Undo');
  await edit({type:'addPhysicsToBones',bones:[child]});assert.equal(project.constraints.length,1);assert.equal(project.constraints[0].type,'physics');
  const authoredBones=structuredClone(project.bones),physics=structuredClone(project.constraints);
  await evaluate({mode:'reset',time:0});await evaluate({mode:'update',time:0.25});await read();assert.deepEqual(project.bones,authoredBones);assert.deepEqual(project.constraints,physics);check('Physics creation/reset/update does not bake authored fields');
  await edit({type:'createAnimation',name:'AI motion'});const animation=project.editedAnimation;
  await edit({type:'setAnimationKeys',animation,keys:[{bone:root,channel:'translate',frame:0,values:[0,0],curve:'linear'},{bone:root,channel:'translate',frame:30,values:[30,0],curve:'linear'}]});
  const pose=await evaluate({mode:'replay',time:0.5,animationId:animation});assert(pose.bones.length===2);await read();assert.deepEqual(project.bones,authoredBones);assert.equal(project.animations.find(a=>a.id===animation).duration,30);check('animation key authoring and independent sampled pose without Setup baking');
+ const originalTrack=structuredClone(project.animations.find(a=>a.id===animation).tracks[0]),beforeStore=revision;
+ await edit({type:'storeAnimationKeys',animation});assert.equal(revision,beforeStore);assert.deepEqual(project.storedAnimation.tracks[0],originalTrack);
+ await edit({type:'deleteAnimationKeys',animation,keys:originalTrack.keys.map(key=>key.id)});
+ assert.deepEqual(project.animations.find(a=>a.id===animation).tracks,[]);
+ const beforeSwap=revision;
+ await edit({type:'swapStoredAnimationKeys',animation});assert.equal(revision,beforeSwap+1);
+ assert.deepEqual(project.animations.find(a=>a.id===animation).tracks[0],originalTrack);assert.deepEqual(project.storedAnimation.tracks,[]);
+ await edit({type:'clearStoredAnimationKeys',animation});assert.equal(revision,beforeSwap+1);assert.equal(project.storedAnimation,undefined);
+ check('Graph Store, atomic all-key Swap and Clear share the authored native Session');
  await mutate('fbones_export_runtime',{path:path.join(directory,'runtime-export')});
  await mutate('fbones_save_project',{path:savedPath,saveAs:true});assert.equal(project.dirty,false);
  const before=await fs.readFile(savedPath);assert(before.length>32&&before[0]!==123,'Save must be binary');
@@ -124,7 +150,7 @@ try{
  const capture=await tool('fbones_capture_viewport',{expectedRevision:revision,documentId:project.documentId});const view=capture.content.find(c=>c.type==='image');assert.equal(view?.mimeType,'image/png');const captured=Buffer.from(view.data,'base64');assert.deepEqual([...captured.subarray(0,8)],[137,80,78,71,13,10,26,10]);assert(captured.readUInt32BE(16)>0&&captured.readUInt32BE(20)>0);await writeNew(path.join(directory,'viewport.png'),captured);check('actual renderer viewport returned as MCP ImageContent');
  for(const t of discovered.tools)assert(toolsSeen.has(t.name),'Untested discovered tool '+t.name);
  finished=true;
- const report={status:'PASS',started,finished:new Date().toISOString(),sdk:{name:sdkPackage.name,version:sdkPackage.version},transport:'official SDK StreamableHTTPClientTransport',checks,tools:[...toolsSeen].sort(),calls,project:{name:project.name,revision,documentId:project.documentId,bones:project.bones.length,slots:project.slots.length,constraints:project.constraints.length,animations:project.animations.length,dirty:project.dirty},artifacts:{binary:{bytes:before.length,sha256:hash(before)},png:{bytes:pngBytes.length,sha256:hash(pngBytes)},wav:{bytes:wavBytes.length,sha256:hash(wavBytes)},viewport:{bytes:captured.length,sha256:hash(captured),width:captured.readUInt32BE(16),height:captured.readUInt32BE(20)}},beforeSemantics,verifiedAuthoredSemantics:true,referencedImage,limitations:['One dedicated Linux editor instance; not Windows/macOS native acceptance.','23 tool routes and representative native edits; not every numerical edge of all86 edit variants.','MCP exposure adds no new Spine fidelity claim.']};
+ const report={status:'PASS',started,finished:new Date().toISOString(),sdk:{name:sdkPackage.name,version:sdkPackage.version},transport:'official SDK StreamableHTTPClientTransport',checks,tools:[...toolsSeen].sort(),calls,project:{name:project.name,revision,documentId:project.documentId,bones:project.bones.length,slots:project.slots.length,constraints:project.constraints.length,animations:project.animations.length,dirty:project.dirty},artifacts:{binary:{bytes:before.length,sha256:hash(before)},png:{bytes:pngBytes.length,sha256:hash(pngBytes)},wav:{bytes:wavBytes.length,sha256:hash(wavBytes)},viewport:{bytes:captured.length,sha256:hash(captured),width:captured.readUInt32BE(16),height:captured.readUInt32BE(20)}},beforeSemantics,verifiedAuthoredSemantics:true,referencedImage,limitations:['One dedicated Linux editor instance; not Windows/macOS native acceptance.',`${expectedToolCount} tool routes and representative native edits across ${expectedEditCount} edit variants.`,'MCP exposure adds no new Spine fidelity claim.']};
  await writeNew(reportPath,JSON.stringify(report,null,2)+'\n');console.log(`Official MCP SDK ${sdkPackage.version}: ${checks.length} acceptance groups,${toolsSeen.size} tool routes PASS.`);
 }catch(error){await writeNew(reportPath,JSON.stringify({status:'FAIL',started,finished:new Date().toISOString(),sdk:{name:sdkPackage.name,version:sdkPackage.version},checks,calls,error:error instanceof Error?error.message:String(error)},null,2)+'\n');throw error;}
 finally{await client.close().catch(()=>{});if(!finished)process.exitCode=1;}

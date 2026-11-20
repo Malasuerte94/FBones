@@ -1,12 +1,12 @@
 import {bezierValue,type AnimationCurve} from './animation.ts';
-import type {AttachmentView,SlotView} from './project.ts';
+import {linkedTimelineSourceId,type AttachmentView,type SlotView} from './project.ts';
 
 export interface DrawOrderKey {id:number;frame:number;order:number[]|null}
 export interface DrawOrderKeyInput {frame:number;order:number[]|null;keyId?:number}
 /** Deformation has one progress curve for the complete dense offset vector. */
 export interface DeformKey {id:number;frame:number;offsets:number[];dataPresent:boolean;curve:AnimationCurve;controls?:[number,number,number,number]|null}
 export interface DeformTrack {attachment:number;keys:DeformKey[]}
-export interface DeformKeyInput {attachment:number;frame:number;offsets:number[];offsetBits?:number[];dataPresent?:boolean;curve:AnimationCurve;controls?:[number,number,number,number]|null;keyId?:number}
+export interface DeformKeyInput {attachment:number;frame:number;offsets:number[];offsetBits?:number[];dataPresent?:boolean;curve:AnimationCurve;controls?:[number,number,number,number]|null;controlsBits?:[number,number,number,number];keyId?:number}
 export interface DeformPose {attachment:number;offsets:number[];worldVertices?:[number,number][]}
 
 export function sampleDrawOrder(slots:readonly SlotView[],keys:readonly DrawOrderKey[],frame:number):number[]{
@@ -46,10 +46,14 @@ export function sampleDeformPoses(slots:readonly SlotView[],tracks:readonly Defo
 /** Keep dense dormant columns, UVs and weights. Only render-time positions change. */
 export function deformSlots(slots:readonly SlotView[],poses:readonly DeformPose[]):SlotView[]{
  const byId=new Map(poses.map(pose=>[pose.attachment,pose.offsets]));
+ const offsetsFor=(attachment:AttachmentView)=>{
+  const source=linkedTimelineSourceId(attachment);
+  return byId.get(attachment.id)??(source===undefined?undefined:byId.get(source));
+ };
  return slots.map(slot=>{
-  if(!slot.attachments?.some(attachment=>byId.has(attachment.id)))return slot;
+  if(!slot.attachments?.some(offsetsFor))return slot;
   const attachments=slot.attachments.map(attachment=>{
-   const offsets=byId.get(attachment.id),binding=attachment.mesh??attachment.clipping;if(!offsets||!binding)return attachment;
+   const offsets=offsetsFor(attachment),binding=attachment.mesh??attachment.clipping;if(!offsets||!binding)return attachment;
    if(offsets.length!==deformDimension(attachment)||offsets.some(v=>!Number.isFinite(v)))throw new Error('Animation deformation no longer matches the attachment binding.');
    let cursor=0;
    const vertices=binding.vertices.map(vertex=>({...vertex,weights:vertex.weights.map(Math.fround),positions:vertex.positions.map(value=>Math.fround(value)+offsets[cursor++]!)}));

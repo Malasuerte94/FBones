@@ -1,21 +1,29 @@
 /** Transient editor selection. It never becomes project/attachment wire data. */
 export interface WeightSelection {
   vertices:number[];
+  vertexOrder:number[];
   active:number|null;
   bones:number[];
   anchor:number|null;
   vertexCount:number;
   locks:number[];
 }
-export function emptyWeightSelection(vertexCount=0):WeightSelection{return{vertices:[],active:null,bones:[],anchor:null,vertexCount,locks:[]};}
+export function emptyWeightSelection(vertexCount=0):WeightSelection{return{vertices:[],vertexOrder:[],active:null,bones:[],anchor:null,vertexCount,locks:[]};}
+function orderedWeightVertices(previous:readonly number[], vertices:readonly number[]):number[]{
+  const remaining=new Set(vertices);
+  return [...previous.filter(vertex=>remaining.delete(vertex)),...remaining];
+}
 export function validWeightSelection(value:WeightSelection|undefined,count:number,bones:readonly number[]):WeightSelection{
   const previous=value??emptyWeightSelection(count),allowed=new Set(bones);
   const vertices=previous.vertexCount===count?previous.vertices.filter(i=>Number.isSafeInteger(i)&&i>=0&&i<count):[];
-  return{vertices,active:vertices.includes(previous.active??-1)?previous.active:vertices.at(-1)??null,bones:previous.bones.filter(id=>allowed.has(id)),anchor:allowed.has(previous.anchor??-1)?previous.anchor:null,vertexCount:count,locks:previous.locks.filter(id=>allowed.has(id))};
+  const vertexOrder=orderedWeightVertices(previous.vertexOrder??[],vertices);
+  return{vertices,vertexOrder,active:vertices.includes(previous.active??-1)?previous.active:vertices.at(-1)??null,bones:previous.bones.filter(id=>allowed.has(id)),anchor:allowed.has(previous.anchor??-1)?previous.anchor:null,vertexCount:count,locks:previous.locks.filter(id=>allowed.has(id))};
 }
-export function withWeightVertices(value:WeightSelection,ids:readonly number[],active:number|null,count:number):WeightSelection{
+export function withWeightVertices(value:WeightSelection,ids:readonly number[],active:number|null,count:number,replaceOrder=false):WeightSelection{
   const vertices=[...new Set(ids)].filter(i=>Number.isSafeInteger(i)&&i>=0&&i<count).sort((a,b)=>a-b);
-  return{...value,vertices,active:vertices.includes(active??-1)?active:vertices.at(-1)??null,vertexCount:count};
+  // Keep existing picks in their original order, then append simultaneous hits by index.
+  const vertexOrder=replaceOrder?[...vertices]:orderedWeightVertices(value.vertexOrder??[],vertices);
+  return{...value,vertices,vertexOrder,active:vertices.includes(active??-1)?active:vertices.at(-1)??null,vertexCount:count};
 }
 /** The range follows the actual visible influence rows, independently of Bind. */
 export function withWeightBone(value:WeightSelection,id:number,ordered:readonly number[],modifiers:{toggle?:boolean;shift?:boolean}={}):WeightSelection{

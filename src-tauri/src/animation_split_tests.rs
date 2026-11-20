@@ -69,8 +69,7 @@ fn identities(f: &SceneFrame, a: usize) -> BTreeMap<u64, (u64, u32, Vec<u32>)> {
 }
 fn modes(f: &SceneFrame) -> Vec<(u64, u32)> {
     f.project.animations[0]
-        .split_modes
-        .iter()
+        .bone_split_modes()
         .map(|row| (f.bone_ids[row.bone], row.mode.wire()))
         .collect()
 }

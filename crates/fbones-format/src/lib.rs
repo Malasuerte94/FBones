@@ -26,6 +26,24 @@ pub enum FormatError {
     UnsupportedProfile,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ProfileRejection {
+    UnsupportedStructure,
+    LinkedMeshChain,
+    /// First differing byte in the decoded payload, counted from zero.
+    RoundtripMismatch {
+        offset: usize,
+    },
+}
+
+#[derive(Debug, Error)]
+#[error("{error}")]
+pub struct ProfileDecodeError {
+    #[source]
+    pub error: FormatError,
+    pub rejection: ProfileRejection,
+}
+
 /// An inspected, immutable project. Its inner objects remain undecoded.
 #[derive(Debug)]
 pub struct ProjectEnvelope {

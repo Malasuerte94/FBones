@@ -150,3 +150,66 @@ pipe inheritance explains only the runner drain. See
 Static Windows entry/path recovery remains conditional beyond independently
 closed primitive wrappers; native DLL exports identify no useful Physics reader.
 Do not repeat negative routes or treat source-symbol discovery as caller proof.
+
+## Scene-axis gravity in exact Linux 4.3.26
+
+REA `ev_b468faef6097318599a8a36aee6e66828fde309a86ad9250ae9b44a6e372f0f4`
+found that the retained exact stock direct-XY positive-gravity cases use
+identity orientations. The earlier exact Linux timing and Graph exports have
+no Physics constraints. A new independent three-lane probe isolates static
+parent rotation from signed direct translation without reopening the closed
+moving-parent cases.
+
+REA `ev_500c5464a03407b3c450338124363db7a631fa3d12f0dbaff2fd5677c70ea10b`
+authenticates exact Linux Professional 4.3.26, the canonical project and a
+30-frame PNG export at 60 fps and 200% scale on private Xvfb. Relative to
+frame 0 the red marker displacements on frame 29, in scene units, were
+`(0, -30.6820)` for the identity parent with gravity `+10`, `(0, -30.6820)`
+for the +90° parent with `+10`, and `(0, +30.6820)` for the +90° parent with
+`-10`. The matched horizontal centroid and opposite signs establish direct
+XY gravity along scene Y for these static-parent lanes. This evidence uses
+pixel-centroid measurements. Parent motion, timestep phase and other Physics
+channels retain their prior evidence limits.
+
+An independent REA check
+`ev_d0d79ee9d44aef21b4659516fda801a5393e0e9fdf2d9dc5609b63df4ffdfce4`
+measures all 30 frames with the same zero horizontal drift and matching
+positive/negative trajectories after baseline subtraction. An analytical
+replay of the current FBones equations predicts the same direction and about
+31.50 units at sample 29 under an assumed frame clock. This is an inference
+pending observed FBones playback and export-clock alignment.
+
+The accepted FBones headless Rust Session `cc2fb3337a16` replayed an
+independently authored equivalent fixture. It sampled all three lanes on a
+fixed 60 Hz grid. Replay from zero and checkpoint continuation agreed on
+every measured centroid, with the source snapshot and saved bytes unchanged.
+Against the stock PNG centroids, nominal alignment gives 1.47584 maximum and
+1.10438 RMS scene-unit error. Aligning stock frame `i` to native time
+`max(0, i - 1) / 60` yields 0.13119 maximum and 0.06718 RMS, less than 0.27
+export pixels at 200% scale. Frame 29 aligned FBones magnitude is 30.56746
+against stock 30.68204. This is observed comparison alignment on the three
+static lanes. Exact exporter sampling and moving-parent phase remain open.
+Private `fbones-gravity-replay-observation.json`, `observe-fbones-replay.mjs`
+and `rea-gravity-export-clock-2026-11-19.json` retain the input, clock, and
+matched replay evidence.
+
+A second exact Linux export adds a separate unconstrained clock marker
+keyed linearly at 60 scene units per second. REA
+`ev_44c416de3f9fed05b56997600dd6ba7dfa34d4e64d5023d5422ddbaefd9dbee2`
+records the same static gravity lanes at 60 and 120 output fps, with the
+physics step held at 1/60 and identical source project bytes. The marker
+centroids match nominal `frame / fps` in all observed frames. The gravity
+centroids match exactly at corresponding sample times across both exports.
+First signed displacement over 0.10 scene units occurs at 50 ms at 60 fps
+and 41.667 ms at 120 fps. The independent source-recurrence comparison at
+120 fps gives maximum errors of 0.19635 with one fixed 1/60 second shift,
+0.87120 with one output-frame shift, and 1.55698 unshifted. This supports a
+physics startup comparison offset of one fixed step for the static fixture.
+The exact internal update sequence and the moving-parent phase remain open.
+
+Private `gravity-axes-2026-11-19/matched-skeleton/` holds the authored own
+fixture, canonical JSON, export settings, centroids, representative PNGs and
+ownership receipt. The initial bounded attempt used a different skeleton name
+in its export settings and exited before producing PNGs. The corrected trial
+selected the canonical fixture name and closed all owned processes. Compare
+FBones against these same three lanes before changing direct-XY gravity.

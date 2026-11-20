@@ -22,6 +22,10 @@ pub(crate) const MAX_TRIANGLE_INDICES: usize =
     fbones_format::minimal::scene::MAX_SCENE_MESH_TRIANGLE_INDICES;
 #[cfg(not(feature = "scene-editing"))]
 pub(crate) const MAX_TRIANGLE_INDICES: usize = 1536;
+#[cfg(feature = "scene-editing")]
+pub(crate) const MAX_EDGE_INDICES: usize = fbones_format::minimal::scene::MAX_SCENE_MESH_EDGE_INDICES;
+#[cfg(not(feature = "scene-editing"))]
+pub(crate) const MAX_EDGE_INDICES: usize = 4096;
 #[cfg(all(test, feature = "scene-editing"))]
 #[path = "large_mesh_core_tests.rs"]
 mod large_mesh_core_tests;

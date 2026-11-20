@@ -1,13 +1,21 @@
 //! Direct complete-scene view and rig bridge. No attachment inventory is collapsed
 //! into the legacy one-image-per-slot model for an edit or save.
 use super::*;
+use crate::project::{PruneWeightsPreviewRow, PruneWeightsPreviewTarget};
 use crate::rig::{
-    local, poses, set_pose, zero, BoneView, MeshView, Pose, RegionView, RigEdit, SlotView,
-    TransformMode, VertexView,
+    local, poses, set_pose, zero, AutoWeightScope, BoneRename, BoneView, MeshView, Pose,
+    PruneWeightsRequest, RegionView, RigEdit, SlotView, TransformMode, VertexView,
 };
-use fbones_format::minimal::scene::MAX_SCENE_BONES;
+use fbones_format::minimal::{
+    meshes::Vertex,
+    scene::{MAX_SCENE_BONES, MAX_SCENE_VERTICES},
+};
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+#[path = "scene_affine_compensation.rs"]
+mod affine_compensation;
+#[path = "scene_compensation.rs"]
+mod compensation;
 #[path = "scene_parenting.rs"]
 mod parenting;
 #[derive(Clone, Debug, Serialize)]
@@ -24,6 +32,18 @@ pub struct ClippingView {
 }
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PathView {
+    pub closed: bool,
+    pub constant_speed: bool,
+    pub color: u32,
+    pub weighted: bool,
+    pub bones: Vec<u64>,
+    pub vertices: Vec<VertexView>,
+    pub edges: Vec<u32>,
+    pub lengths: Vec<f32>,
+}
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AttachmentView {
     pub id: u64,
     pub slot: u64,
@@ -32,7 +52,13 @@ pub struct AttachmentView {
     pub kind: &'static str,
     pub region: Option<RegionView>,
     pub mesh: Option<MeshView>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub linked_mesh_source_id: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub linked_mesh_inherits_timelines: Option<bool>,
     pub clipping: Option<ClippingView>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<PathView>,
     pub image_available: bool,
     pub color: u32,
     pub sequence: Option<crate::animation_sequence::SettingsInput>,
@@ -88,6 +114,48 @@ pub(crate) struct ResourceRebase {
     undo: Vec<ResourceFrameRebase>,
     redo: Vec<ResourceFrameRebase>,
 }
+
+pub(crate) struct AutoWeightWork {
+    id: u64,
+    attachment: SceneAttachment,
+    bones: Vec<Bone>,
+    world: Vec<Pose>,
+    operation: AutoWeightOperation,
+}
+
+enum AutoWeightOperation {
+    Attachment(crate::auto_weights::AutoScope),
+    SlotMesh,
+}
+
+impl AutoWeightWork {
+    pub(crate) fn solve(mut self) -> Result<SceneEdit, AppError> {
+        let clear_vertex = match self.operation {
+            AutoWeightOperation::Attachment(scope) => {
+                auto_attachment_weights(&mut self.attachment, &self.bones, &self.world, &scope)?;
+                if let Some(clip) = self.attachment.clipping() {
+                    crate::clip_edit::validate_polygon(clip, &self.world)?;
+                }
+                true
+            }
+            AutoWeightOperation::SlotMesh => {
+                // Match the slot command's legacy dormant-position policy.
+                let mesh = self
+                    .attachment
+                    .mesh_mut()
+                    .ok_or_else(|| invalid("Convert the image to a mesh first."))?;
+                crate::auto_weights::apply(mesh, &self.bones, &self.world)?;
+                false
+            }
+        };
+        Ok(SceneEdit::ApplyAutoWeights {
+            id: self.id,
+            attachment: self.attachment,
+            clear_vertex,
+        })
+    }
+}
+
 pub struct SceneRigHistory {
     pub history: SceneHistory,
 }
@@ -128,62 +196,97 @@ impl SceneRigHistory {
                     .attachments
                     .iter()
                     .enumerate()
-                    .map(|(a, attachment)| AttachmentView {
-                        id: f.attachment_ids[s][a],
-                        slot: f.slot_ids[s],
-                        name: attachment.name().into(),
-                        kind: match attachment {
-                            SceneAttachment::Region(_) => "region",
-                            SceneAttachment::Mesh(_) => "mesh",
-                            SceneAttachment::Clipping(_) => "clipping",
-                        },
-                        region: attachment.image().map(region_view),
-                        mesh: attachment.mesh().map(|m| mesh_view(m, &f.bone_ids)),
-                        clipping: attachment.clipping().map(|c| ClippingView {
-                            end_slot: f.slot_ids[c.end_slot.expect("validated endpoint")],
-                            convex: c.convex,
-                            inverse: c.inverse,
-                            color: u32::from_be_bytes(c.color),
-                            weighted: c.weighted,
-                            bones: c.bones.iter().map(|i| f.bone_ids[*i]).collect(),
-                            vertices: c
-                                .vertices
-                                .iter()
-                                .map(|v| VertexView {
-                                    weights: v.weights.clone(),
-                                    positions: v.positions.clone(),
-                                })
-                                .collect(),
-                            edges: c.edges.clone(),
-                        }),
-                        color: u32::from_be_bytes(p.attachment_color(AttachmentAddress {
+                    .map(|(a, attachment)| {
+                        let link = p.linked_mesh(AttachmentAddress {
                             slot: s,
                             attachment: a,
-                        })),
-                        sequence: crate::animation_sequence::settings(
-                            p,
-                            AttachmentAddress {
+                        });
+                        let mesh = attachment.mesh().map(|m| {
+                            let mut view = mesh_view(m, &f.bone_ids);
+                            if link.is_some() && !view.weighted {
+                                view.bones[0] = f.bone_ids[slot.bone];
+                            }
+                            view
+                        });
+                        AttachmentView {
+                            id: f.attachment_ids[s][a],
+                            slot: f.slot_ids[s],
+                            name: attachment.name().into(),
+                            kind: match attachment {
+                                SceneAttachment::Region(_) => "region",
+                                SceneAttachment::Mesh(_) => "mesh",
+                                SceneAttachment::Clipping(_) => "clipping",
+                                SceneAttachment::Path(_) => "path",
+                            },
+                            region: attachment.image().map(region_view),
+                            mesh,
+                            linked_mesh_source_id: link.map(|link| {
+                                f.attachment_ids[link.source.slot][link.source.attachment]
+                            }),
+                            linked_mesh_inherits_timelines: link.map(|link| link.inherit_timelines),
+                            clipping: attachment.clipping().map(|c| ClippingView {
+                                end_slot: f.slot_ids[c.end_slot.expect("validated endpoint")],
+                                convex: c.convex,
+                                inverse: c.inverse,
+                                color: u32::from_be_bytes(c.color),
+                                weighted: c.weighted,
+                                bones: c.bones.iter().map(|i| f.bone_ids[*i]).collect(),
+                                vertices: c
+                                    .vertices
+                                    .iter()
+                                    .map(|v| VertexView {
+                                        weights: v.weights.clone(),
+                                        positions: v.positions.clone(),
+                                    })
+                                    .collect(),
+                                edges: c.edges.clone(),
+                            }),
+                            path: attachment.path().map(|path| PathView {
+                                closed: path.closed,
+                                constant_speed: path.constant_speed,
+                                color: u32::from_be_bytes(path.color),
+                                weighted: path.weighted,
+                                bones: path.bones.iter().map(|i| f.bone_ids[*i]).collect(),
+                                vertices: path
+                                    .vertices
+                                    .iter()
+                                    .map(|v| VertexView {
+                                        weights: v.weights.clone(),
+                                        positions: v.positions.clone(),
+                                    })
+                                    .collect(),
+                                edges: path.edges.clone(),
+                                lengths: path.lengths.iter().map(|length| length.get()).collect(),
+                            }),
+                            color: u32::from_be_bytes(p.attachment_color(AttachmentAddress {
                                 slot: s,
                                 attachment: a,
-                            },
-                        )
-                        .map(Into::into),
-                        sequence_available_frames: crate::animation_sequence::available_frames(
-                            p,
-                            AttachmentAddress {
-                                slot: s,
-                                attachment: a,
-                            },
-                            cache,
-                        ),
-                        image_available: crate::animation_sequence::setup_available(
-                            p,
-                            AttachmentAddress {
-                                slot: s,
-                                attachment: a,
-                            },
-                            cache,
-                        ),
+                            })),
+                            sequence: crate::animation_sequence::settings(
+                                p,
+                                AttachmentAddress {
+                                    slot: s,
+                                    attachment: a,
+                                },
+                            )
+                            .map(Into::into),
+                            sequence_available_frames: crate::animation_sequence::available_frames(
+                                p,
+                                AttachmentAddress {
+                                    slot: s,
+                                    attachment: a,
+                                },
+                                cache,
+                            ),
+                            image_available: crate::animation_sequence::setup_available(
+                                p,
+                                AttachmentAddress {
+                                    slot: s,
+                                    attachment: a,
+                                },
+                                cache,
+                            ),
+                        }
                     })
                     .collect::<Vec<_>>();
                 let active = slot.active_attachment.map(|a| &attachments[a]);
@@ -372,6 +475,16 @@ impl SceneRigHistory {
             RigEdit::SetAttachmentSequence { id, sequence } => {
                 SceneEdit::SetAttachmentSequence { id, sequence }
             }
+            RigEdit::SetLinkedMeshInheritance {
+                id,
+                inherit_timelines,
+            } => SceneEdit::SetLinkedMeshInheritance {
+                id,
+                inherit_timelines,
+            },
+            RigEdit::CreateLinkedMesh { source, slot, name } => {
+                SceneEdit::CreateLinkedMesh { source, slot, name }
+            }
             RigEdit::RenameAttachment { id, name } => SceneEdit::RenameAttachment { id, name },
             RigEdit::DeleteAttachment { id } => SceneEdit::DeleteAttachment { id },
             RigEdit::ReorderSlot { id, index } => SceneEdit::ReorderSlot { id, index },
@@ -404,6 +517,119 @@ impl SceneRigHistory {
     pub(crate) fn geometry_edit(edit: &RigEdit) -> bool {
         geometry_edit(edit)
     }
+
+    pub(crate) fn scratch_for_prune_preview(&self) -> Self {
+        Self {
+            history: SceneHistory {
+                frame: self.history.frame.clone(),
+                undo: Vec::new(),
+                redo: Vec::new(),
+                saved: None,
+                encoded: self.history.encoded.clone(),
+                saved_encoded: None,
+                stored_animation: None,
+                offset_basis: None,
+                ids: self.history.ids,
+            },
+        }
+    }
+
+    pub(crate) fn preview_prune_weights(
+        mut self,
+        request: PruneWeightsRequest,
+        frozen: Option<Vec<Pose>>,
+    ) -> Result<(usize, Vec<PruneWeightsPreviewTarget>), AppError> {
+        let ids: Vec<_> = request.targets.iter().map(|target| target.id).collect();
+        let edit = RigEdit::PruneAttachmentWeights { request };
+        let candidate = match frozen {
+            Some(poses) => SceneEdit::RigInPose { edit, poses },
+            None => SceneEdit::Rig(edit),
+        };
+        if !self.history.apply(candidate)? {
+            return Ok((0, Vec::new()));
+        }
+        // The scratch transaction records the exact unchanged baseline rows.
+        let before = self
+            .history
+            .undo
+            .last()
+            .expect("changed Prune has an undo frame");
+        let mut removed = 0;
+        let mut targets = Vec::new();
+        for id in ids {
+            let original = attachment_weight_rows(before.attachment(id)?)?;
+            let pruned = attachment_weight_rows(self.history.frame.attachment(id)?)?;
+            let mut rows = Vec::new();
+            for (vertex, (old, new)) in original.iter().zip(pruned).enumerate() {
+                if old
+                    .weights
+                    .iter()
+                    .zip(&new.weights)
+                    .any(|(a, b)| a.to_bits() != b.to_bits())
+                {
+                    removed += old
+                        .weights
+                        .iter()
+                        .zip(&new.weights)
+                        .filter(|(a, b)| **a > 0.0 && **b == 0.0)
+                        .count();
+                    rows.push(PruneWeightsPreviewRow {
+                        vertex,
+                        weights: new.weights.clone(),
+                    });
+                }
+            }
+            if !rows.is_empty() {
+                targets.push(PruneWeightsPreviewTarget { id, rows });
+            }
+        }
+        Ok((removed, targets))
+    }
+
+    pub(crate) fn prepare_auto_weights(
+        &self,
+        edit: RigEdit,
+        frozen: Option<Vec<Pose>>,
+    ) -> Result<AutoWeightWork, AppError> {
+        let frame = self.history.frame();
+        let bones = &frame.project.rig.bones;
+        let world = frozen.unwrap_or_else(|| poses(bones));
+        if world.len() != bones.len() {
+            return Err(invalid(
+                "This frozen pose may only be used for geometry edits.",
+            ));
+        }
+        let (address, operation) = match &edit {
+            RigEdit::AutoAttachmentWeights { id, scope } => (
+                frame.attachment_address(*id)?,
+                AutoWeightOperation::Attachment(resolve_auto_scope(frame, scope.as_ref())?),
+            ),
+            _ => {
+                let address =
+                    mesh_address(frame, &edit)?.ok_or_else(|| invalid("Choose a mesh."))?;
+                (address, AutoWeightOperation::SlotMesh)
+            }
+        };
+        frame.require_editable_geometry(address)?;
+        Ok(AutoWeightWork {
+            id: frame.attachment_ids[address.slot][address.attachment],
+            attachment: frame.project.slots[address.slot].attachments[address.attachment].clone(),
+            bones: bones.clone(),
+            world,
+            operation,
+        })
+    }
+
+    pub(crate) fn commit_auto_weights(
+        &mut self,
+        project: &mut SceneProject,
+        edit: SceneEdit,
+    ) -> Result<bool, AppError> {
+        let changed = self.history.apply(edit)?;
+        *project = self.history.frame.project.clone();
+        Ok(changed)
+    }
+
     pub fn attachment_address(&self, id: u64) -> Result<AttachmentAddress, AppError> {
         self.history.frame.attachment_address(id)
     }
@@ -438,6 +664,163 @@ fn mesh_id(edit: &RigEdit) -> Option<u64> {
         _ => None,
     }
 }
+
+fn mesh_address(frame: &SceneFrame, edit: &RigEdit) -> Result<Option<AttachmentAddress>, AppError> {
+    if let RigEdit::AttachmentEdit { id, edit } = edit {
+        let slot = mesh_id(edit)
+            .ok_or_else(|| invalid("Only image mesh edits can be wrapped in attachmentEdit."))?;
+        let address = frame.attachment_address(*id)?;
+        if slot != frame.slot_ids[address.slot] {
+            return Err(invalid(
+                "The inner mesh command must address the attachment owner slot.",
+            ));
+        }
+        Ok(Some(address))
+    } else {
+        mesh_id(edit)
+            .map(|id| resolve_active(frame, id))
+            .transpose()
+    }
+}
+
+pub(super) fn focus_binding(
+    before: &mut SceneFrame,
+    next: &mut SceneFrame,
+    address: AttachmentAddress,
+    clear_vertex: bool,
+) {
+    before.focus.bone = next.bone_ids[next.project.slots[address.slot].bone];
+    before.focus.slot = Some(next.slot_ids[address.slot]);
+    before.focus.attachment = Some(next.attachment_ids[address.slot][address.attachment]);
+    if clear_vertex {
+        before.focus.vertex = None;
+    }
+    next.focus = before.focus.clone();
+}
+
+fn resolve_auto_scope(
+    frame: &SceneFrame,
+    scope: Option<&AutoWeightScope>,
+) -> Result<crate::auto_weights::AutoScope, AppError> {
+    let Some(scope) = scope else {
+        return Ok(crate::auto_weights::AutoScope::default());
+    };
+    let resolve = |ids: &[u64]| {
+        ids.iter()
+            .map(|id| frame.bone_index(*id))
+            .collect::<Result<Vec<_>, _>>()
+    };
+    Ok(crate::auto_weights::AutoScope {
+        vertices: scope.vertices.clone(),
+        bones: scope.bones.as_deref().map(resolve).transpose()?,
+        locked_bones: resolve(scope.locked_bones.as_deref().unwrap_or_default())?,
+    })
+}
+
+fn auto_attachment_weights(
+    attachment: &mut SceneAttachment,
+    bones: &[Bone],
+    world: &[Pose],
+    scope: &crate::auto_weights::AutoScope,
+) -> Result<(), AppError> {
+    let (triangles, edges) = match &*attachment {
+        SceneAttachment::Mesh(mesh) => (mesh.triangles.clone(), mesh.edges.clone()),
+        SceneAttachment::Clipping(clip) => (
+            vec![],
+            (0..clip.vertices.len())
+                .flat_map(|i| [i as u32, ((i + 1) % clip.vertices.len()) as u32])
+                .collect(),
+        ),
+        _ => return Err(invalid("Choose a mesh or clipping attachment.")),
+    };
+    crate::auto_weights::apply_binding_scoped(
+        dense_binding_mut(attachment)?,
+        crate::auto_weights::BindingTopology {
+            triangles: &triangles,
+            edges: &edges,
+        },
+        bones,
+        world,
+        crate::binding::PositionPolicy::PreserveAll,
+        scope,
+    )
+}
+
+fn prune_attachment_weights(
+    before: &mut SceneFrame,
+    next: &mut SceneFrame,
+    request: PruneWeightsRequest,
+    world: &[Pose],
+) -> Result<(), AppError> {
+    if request.targets.is_empty() || request.targets.len() > MAX_SCENE_VERTICES / 3 {
+        return Err(invalid("Choose existing weighted attachments to prune."));
+    }
+    let mut seen = HashSet::with_capacity(request.targets.len());
+    let mut targets = Vec::with_capacity(request.targets.len());
+    for target in request.targets {
+        if !seen.insert(target.id) {
+            return Err(invalid("Choose distinct attachments to prune."));
+        }
+        let address = next.attachment_address(target.id)?;
+        next.require_editable_geometry(address)?;
+        let locks = target
+            .locked_bones
+            .unwrap_or_default()
+            .into_iter()
+            .map(|id| next.bone_index(id))
+            .collect::<Result<Vec<_>, _>>()?;
+        targets.push((address, locks));
+    }
+    focus_binding(before, next, targets[0].0, true);
+    for (address, locks) in targets {
+        let attachment = &mut next.project.slots[address.slot].attachments[address.attachment];
+        crate::binding::prune_weights(
+            dense_binding_mut(attachment)?,
+            world,
+            &locks,
+            request.max_influences,
+            request.threshold,
+        )?;
+        if let Some(clip) = attachment.clipping() {
+            crate::clip_edit::validate_polygon(clip, world)?;
+        }
+    }
+    Ok(())
+}
+
+fn rename_bones(next: &mut SceneFrame, renames: &[BoneRename]) -> Result<(), AppError> {
+    if renames.is_empty() || renames.len() > MAX_SCENE_BONES {
+        return Err(invalid(&format!(
+            "Choose 1–{MAX_SCENE_BONES} bones to rename."
+        )));
+    }
+    let mut replacements = HashMap::with_capacity(renames.len());
+    for rename in renames {
+        let index = next.bone_index(rename.id)?;
+        let name = rename.name.trim();
+        if name.is_empty() || name.len() > 1024 {
+            return Err(invalid(
+                "Use nonempty bone names of at most 1024 UTF-8 bytes.",
+            ));
+        }
+        if replacements.insert(index, name).is_some() {
+            return Err(invalid("Choose each bone once."));
+        }
+    }
+    // Validate the complete namespace before writing any row, including name swaps.
+    let bones = &mut next.project.rig.bones;
+    let mut names = HashSet::with_capacity(bones.len());
+    for (index, bone) in bones.iter().enumerate() {
+        if !names.insert(replacements.get(&index).copied().unwrap_or(&bone.name)) {
+            return Err(invalid("Use a unique name for each bone."));
+        }
+    }
+    for (index, name) in replacements {
+        bones[index].name = name.to_owned();
+    }
+    Ok(())
+}
+
 pub(super) fn apply(
     before: &mut SceneFrame,
     next: &mut SceneFrame,
@@ -445,13 +828,30 @@ pub(super) fn apply(
     edit: RigEdit,
     geometry_poses: Option<&[Pose]>,
 ) -> Result<(), AppError> {
+    if let RigEdit::RenameBones { renames } = &edit {
+        if geometry_poses.is_some() {
+            return Err(AppError::new(
+                "InvalidPose",
+                "Bone names do not use an evaluated pose.",
+            ));
+        }
+        return rename_bones(next, renames);
+    }
     if matches!(
         &edit,
         RigEdit::Create { .. }
             | RigEdit::Update { .. }
+            | RigEdit::SetBoneParentPosition { .. }
+            | RigEdit::SetBoneLocalPosition { .. }
+            | RigEdit::SetBoneWorldPosition { .. }
+            | RigEdit::SetBoneWorldRotation { .. }
             | RigEdit::SetBoneColors { .. }
             | RigEdit::SetBoneColor { .. }
             | RigEdit::TransformBones { .. }
+            | RigEdit::TranslateBoneWithCompensation { .. }
+            | RigEdit::RotateBoneWithCompensation { .. }
+            | RigEdit::ScaleBoneWithCompensation { .. }
+            | RigEdit::ShearBoneWithCompensation { .. }
             | RigEdit::Length { .. }
             | RigEdit::Move { .. }
             | RigEdit::Tip { .. }
@@ -473,6 +873,50 @@ pub(super) fn apply(
     } else {
         poses(&next.project.rig.bones)
     };
+    let mesh_topology = match &edit {
+        RigEdit::GenerateMeshVertices { id } => Some((*id, None)),
+        RigEdit::ReplaceMeshOutline { id, uvs } => Some((*id, Some(uvs.as_slice()))),
+        _ => None,
+    };
+    if let Some((id, outline)) = mesh_topology {
+        let address = next.attachment_address(id)?;
+        next.require_editable_geometry(address)?;
+        let mesh = next.project.slots[address.slot].attachments[address.attachment]
+            .mesh_mut()
+            .filter(|mesh| !mesh.weighted)
+            .ok_or_else(|| {
+                AppError::new(
+                    "InvalidMesh",
+                    "Choose an unweighted mesh to change its topology.",
+                )
+            })?;
+        if next.project.animations.iter().any(|clip| {
+            clip.deform_tracks
+                .iter()
+                .any(|track| track.attachment == address && !track.keys.is_empty())
+        }) {
+            return Err(AppError::new(
+                "InvalidAnimation",
+                "Clear this attachment's deformation keys before changing its topology.",
+            ));
+        }
+        *mesh = if let Some(uvs) = outline {
+            if !(mesh.image.width > 0.0 && mesh.image.height > 0.0) {
+                return Err(AppError::new(
+                    "InvalidMesh",
+                    "Use a mesh with a positive stored image size to replace its outline.",
+                ));
+            }
+            crate::mesh_edit::replace_outline(mesh, uvs)?
+        } else {
+            crate::mesh_edit::generate_vertices(mesh)?
+        };
+        focus_binding(before, next, address, true);
+        return Ok(());
+    }
+    if let RigEdit::PruneAttachmentWeights { request } = edit {
+        return prune_attachment_weights(before, next, request, &world);
+    }
     let stable_bones = next.bone_ids.clone();
     let find = |id| {
         stable_bones
@@ -482,49 +926,32 @@ pub(super) fn apply(
     };
     let binding_id = match &edit {
         RigEdit::BindAttachment { id, .. }
+        | RigEdit::UpdateAttachmentBindings { id }
         | RigEdit::SetAttachmentWeight { id, .. }
         | RigEdit::PaintAttachmentWeights { id, .. }
         | RigEdit::NormalizeAttachmentWeights { id, .. }
+        | RigEdit::SmoothAttachmentWeights { id, .. }
+        | RigEdit::SwapAttachmentWeights { id, .. }
+        | RigEdit::PasteAttachmentWeights { id, .. }
         | RigEdit::AutoAttachmentWeights { id, .. } => Some(*id),
         _ => None,
     };
     if let Some(id) = binding_id {
         let address = next.attachment_address(id)?;
+        next.require_editable_geometry(address)?;
         let owner = next.project.slots[address.slot].bone;
-        before.focus.bone = next.bone_ids[owner];
-        before.focus.slot = Some(next.slot_ids[address.slot]);
-        before.focus.attachment = Some(id);
-        before.focus.vertex = None;
-        next.focus = before.focus.clone();
-        let auto_scope = if let RigEdit::AutoAttachmentWeights {
-            scope: Some(scope), ..
-        } = &edit
-        {
-            Some(crate::auto_weights::AutoScope {
-                vertices: scope.vertices.clone(),
-                bones: scope
-                    .bones
-                    .as_ref()
-                    .map(|ids| {
-                        ids.iter()
-                            .map(|id| next.bone_index(*id))
-                            .collect::<Result<Vec<_>, _>>()
-                    })
-                    .transpose()?,
-                locked_bones: scope
-                    .locked_bones
-                    .as_deref()
-                    .unwrap_or(&[])
-                    .iter()
-                    .map(|id| next.bone_index(*id))
-                    .collect::<Result<Vec<_>, _>>()?,
-            })
+        focus_binding(before, next, address, true);
+        let auto_scope = if let RigEdit::AutoAttachmentWeights { scope, .. } = &edit {
+            Some(resolve_auto_scope(next, scope.as_ref())?)
         } else {
             None
         };
         let manual_locks = match &edit {
             RigEdit::SetAttachmentWeight { locked_bones, .. }
             | RigEdit::PaintAttachmentWeights { locked_bones, .. }
+            | RigEdit::SmoothAttachmentWeights { locked_bones, .. }
+            | RigEdit::SwapAttachmentWeights { locked_bones, .. }
+            | RigEdit::PasteAttachmentWeights { locked_bones, .. }
             | RigEdit::NormalizeAttachmentWeights { locked_bones, .. } => locked_bones
                 .as_deref()
                 .unwrap_or(&[])
@@ -543,6 +970,9 @@ pub(super) fn apply(
                     owner,
                     &world,
                 )?;
+            }
+            RigEdit::UpdateAttachmentBindings { .. } => {
+                crate::binding::update_bindings(dense_binding_mut(attachment)?, &world)?;
             }
             RigEdit::SetAttachmentWeight {
                 vertex,
@@ -601,29 +1031,39 @@ pub(super) fn apply(
                 &world,
                 &manual_locks,
             )?,
-            RigEdit::AutoAttachmentWeights { .. } => {
-                let (triangles, edges) = match &*attachment {
-                    SceneAttachment::Mesh(m) => (m.triangles.clone(), m.edges.clone()),
-                    SceneAttachment::Clipping(c) => (
-                        vec![],
-                        (0..c.vertices.len())
-                            .flat_map(|i| [i as u32, ((i + 1) % c.vertices.len()) as u32])
-                            .collect(),
-                    ),
-                    _ => return Err(invalid("Choose a mesh or clipping attachment.")),
-                };
-                crate::auto_weights::apply_binding_scoped(
+            RigEdit::SmoothAttachmentWeights { vertices, .. } => {
+                let mesh = attachment
+                    .mesh_mut()
+                    .ok_or_else(|| invalid("Choose a mesh to smooth its weights."))?;
+                crate::binding::smooth_mesh(mesh, &world, vertices.as_deref(), &manual_locks)?;
+            }
+            RigEdit::SwapAttachmentWeights {
+                bones: [first, second],
+                ..
+            } => {
+                crate::binding::swap_weights(
                     dense_binding_mut(attachment)?,
-                    crate::auto_weights::BindingTopology {
-                        triangles: &triangles,
-                        edges: &edges,
-                    },
+                    [find(first)?, find(second)?],
+                    &world,
+                    &manual_locks,
+                )?;
+            }
+            RigEdit::PasteAttachmentWeights { bones, rows, .. } => {
+                let source_bones = bones.into_iter().map(find).collect::<Result<Vec<_>, _>>()?;
+                crate::binding::paste_weights(
+                    dense_binding_mut(attachment)?,
+                    &world,
+                    &source_bones,
+                    &rows,
+                    &manual_locks,
+                )?;
+            }
+            RigEdit::AutoAttachmentWeights { .. } => {
+                auto_attachment_weights(
+                    attachment,
                     &next.project.rig.bones,
                     &world,
-                    crate::binding::PositionPolicy::PreserveAll,
-                    auto_scope
-                        .as_ref()
-                        .unwrap_or(&crate::auto_weights::AutoScope::default()),
+                    &auto_scope.expect("Auto scope resolved before attachment mutation"),
                 )?;
             }
             _ => unreachable!(),
@@ -633,37 +1073,15 @@ pub(super) fn apply(
         }
         return Ok(());
     }
-    let (edit, address) = if let RigEdit::AttachmentEdit { id, edit } = edit {
-        if mesh_id(&edit).is_none() {
-            return Err(invalid(
-                "Only image mesh edits can be wrapped in attachmentEdit.",
-            ));
-        }
-        {
-            let a = next.attachment_address(id)?;
-            if mesh_id(&edit) != Some(next.slot_ids[a.slot]) {
-                return Err(invalid(
-                    "The inner mesh command must address the attachment owner slot.",
-                ));
-            }
-            (*edit, Some(a))
-        }
-    } else {
-        let a = mesh_id(&edit)
-            .map(|id| resolve_active(next, id))
-            .transpose()?;
-        (edit, a)
+    let address = mesh_address(next, &edit)?;
+    let edit = match edit {
+        RigEdit::AttachmentEdit { edit, .. } => *edit,
+        edit => edit,
     };
     if let Some(address) = address {
+        next.require_editable_geometry(address)?;
         let owner = next.project.slots[address.slot].bone;
-        let attachment_id = next.attachment_ids[address.slot][address.attachment];
-        let slot_id = next.slot_ids[address.slot];
-        before.focus.bone = next.bone_ids[owner];
-        next.focus.bone = next.bone_ids[owner];
-        before.focus.slot = Some(slot_id);
-        before.focus.attachment = Some(attachment_id);
-        next.focus.slot = Some(slot_id);
-        next.focus.attachment = Some(attachment_id);
+        focus_binding(before, next, address, false);
         let attachment = &mut next.project.slots[address.slot].attachments[address.attachment];
         if let RigEdit::ReplaceMesh { mesh, .. } = edit {
             *attachment = SceneAttachment::Mesh(mesh);
@@ -672,12 +1090,10 @@ pub(super) fn apply(
             if attachment.mesh().is_some() {
                 return Ok(());
             }
-            let mesh = crate::mesh::from_region(
-                attachment
-                    .image()
-                    .ok_or_else(|| invalid("Clipping is not an image mesh."))?,
-                owner,
-            );
+            let image = attachment
+                .image()
+                .ok_or_else(|| invalid("Choose an image attachment to convert to a mesh."))?;
+            let mesh = crate::mesh::from_region(image, owner);
             *attachment = SceneAttachment::Mesh(Box::new(mesh));
             next.focus.vertex = None;
         } else {
@@ -833,6 +1249,42 @@ pub(super) fn apply(
                 [scale_x, scale_y],
                 &world,
             )?;
+        }
+        RigEdit::SetRegionPosition { id, x, y } => {
+            if (x.is_none() && y.is_none())
+                || [x, y].into_iter().flatten().any(|value| {
+                    !value.is_finite() || value.abs() > 1_000_000.0 || (value * 2.0).fract() != 0.0
+                })
+            {
+                return Err(invalid(
+                    "Choose at least one Region coordinate in half-unit steps within supported bounds.",
+                ));
+            }
+            let address = next.attachment_address(id)?;
+            let slot = &mut next.project.slots[address.slot];
+            if slot.active_attachment != Some(address.attachment) {
+                return Err(invalid("Choose the slot's active Region attachment."));
+            }
+            let SceneAttachment::Region(region) = &mut slot.attachments[address.attachment] else {
+                return Err(invalid("Choose the slot's active Region attachment."));
+            };
+            if let Some(value) = x
+                .map(|value| value as f32)
+                .filter(|&value| value != region.x)
+            {
+                region.x = value;
+            }
+            if let Some(value) = y
+                .map(|value| value as f32)
+                .filter(|&value| value != region.y)
+            {
+                region.y = value;
+            }
+            before.focus.bone = next.bone_ids[slot.bone];
+            before.focus.slot = Some(next.slot_ids[address.slot]);
+            before.focus.attachment = Some(id);
+            before.focus.vertex = None;
+            next.focus = before.focus.clone();
         }
         edit @ (RigEdit::MoveClippingVertices { id, .. }
         | RigEdit::InsertClippingVertex { id, .. }
@@ -1119,6 +1571,68 @@ pub(super) fn apply(
             before.focus.bone = ids[0];
             next.focus.bone = ids[0];
         }
+        RigEdit::TranslateBoneWithCompensation {
+            id,
+            dx,
+            dy,
+            compensate_bones,
+            compensate_images,
+        } => compensation::translate(
+            before,
+            next,
+            id,
+            compensation::Translation::WorldDelta(dx, dy),
+            compensate_bones,
+            compensate_images,
+        )?,
+        RigEdit::RotateBoneWithCompensation {
+            id,
+            mode,
+            angle,
+            compensate_bones,
+            compensate_images,
+        } => affine_compensation::rotate(
+            before,
+            next,
+            id,
+            mode,
+            angle,
+            compensate_bones,
+            compensate_images,
+        )?,
+        RigEdit::ScaleBoneWithCompensation {
+            id,
+            mode,
+            x,
+            y,
+            compensate_bones,
+            compensate_images,
+        } => affine_compensation::scale(
+            before,
+            next,
+            id,
+            mode,
+            [x, y],
+            compensate_bones,
+            compensate_images,
+        )?,
+        RigEdit::ShearBoneWithCompensation {
+            id,
+            mode,
+            axis,
+            angle,
+            compensate_bones,
+            compensate_images,
+        } => affine_compensation::shear(
+            before,
+            next,
+            id,
+            mode,
+            axis,
+            angle,
+            compensate_bones,
+            compensate_images,
+        )?,
         RigEdit::Length { id, x, y } => {
             let i = find(id)?;
             let p = world[i];
@@ -1194,6 +1708,86 @@ pub(super) fn apply(
                 ..next.project.rig.bones[index].clone()
             };
         }
+        RigEdit::SetBoneParentPosition {
+            id,
+            x,
+            y,
+            compensate_bones,
+            compensate_images,
+        } => {
+            let index = find(id)?;
+            if (x.is_none() && y.is_none())
+                || [x, y]
+                    .into_iter()
+                    .flatten()
+                    .any(|value| !value.is_finite() || value.abs() > 1_000_000.0)
+            {
+                return Err(invalid(
+                    "Choose at least one finite parent-space coordinate within ±1,000,000.",
+                ));
+            }
+            if compensate_bones || compensate_images {
+                compensation::translate(
+                    before,
+                    next,
+                    id,
+                    compensation::Translation::ParentPosition(x, y),
+                    compensate_bones,
+                    compensate_images,
+                )?;
+            } else {
+                let bone = &mut next.project.rig.bones[index];
+                if let Some(x) = x {
+                    bone.x = x;
+                }
+                if let Some(y) = y {
+                    bone.y = y;
+                }
+                before.focus.bone = id;
+                next.focus.bone = id;
+            }
+        }
+        RigEdit::SetBoneLocalPosition {
+            id,
+            x,
+            y,
+            compensate_bones,
+            compensate_images,
+        } => compensation::translate(
+            before,
+            next,
+            id,
+            compensation::Translation::LocalPosition { x, y },
+            compensate_bones,
+            compensate_images,
+        )?,
+        RigEdit::SetBoneWorldPosition {
+            id,
+            axis,
+            position,
+            compensate_bones,
+            compensate_images,
+        } => compensation::translate(
+            before,
+            next,
+            id,
+            compensation::Translation::WorldPosition { axis, position },
+            compensate_bones,
+            compensate_images,
+        )?,
+        RigEdit::SetBoneWorldRotation {
+            id,
+            angle,
+            compensate_bones,
+            compensate_images,
+        } => affine_compensation::set_world_rotation(
+            before,
+            next,
+            id,
+            angle,
+            compensate_bones,
+            compensate_images,
+        )?,
         RigEdit::Move { id, x, y } => {
             let index = find(id)?;
             before.focus.bone = id;
@@ -1319,7 +1913,7 @@ pub(super) fn apply(
             let address = next.attachment_address(id)?;
             let image = next.project.slots[address.slot].attachments[address.attachment]
                 .image_mut()
-                .ok_or_else(|| invalid("Clipping has no image path."))?;
+                .ok_or_else(|| invalid("Choose an image attachment to edit its PNG path."))?;
             // The Session additionally requires this exact key in its loaded
             // image cache before staging. This lower boundary still protects
             // canonical portable keys for internal callers.
@@ -1348,8 +1942,13 @@ pub(super) fn apply(
             scale_x,
             scale_y,
         } => {
-            if [x, y, rotation, scale_x, scale_y]
+            let channels = [x, y, rotation, scale_x, scale_y];
+            if channels.iter().all(Option::is_none) {
+                return Err(invalid("Choose at least one image transform channel."));
+            }
+            if channels
                 .iter()
+                .flatten()
                 .any(|v| !v.is_finite() || v.abs() > 1_000_000.0)
             {
                 return Err(invalid(
@@ -1357,16 +1956,40 @@ pub(super) fn apply(
                 ));
             }
             let a = next.attachment_address(id)?;
-            let r = next.project.slots[a.slot].attachments[a.attachment]
+            let attachment = &mut next.project.slots[a.slot].attachments[a.attachment];
+            let sparse = channels.iter().any(Option::is_none);
+            if sparse && !matches!(attachment, SceneAttachment::Region(_)) {
+                return Err(invalid(
+                    "Choose a Region to edit individual image transform channels.",
+                ));
+            }
+            let r = attachment
                 .image_mut()
-                .ok_or_else(|| invalid("Clipping has no region transform."))?;
-            r.x = x;
-            r.y = y;
-            r.rotation = rotation;
-            r.scale_x = scale_x;
-            r.scale_y = scale_y;
+                .ok_or_else(|| invalid("Choose an image attachment to edit its transform."))?;
+            for (field, value) in [
+                &mut r.x,
+                &mut r.y,
+                &mut r.rotation,
+                &mut r.scale_x,
+                &mut r.scale_y,
+            ]
+            .into_iter()
+            .zip(channels)
+            {
+                if let Some(value) = value {
+                    *field = value;
+                }
+            }
             next.focus.attachment = Some(id);
             next.focus.slot = Some(next.slot_ids[a.slot]);
+            if sparse {
+                // Undo restores the inspected Region, even when a sibling
+                // was the last native focus. Bone focus remains independent.
+                before.focus.attachment = next.focus.attachment;
+                before.focus.slot = next.focus.slot;
+                before.focus.vertex = None;
+                next.focus.vertex = None;
+            }
         }
         RigEdit::UpdateSlot {
             id,
@@ -1434,6 +2057,9 @@ fn remap_bones(before: &SceneFrame, next: &mut SceneFrame) -> Result<(), AppErro
         // Keep surviving rows in their original order; ordinary dangling-key
         // deletion remains rejected above rather than dropping animation data.
         animation.split_modes.retain_mut(|row| {
+            let fbones_format::minimal::scene::SplitModeConfig::Bone(row) = row else {
+                return true;
+            };
             if let Some(Some(bone)) = map.get(row.bone) {
                 row.bone = *bone;
                 true
@@ -1455,6 +2081,11 @@ fn remap_bones(before: &SceneFrame, next: &mut SceneFrame) -> Result<(), AppErro
                     *b = index(*b)?;
                 }
             }
+            if let Some(path) = a.path_mut() {
+                for bone in &mut path.bones {
+                    *bone = index(*bone)?;
+                }
+            }
         }
     }
     for c in &mut next.project.constraints {
@@ -1469,6 +2100,11 @@ fn remap_bones(before: &SceneFrame, next: &mut SceneFrame) -> Result<(), AppErro
                 c.source = index(c.source)?;
                 for b in &mut c.bones {
                     *b = index(*b)?;
+                }
+            }
+            Constraint::Path(c) => {
+                for bone in &mut c.bones {
+                    *bone = index(*bone)?;
                 }
             }
             Constraint::Physics(c) => c.bone = index(c.bone)?,
@@ -1515,6 +2151,11 @@ fn update_slot(
         }
     }
     if old != bone {
+        if slot.attachments.iter().any(|attachment| attachment.path().is_some()) {
+            return Err(invalid(
+                "A slot with an imported Path cannot change its owning bone.",
+            ));
+        }
         world[bone].inverse()?;
         for a in &mut slot.attachments {
             reparent_attachment(a, old, bone, world)?;
@@ -1553,7 +2194,9 @@ fn reparent_attachment(
         }
         return Ok(());
     }
-    let r = a.image().unwrap();
+    let r = a
+        .image()
+        .ok_or_else(|| invalid("This attachment cannot change its owning bone."))?;
     let mut m = crate::mesh::from_region(r, old);
     let points = crate::mesh::world_vertices(&m, world);
     let angle = r.rotation.to_radians();
@@ -1595,6 +2238,14 @@ impl SceneRigHistory {
         f.project.constraints.iter().enumerate().map(|(i,c)|{let id=f.constraint_ids[i];match c{
  Constraint::Ik(c)=>json!({"id":id,"order":i,"type":"ik","name":c.name,"bones":c.bones.iter().map(|b|f.bone_ids[*b]).collect::<Vec<_>>(),"target":f.bone_ids[c.target],"mix":c.mix,"softness":c.softness,"bendPositive":c.bend_positive,"compress":c.compress,"stretch":c.stretch}),
  Constraint::Transform(c)=>json!({"id":id,"order":i,"type":"transform","name":c.name,"source":f.bone_ids[c.source],"bones":c.bones.iter().map(|b|f.bone_ids[*b]).collect::<Vec<_>>(),"localSource":c.local_source,"localTarget":c.local_target,"additive":c.additive,"clamp":c.clamp,"offsets":c.offsets,"mix":c.mix,"editorRangeBits":c.editor_range_bits(),"editorRangeValues":crate::transform_ranges::resolved_endpoints(c).ok(),"properties":c.properties.iter().map(|p|json!({"property":constraint_input::property_name(p.property),"offset":p.offset,"to":p.to.iter().map(|t|json!({"property":constraint_input::property_name(t.property),"offset":t.offset,"max":t.max,"scale":t.scale})).collect::<Vec<_>>()})).collect::<Vec<_>>()}),
+ Constraint::Path(c) => json!({
+     "id": id, "order": i, "type": "path", "name": c.name,
+     "bones": c.bones.iter().map(|&bone| f.bone_ids[bone]).collect::<Vec<_>>(),
+     "slot": f.slot_ids[c.slot], "positionMode": c.position_mode.name(),
+     "spacingMode": c.spacing_mode.name(), "rotateMode": c.rotate_mode.name(),
+     "rotation": c.rotation, "position": c.position, "spacing": c.spacing,
+     "mixRotate": c.mix_rotate, "mixX": c.mix_x, "mixY": c.mix_y,
+ }),
  Constraint::Physics(c)=>{let(r,s)=c.angular.wire_bits();json!({"id":id,"order":i,"type":"physics","name":c.name,"bone":f.bone_ids[c.bone],"x":c.x,"y":c.y,"scaleX":c.scale_x,"rotate":if r==0x7fc00000{None}else{Some(f32::from_bits(r))},"shearX":f32::from_bits(s),"step":c.step,"inertia":c.inertia,"strength":c.strength,"damping":c.damping,"mass":c.mass,"wind":c.wind,"gravity":c.gravity,"mix":c.mix,"limit":c.limit,"globals":{"inertia":c.globals.inertia,"strength":c.globals.strength,"damping":c.globals.damping,"mass":c.globals.mass,"wind":c.globals.wind,"gravity":c.globals.gravity,"mix":c.globals.mix}})}
  }}).collect()
     }
@@ -1604,11 +2255,17 @@ pub(super) fn geometry_edit(edit: &RigEdit) -> bool {
     matches!(
         edit,
         RigEdit::TransformAttachments { .. }
+            | RigEdit::SetRegionPosition { .. }
+            | RigEdit::GenerateMeshVertices { .. }
+            | RigEdit::ReplaceMeshOutline { .. }
             | RigEdit::BindAttachment { .. }
+            | RigEdit::UpdateAttachmentBindings { .. }
             | RigEdit::SetAttachmentWeight { .. }
             | RigEdit::PaintAttachmentWeights { .. }
+            | RigEdit::PasteAttachmentWeights { .. }
             | RigEdit::NormalizeAttachmentWeights { .. }
             | RigEdit::AutoAttachmentWeights { .. }
+            | RigEdit::PruneAttachmentWeights { .. }
             | RigEdit::MoveAttachment { .. }
             | RigEdit::CreateClipping { .. }
             | RigEdit::AttachmentEdit { .. }
@@ -1616,6 +2273,16 @@ pub(super) fn geometry_edit(edit: &RigEdit) -> bool {
             | RigEdit::InsertClippingVertex { .. }
             | RigEdit::DeleteClippingVertex { .. }
     ) || mesh_id(edit).is_some()
+}
+
+fn attachment_weight_rows(attachment: &SceneAttachment) -> Result<&[Vertex], AppError> {
+    match attachment {
+        SceneAttachment::Mesh(mesh) => Ok(&mesh.vertices),
+        SceneAttachment::Clipping(clip) => Ok(&clip.vertices),
+        SceneAttachment::Region(_) | SceneAttachment::Path(_) => {
+            Err(invalid("Choose a mesh or clipping attachment."))
+        }
+    }
 }
 
 fn dense_binding_mut(
@@ -1632,7 +2299,9 @@ fn dense_binding_mut(
             bones: &mut c.bones,
             vertices: &mut c.vertices,
         }),
-        SceneAttachment::Region(_) => Err(invalid("Choose a mesh or clipping attachment.")),
+        SceneAttachment::Region(_) | SceneAttachment::Path(_) => {
+            Err(invalid("Choose a mesh or clipping attachment."))
+        }
     }
 }
 
@@ -1649,6 +2318,9 @@ fn move_attachment(
         return Ok(());
     }
     let attachment = &next.project.slots[source.slot].attachments[source.attachment];
+    if attachment.path().is_some() {
+        return Err(invalid("An imported Path cannot move to another slot."));
+    }
     if next.project.slots[destination]
         .attachments
         .iter()
@@ -1788,6 +2460,7 @@ fn transform_attachments(
         })
         .collect::<Result<Vec<_>, _>>()?;
     for address in addresses {
+        next.require_editable_geometry(address)?;
         let owner = next.project.slots[address.slot].bone;
         let attachment = &mut next.project.slots[address.slot].attachments[address.attachment];
         if let Some(clip) = attachment.clipping_mut() {
@@ -1815,7 +2488,9 @@ fn transform_attachments(
             }
             continue;
         }
-        let r = attachment.image().unwrap();
+        let r = attachment
+            .image()
+            .ok_or_else(|| invalid("Choose an image attachment."))?;
         let angle = r.rotation.to_radians();
         let local = Pose {
             x: r.x,

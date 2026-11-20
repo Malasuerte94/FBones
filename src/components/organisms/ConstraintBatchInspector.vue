@@ -13,7 +13,8 @@ interface Capture {context:string;revision:number;ids:number[]}
 const w=useWorkspace(),{t}=useI18n();
 const animate=computed(()=>w.editorMode==='animate');
 const constraints=computed(()=>w.selectedConstraints.map(c=>animate.value?w.animationConstraint(c.id)??c:c));
-const kind=computed(()=>{const first=constraints.value[0]?.type;return first&&constraints.value.every(c=>c.type===first)?first:null;});
+const hasReadOnlyPath=computed(()=>constraints.value.some(c=>c.type==='path'));
+const kind=computed(()=>{const first=constraints.value[0]?.type;return first&&first!=='path'&&constraints.value.every(c=>c.type===first)?first:null;});
 const ids=computed(()=>constraints.value.map(c=>c.id));
 const context=computed(()=>`${w.project?.documentId}:${ids.value.join(',')}:${w.editorMode}:${w.animationId}:${w.animationFrame}`);
 const fieldContext=computed(()=>`${context.value}:${w.project?.revision}`);
@@ -39,7 +40,7 @@ function raw(c:ConstraintView,key:string):number|boolean|null {
   if(key.startsWith('mix:'))return c.mix[Number(key.slice(4))]!;
   return c[key as 'localSource'];
  }
- return c[key as 'mix'];
+ return c.type==='ik'?c[key as 'mix']:null;
 }
 function mixed(key:string){const first=constraints.value[0];return !!first&&constraints.value.some(c=>!Object.is(raw(c,key),raw(first,key)));}
 function displayed(key:string,value:number|boolean|null){
@@ -140,7 +141,8 @@ function insertKey(property?:string){
  <section class="inspector-form min-w-0 border-b border-line p-2" data-testid="constraint-batch-inspector" :data-constraint-type="kind??'mixed'" :data-selected-count="constraints.length">
   <h3 class="mb-1 flex items-center gap-1.5 text-xs font-medium text-accent"><AppIcon v-if="kind" :name="kind" class="!size-3.5"/><span>{{kind?t('constraintBatchTitle',{count:constraints.length,type:t('constraint_'+kind)}):t('constraintSelectionCount',{count:constraints.length})}}</span></h3>
   <p class="mb-2 truncate text-[10px] text-muted" :title="constraints.map(c=>c.name).join(', ')">{{constraints.map(c=>c.name).join(', ')}}</p>
-  <p v-if="!kind" class="text-[11px] leading-4 text-muted" data-testid="constraint-batch-mixed-types">{{t('constraintBatchMixedTypes')}}</p>
+  <p v-if="hasReadOnlyPath" class="text-[11px] leading-4 text-muted">{{t('pathConstraintReadOnly')}}</p>
+  <p v-else-if="!kind" class="text-[11px] leading-4 text-muted" data-testid="constraint-batch-mixed-types">{{t('constraintBatchMixedTypes')}}</p>
   <template v-else>
    <p class="mb-2 text-[10px] leading-4 text-muted">{{t('constraintBatchHint')}}</p>
    <p v-if="animate" class="mb-2 text-[10px] leading-4 text-muted">{{t('constraintBatchAnimateHint')}}</p>

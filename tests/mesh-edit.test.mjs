@@ -1,13 +1,27 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {previewMeshEdit,retriangulate} from '../src/domain/meshEdit.ts';
+import {createMeshOutlinePlane,previewMeshEdit,retriangulate} from '../src/domain/meshEdit.ts';
+import {meshOutlineUv,meshOutlineWorldPoints} from '../src/domain/meshOutline.ts';
 import {meshPoints,nearestVertex,meshContains} from '../src/domain/meshes.ts';
 import {emptyWeightSelection,withWeightVertices} from '../src/domain/weightSelection.ts';
 const bones=[{id:0,parent:null,name:'root',x:0,y:0,rotation:0,length:0}];
 const quad={weighted:false,bones:[0],uvs:[0,0,1,0,1,1,0,1],triangles:[0,1,2,2,3,0],edges:[0,1,1,2,2,3,3,0],hull:4,vertices:[[-50,50],[50,50],[50,-50],[-50,-50]].map(p=>({weights:[1],positions:p}))};
 const edgeSet=triangles=>new Set(triangles.flatMap((_,i)=>i%3?[]:[0,1,2].map(j=>{const a=triangles[i+j],b=triangles[i+(j+1)%3];return`${Math.min(a,b)}:${Math.max(a,b)}`;})));
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-5,`${a} != ${b}`);
+test('new outline projects the full image and round-trips draft UVs through the owner pose',()=>{
+ const source={...quad,uvs:quad.uvs.map(value=>value*.5+.25),vertices:quad.vertices.map(vertex=>({...vertex,positions:vertex.positions.map(value=>value*.5)}))};
+ const before=structuredClone(source),plane=createMeshOutlinePlane(source);
+ assert.deepEqual(plane.uvs,quad.uvs);
+ for(let i=0;i<4;i++)for(let axis=0;axis<2;axis++)near(plane.vertices[i].positions[axis],quad.vertices[i].positions[axis]);
+ const owner=[{...bones[0],x:19,y:-12,rotation:33,scaleX:-1.6,scaleY:1.2,shearY:14}];
+ const draft={attachmentId:9,documentId:1,revision:2,plane,points:[[.125,.875],[-.02,.6],[1,0]]};
+ const [inside,outside,corner]=meshOutlineWorldPoints(draft,owner);
+ assert.deepEqual(meshOutlineUv(draft,owner,inside),[.125,.875]);
+ assert.equal(meshOutlineUv(draft,owner,outside),null);
+ assert.deepEqual(meshOutlineUv(draft,owner,corner),[1,0]);
+ assert.deepEqual(source,before);
+});
 test('setup preview follows image pixels while deformation preserves UVs and topology',()=>{
  const before=structuredClone(quad),setup=previewMeshEdit(bones,quad,[{vertex:0,x:-30,y:40}]);
  near(setup.uvs[0],.2);near(setup.uvs[1],.1);const point=meshPoints(bones,setup)[0];near(point.x,-30);near(point.y,40);

@@ -46,6 +46,8 @@ fn model() -> SceneProject {
         wire: None,
         attachment_sequences: vec![],
         attachment_colors: vec![],
+        animation_folders: None,
+        linked_meshes: vec![],
         slot_dark_colors: vec![],
         rig,
         images_root: "./images/".into(),

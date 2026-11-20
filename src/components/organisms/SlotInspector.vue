@@ -7,27 +7,31 @@ import NumericSliderRow from '../molecules/NumericSliderRow.vue';
 import AppIcon from '../atoms/AppIcon.vue';
 import SequenceInspector from './SequenceInspector.vue';
 import AttachmentColorEditor from './AttachmentColorEditor.vue';
+import {hasSplitSlotColor} from '../../domain/animationSlots';
 import type {SlotBlendMode} from '../../domain/project';
 const w = useWorkspace(), { t } = useI18n();
 const animate=computed(()=>w.editorMode==='animate');
+const splitColor=computed(()=>w.selectedSlotId!==null&&hasSplitSlotColor(w.activeAnimation,w.selectedSlotId));
+const canEditColor=computed(()=>w.canEdit&&!w.busy&&!splitColor.value);
 const sequenceTarget=computed(()=>w.selectedAttachment??w.sceneAttachments.find(a=>a.id===w.selectedSlot?.activeAttachmentId));
+const ownsPath=computed(()=>w.selectedSlot?.attachments?.some(attachment=>attachment.type==='path')??false);
 const components=['R','G','B','A'] as const;
 const animateColor=computed<[number,number,number,number]>(()=>w.selectedSlot?w.animationSlotColor(w.selectedSlot.id):[1,1,1,1] as [number,number,number,number]);
 const colorMessage=()=>t('invalidTransform');
 const colorEditor=useSceneFieldEditor({
- current:()=>w.selectedSlot&&animate.value&&w.project?{id:w.selectedSlot.id,documentId:w.project.documentId,revision:w.project.revision,editable:w.canEdit&&!w.busy,values:Object.fromEntries(components.map((_,i)=>[String(i),animateColor.value[i]!]))}:null,
+ current:()=>w.selectedSlot&&animate.value&&w.project?{id:w.selectedSlot.id,documentId:w.project.documentId,revision:w.project.revision,editable:canEditColor.value,values:Object.fromEntries(components.map((_,i)=>[String(i),animateColor.value[i]!]))}:null,
  numeric:()=>true,invalidMessage:colorMessage,
  edit:(_key,value)=>{const slot=w.selectedSlot;if(!slot)return Promise.resolve(false);const values=[...animateColor.value] as [number,number,number,number];values[Number(_key)]=Number(value);if(values.some(v=>!Number.isFinite(v)||v<0||v>1)){w.showNotice(colorMessage(),true);return Promise.resolve(false);}return w.setSlotAnimationColor(slot.id,values);},
 });
 const animateDark=computed<[number,number,number]>(()=>w.selectedSlot?w.animationSlotDarkColor(w.selectedSlot.id):[0,0,0]);
 const darkEditor=useSceneFieldEditor({
- current:()=>w.selectedSlot?.tintBlack&&animate.value&&w.project?{id:w.selectedSlot.id,documentId:w.project.documentId,revision:w.project.revision,editable:w.canEdit&&!w.busy,values:Object.fromEntries(components.slice(0,3).map((_,i)=>[String(i),animateDark.value[i]!]))}:null,
+ current:()=>w.selectedSlot?.tintBlack&&animate.value&&w.project?{id:w.selectedSlot.id,documentId:w.project.documentId,revision:w.project.revision,editable:canEditColor.value,values:Object.fromEntries(components.slice(0,3).map((_,i)=>[String(i),animateDark.value[i]!]))}:null,
  numeric:()=>true,invalidMessage:colorMessage,
  edit:(key,value)=>{const slot=w.selectedSlot;if(!slot?.tintBlack)return Promise.resolve(false);const values=[...animateDark.value]as[number,number,number];values[Number(key)]=Number(value);if(values.some(v=>!Number.isFinite(v)||v<0||v>1)){w.showNotice(colorMessage(),true);return Promise.resolve(false);}return w.setSlotAnimationDarkColor(slot.id,values);},
 });
 watch(()=>[w.animationId,w.animationFrame,w.editorMode,w.selectedSlotId],()=>{colorEditor.reset();darkEditor.reset();});
-const colorInvalid=computed(()=>animate.value&&components.some((_,i)=>{const value=String(colorEditor.draft[String(i)]??'');return !value.trim()||!Number.isFinite(Number(value))||Number(value)<0||Number(value)>1;}));
-const darkInvalid=computed(()=>animate.value&&w.selectedSlot?.tintBlack&&components.slice(0,3).some((_,i)=>{const value=String(darkEditor.draft[String(i)]??'');return !value.trim()||!Number.isFinite(Number(value))||Number(value)<0||Number(value)>1;}));
+const colorInvalid=computed(()=>animate.value&&!splitColor.value&&components.some((_,i)=>{const value=String(colorEditor.draft[String(i)]??'');return !value.trim()||!Number.isFinite(Number(value))||Number(value)<0||Number(value)>1;}));
+const darkInvalid=computed(()=>animate.value&&!splitColor.value&&w.selectedSlot?.tintBlack&&components.slice(0,3).some((_,i)=>{const value=String(darkEditor.draft[String(i)]??'');return !value.trim()||!Number.isFinite(Number(value))||Number(value)<0||Number(value)>1;}));
 let colorDisposed=false;
 watch([colorInvalid,darkInvalid,()=>w.inspectorError],([light,dark])=>{if(!colorDisposed&&(light||dark)&&w.inspectorError!==colorMessage())w.inspectorError=colorMessage();},{flush:'sync'});
 function cancelColor(index:number){colorEditor.draft[String(index)]=String(animateColor.value[index]);void colorEditor.commit(String(index));if(!colorInvalid.value&&!darkInvalid.value&&w.inspectorError===colorMessage())w.inspectorError='';}
@@ -36,7 +40,7 @@ function escapeDark(event:KeyboardEvent,index:number){darkEditor.draft[String(in
 onBeforeUnmount(()=>{colorDisposed=true;if(w.inspectorError===colorMessage())w.inspectorError='';});
 const colorHex=computed(()=> '#'+animateColor.value.slice(0,3).map(v=>Math.round(Math.max(0,Math.min(1,v))*255).toString(16).padStart(2,'0')).join(''));
 const darkHex=computed(()=> '#'+animateDark.value.map(v=>Math.round(Math.max(0,Math.min(1,v))*255).toString(16).padStart(2,'0')).join(''));
-function animateDarkSwatch(event:Event){const slot=w.selectedSlot;if(!slot?.tintBlack||!w.canEdit||w.busy||colorInvalid.value||darkInvalid.value)return;const rgb=(event.target as HTMLInputElement).value.slice(1);void w.setSlotAnimationDarkColor(slot.id,[0,2,4].map(i=>Number.parseInt(rgb.slice(i,i+2),16)/255)as[number,number,number]);}
+function animateDarkSwatch(event:Event){const slot=w.selectedSlot;if(!slot?.tintBlack||!canEditColor.value||colorInvalid.value||darkInvalid.value)return;const rgb=(event.target as HTMLInputElement).value.slice(1);void w.setSlotAnimationDarkColor(slot.id,[0,2,4].map(i=>Number.parseInt(rgb.slice(i,i+2),16)/255)as[number,number,number]);}
 const darkSetupFailure=ref('');
 const darkSetupActions=computed(()=>{
  const slot=w.selectedSlot,documentId=w.project?.documentId;
@@ -48,7 +52,7 @@ const darkSetupActions=computed(()=>{
  return{toggle:(event:Event)=>apply(event,(event.target as HTMLInputElement).checked,slot?.darkColor??255),color:(event:Event)=>apply(event,!!slot?.tintBlack,((Number.parseInt((event.target as HTMLInputElement).value.slice(1),16)<<8)|((slot?.darkColor??255)&255))>>>0)};
 });
 watch(()=>[w.selectedSlotId,w.editorMode,w.project?.documentId,w.selectedSlot?.tintBlack,w.selectedSlot?.darkColor],()=>{darkSetupFailure.value='';});
-function animateSwatch(event:Event){if(!w.selectedSlot||w.busy)return;const rgb=(event.target as HTMLInputElement).value.slice(1);const values=[0,2,4].map(i=>Number.parseInt(rgb.slice(i,i+2),16)/255);void w.setSlotAnimationColor(w.selectedSlot.id,[values[0]!,values[1]!,values[2]!,animateColor.value[3]]);}
+function animateSwatch(event:Event){if(!w.selectedSlot||!canEditColor.value)return;const rgb=(event.target as HTMLInputElement).value.slice(1);const values=[0,2,4].map(i=>Number.parseInt(rgb.slice(i,i+2),16)/255);void w.setSlotAnimationColor(w.selectedSlot.id,[values[0]!,values[1]!,values[2]!,animateColor.value[3]]);}
 const fields = ['x', 'y', 'rotation', 'scaleX', 'scaleY'] as const;
 const draft = reactive({ name: '', x: '', y: '', rotation: '', scaleX: '', scaleY: '' });
 function reset() {
@@ -60,7 +64,7 @@ function reset() {
 watch(() => [w.selectedSlotId, w.project], reset, { immediate: true });
 async function commit(key: keyof typeof draft | 'bone' | 'visible', value?: number | boolean) {
   const slot = w.selectedSlot;
-  if (!slot || !w.canEdit || w.busy) return;
+  if (!slot || !w.canEdit || w.busy || key==='bone'&&ownsPath.value) return;
   const patch = key === 'bone' || key === 'visible' ? value : key === 'name' ? draft.name : Number(draft[key]);
   if (fields.includes(key as typeof fields[number]) && (!String(draft[key as typeof fields[number]]).trim() || !Number.isFinite(patch))) {
     w.inspectorError = t('invalidTransform'); w.showNotice(w.inspectorError, true); return;
@@ -80,19 +84,20 @@ function escape(event: KeyboardEvent) { reset(); (event.target as HTMLInputEleme
   <section v-if="w.selectedSlot" class="inspector-form border-b border-line p-2" :class="{'slot-animation-inspector':animate}" :data-testid="animate?'animation-slot-inspector':'slot-inspector'">
     <h3 :class="animate?'mb-1':'mb-4'" class=" text-xs font-medium text-accent">{{ t(w.sceneEditing?'slotProperties':'imageProperties') }}</h3>
     <div v-if="animate" class="space-y-1.5" @focusin="w.pauseAnimation">
-      <div class="flex items-center gap-2 text-xs"><span class="min-w-0 flex-1 truncate" :title="w.selectedSlot.name">{{w.selectedSlot.name}}</span><label>{{t(w.selectedSlot.tintBlack?'slotLightColor':'color')}} <input type="color" :value="colorHex" :disabled="!w.canEdit||w.busy" data-testid="animation-slot-color" @change="animateSwatch"/></label><button class="dock-tab" :disabled="!w.canEdit||w.busy||colorInvalid||darkInvalid" data-testid="animation-slot-key-rgba" :aria-label="t('color')+' key'" title="Key slot color" @click="w.insertSlotAnimationKeys({slotId:w.selectedSlot.id,channel:'rgba'})"><AppIcon name="key" class="size-3"/></button></div>
-      <NumericSliderRow v-model="colorEditor.draft['3']!" :label="t('opacity')" test-id="animation-slot-opacity" :context-key="`${w.project?.documentId}:${w.selectedSlot.id}:${w.animationId}:${w.animationFrame}`" :min="0" :max="1" :step="0.001" :disabled="!w.canEdit" :locked="w.busy" @commit="colorEditor.commit('3')" @cancel="cancelColor(3)"/>
-      <div class="grid grid-cols-3 gap-1"><label v-for="(component,index) in components.slice(0,3)" :key="component" class="text-[10px] text-muted">{{component}}<input v-model="colorEditor.draft[String(index)]" type="text" inputmode="decimal" :disabled="!w.canEdit||w.busy" :aria-label="'Slot '+component" :aria-invalid="colorInvalid" :data-testid="'animation-slot-color-'+component.toLowerCase()" class="editor-input w-full min-w-0" @change="colorEditor.commit(String(index))" @keydown.enter.prevent="colorEditor.enter($event,String(index))" @keydown.esc.prevent="escapeColor($event,index)"/></label></div>
+      <div class="flex items-center gap-2 text-xs"><span class="min-w-0 flex-1 truncate" :title="w.selectedSlot.name">{{w.selectedSlot.name}}</span><label>{{t(w.selectedSlot.tintBlack?'slotLightColor':'color')}} <input type="color" :value="colorHex" :disabled="!canEditColor" data-testid="animation-slot-color" @change="animateSwatch"/></label><button class="dock-tab" :disabled="!canEditColor||colorInvalid||darkInvalid" data-testid="animation-slot-key-rgba" :aria-label="t('color')+' key'" title="Key slot color" @click="w.insertSlotAnimationKeys({slotId:w.selectedSlot.id,channel:'rgba'})"><AppIcon name="key" class="size-3"/></button></div>
+      <NumericSliderRow v-model="colorEditor.draft['3']!" :label="t('opacity')" test-id="animation-slot-opacity" :context-key="`${w.project?.documentId}:${w.selectedSlot.id}:${w.animationId}:${w.animationFrame}`" :min="0" :max="1" :step="0.001" :disabled="!w.canEdit||splitColor" :locked="w.busy" @commit="colorEditor.commit('3')" @cancel="cancelColor(3)"/>
+      <div class="grid grid-cols-3 gap-1"><label v-for="(component,index) in components.slice(0,3)" :key="component" class="text-[10px] text-muted">{{component}}<input v-model="colorEditor.draft[String(index)]" type="text" inputmode="decimal" :disabled="!canEditColor" :aria-label="'Slot '+component" :aria-invalid="colorInvalid" :data-testid="'animation-slot-color-'+component.toLowerCase()" class="editor-input w-full min-w-0" @change="colorEditor.commit(String(index))" @keydown.enter.prevent="colorEditor.enter($event,String(index))" @keydown.esc.prevent="escapeColor($event,index)"/></label></div>
       <div v-if="w.selectedSlot.tintBlack" class="space-y-1" data-testid="animation-slot-dark-editor">
-       <label class="flex items-center justify-between text-[10px] text-muted">{{t('slotDarkColor')}}<input type="color" :value="darkHex" :disabled="!w.canEdit||w.busy||colorInvalid||darkInvalid" :aria-label="t('slotDarkColor')" data-testid="animation-slot-dark-color" @change="animateDarkSwatch"/></label>
-       <div class="grid grid-cols-3 gap-1"><label v-for="(component,index) in components.slice(0,3)" :key="component" class="min-w-0 text-[10px] text-muted">{{component}}<input v-model="darkEditor.draft[String(index)]" type="text" inputmode="decimal" :disabled="!w.canEdit||w.busy" :aria-label="t('slotDarkColor')+' '+component" :aria-invalid="darkInvalid" :data-testid="'animation-slot-dark-'+component.toLowerCase()" class="editor-input w-full min-w-0" @change="darkEditor.commit(String(index))" @keydown.enter.prevent="darkEditor.enter($event,String(index))" @keydown.esc.prevent="escapeDark($event,index)"/></label></div>
-       <p class="text-[10px] leading-4 text-muted" data-testid="slot-two-color-limit">{{t('slotTwoColorLinearOnly')}}</p>
+       <label class="flex items-center justify-between text-[10px] text-muted">{{t('slotDarkColor')}}<input type="color" :value="darkHex" :disabled="!canEditColor||colorInvalid||darkInvalid" :aria-label="t('slotDarkColor')" data-testid="animation-slot-dark-color" @change="animateDarkSwatch"/></label>
+       <div class="grid grid-cols-3 gap-1"><label v-for="(component,index) in components.slice(0,3)" :key="component" class="min-w-0 text-[10px] text-muted">{{component}}<input v-model="darkEditor.draft[String(index)]" type="text" inputmode="decimal" :disabled="!canEditColor" :aria-label="t('slotDarkColor')+' '+component" :aria-invalid="darkInvalid" :data-testid="'animation-slot-dark-'+component.toLowerCase()" class="editor-input w-full min-w-0" @change="darkEditor.commit(String(index))" @keydown.enter.prevent="darkEditor.enter($event,String(index))" @keydown.esc.prevent="escapeDark($event,index)"/></label></div>
+       <p v-if="!splitColor" class="text-[10px] leading-4 text-muted" data-testid="slot-two-color-limit">{{t('slotTwoColorLinearOnly')}}</p>
       </div>
+      <p v-if="splitColor" class="text-[10px] leading-4 text-muted" data-testid="slot-split-color-read-only">{{t('slotSplitColorReadOnly')}}</p>
       <p v-if="colorInvalid||darkInvalid" class="text-[10px] text-danger" role="status">{{colorMessage()}}</p>
     </div>
     <fieldset v-else :disabled="!w.canEdit || w.busy" class="space-y-4">
       <label class="block text-xs text-muted">{{ t('slotName') }}<input v-model="draft.name" data-testid="slot-name" maxlength="120" class="mt-2 w-full rounded border border-line bg-shell px-2.5 py-2 text-ink outline-none focus:border-accent" @change="commit('name')" @keydown.enter.prevent="commit('name')" @keydown.esc.prevent="escape"></label>
-      <label class="block text-xs text-muted">{{ t('boundBone') }}<select :value="w.selectedSlot.bone" class="mt-2 w-full rounded border border-line bg-shell px-2.5 py-2 text-ink outline-none focus:border-accent" @change="commit('bone', Number(($event.target as HTMLSelectElement).value))"><option v-for="bone in w.project?.bones" :key="bone.id" :value="bone.id">{{ bone.name }}</option></select></label>
+      <label class="block text-xs text-muted">{{ t('boundBone') }}<select :value="w.selectedSlot.bone" :disabled="ownsPath" class="mt-2 w-full rounded border border-line bg-shell px-2.5 py-2 text-ink outline-none focus:border-accent" @change="commit('bone', Number(($event.target as HTMLSelectElement).value))"><option v-for="bone in w.project?.bones" :key="bone.id" :value="bone.id">{{ bone.name }}</option></select></label>
       <label v-if="!animate&&!w.sceneEditing" class="flex items-center gap-2 text-xs text-muted"><input type="checkbox" :checked="w.selectedSlot.visible" :disabled="!w.selectedSlot.region" @change="commit('visible', ($event.target as HTMLInputElement).checked)">{{ t('visible') }}</label>
       <div class="flex items-center gap-2"><label class="flex items-center gap-2 text-xs text-muted">{{ t('color') }}<input type="color" :value="'#'+((w.selectedSlot.color??0xffffffff)>>>8).toString(16).padStart(6,'0')" @change="setColor"/></label><label class="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted">{{ t('opacity') }}<input type="range" min="0" max="1" step="0.01" :value="((w.selectedSlot.color??0xffffffff)&255)/255" @change="setOpacity"/></label></div>
       <div class="space-y-1" data-testid="slot-dark-setup"><div class="flex flex-wrap items-center justify-between gap-1 text-xs text-muted"><label class="flex items-center gap-1"><input type="checkbox" :checked="!!w.selectedSlot.tintBlack" :disabled="!w.canEdit||w.busy" data-testid="slot-tint-black" :onChange="darkSetupActions.toggle"/>{{t('slotTintBlack')}}</label><label class="flex items-center gap-1">{{t('slotDarkColor')}}<input type="color" :value="'#'+((w.selectedSlot.darkColor??255)>>>8).toString(16).padStart(6,'0')" :disabled="!w.canEdit||w.busy||!w.selectedSlot.tintBlack" :aria-label="t('slotDarkColor')" data-testid="slot-dark-color" :onChange="darkSetupActions.color"/></label></div><p v-if="darkSetupFailure" role="status" class="text-[10px] text-danger">{{darkSetupFailure}}</p></div>

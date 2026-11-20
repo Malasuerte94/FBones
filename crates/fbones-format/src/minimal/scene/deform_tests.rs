@@ -169,6 +169,61 @@ fn draw_and_mesh_clip_dense_deform_roundtrip_preserve_all_setup_dormant_bits_and
         0x8000_0000
     );
 }
+
+#[test]
+fn linked_deform_preserves_inheritance_and_independent_track_owners() {
+    let mut p = scene();
+    let attachment = p.attachment_order[1];
+    let source = p.attachment_order[2];
+    let mut linked = p.slots[source.slot].attachments[source.attachment]
+        .mesh()
+        .unwrap()
+        .clone();
+    linked.image = image("Own linked mesh");
+    p.slots[attachment.slot].bone = 0;
+    p.slots[attachment.slot].attachments[attachment.attachment] =
+        SceneAttachment::Mesh(Box::new(linked));
+    p.linked_meshes.push(LinkedMesh {
+        attachment,
+        source,
+        inherit_timelines: true,
+    });
+    p.animations[0]
+        .deform_tracks
+        .push(track(source.slot, 16, true));
+
+    let inherited = encode_scene_payload(&p).unwrap();
+    assert_eq!(decode_scene(&inherited).unwrap(), p);
+
+    p.linked_meshes[0].inherit_timelines = false;
+    let independent = encode_scene_payload(&p).unwrap();
+    assert_eq!(decode_scene(&independent).unwrap(), p);
+    assert_eq!(inherited.len(), independent.len());
+    assert_eq!(
+        inherited
+            .iter()
+            .copied()
+            .zip(independent.iter().copied())
+            .filter(|(a, b)| a != b)
+            .collect::<Vec<_>>(),
+        [(1, 0)]
+    );
+
+    let mut child_track = track(attachment.slot, 16, true);
+    child_track.keys[2].offsets[3] = -7.;
+    p.animations[0].deform_tracks.push(child_track);
+    let with_child = encode_scene_payload(&p).unwrap();
+    let decoded = decode_scene(&with_child).unwrap();
+    assert_eq!(decoded, p);
+    assert_eq!(encode_scene_payload(&decoded).unwrap(), with_child);
+
+    p.linked_meshes[0].inherit_timelines = true;
+    assert!(matches!(
+        encode_scene_payload(&p),
+        Err(FormatError::UnsupportedProfile)
+    ));
+}
+
 #[test]
 fn permutation_helper_preserves_arbitrary_orders_and_literal_reset_boundary() {
     fn permutations(prefix: Vec<usize>, rest: Vec<usize>) {

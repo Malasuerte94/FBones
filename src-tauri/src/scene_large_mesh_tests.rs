@@ -82,6 +82,307 @@ fn assert_rejected(session: &Session, value: Value) {
     assert_eq!(payload(session), bytes);
 }
 
+fn assert_staged_auto_unchanged(session: &Session, before: &ProjectSummary, bytes: &[u8]) {
+    assert_eq!(
+        serde_json::to_value(summary(session)).unwrap(),
+        serde_json::to_value(before).unwrap()
+    );
+    assert_eq!(payload(session), bytes);
+}
+
+fn locked_auto(attachment: u64, candidate: u64) -> RigEdit {
+    RigEdit::AutoAttachmentWeights {
+        id: attachment,
+        scope: Some(crate::rig::AutoWeightScope {
+            bones: Some(vec![candidate]),
+            locked_bones: Some(vec![candidate]),
+            ..Default::default()
+        }),
+    }
+}
+
+#[test]
+fn staged_auto_competing_results_publish_one_revision_and_one_history_entry() {
+    let (directory, session, source) = open(4, 3, false);
+    let initial = summary(&session);
+    let original = payload(&session);
+    let slot = initial.slots[1].id;
+    let attachment = initial.slots[1].attachments[0].id;
+    let edits = [
+        RigEdit::AutoAttachmentWeights {
+            id: attachment,
+            scope: None,
+        },
+        RigEdit::AttachmentEdit {
+            id: attachment,
+            edit: Box::new(RigEdit::AutoWeights { id: slot }),
+        },
+    ];
+    let [first, second] = edits.map(|edit| {
+        session
+            .prepare_auto_weights(initial.revision, edit, None)
+            .unwrap()
+    });
+    let first = first.solve().unwrap();
+    let second = second.solve().unwrap();
+    assert_staged_auto_unchanged(&session, &initial, &original);
+
+    let changed = session.commit_auto_weights(first).unwrap();
+    let result = payload(&session);
+    assert_ne!(result, original);
+    assert_eq!(changed.revision, initial.revision + 1);
+    assert_eq!(changed.document_id, initial.document_id);
+    assert_eq!(changed.edited_attachment, Some(attachment));
+    assert!(changed.dirty && changed.can_undo && !changed.can_redo);
+    assert_eq!(
+        session.commit_auto_weights(second).unwrap_err().code,
+        "ProjectChanged"
+    );
+    assert_staged_auto_unchanged(&session, &changed, &result);
+
+    let undone = session.edit(changed.revision, RigEdit::Undo).unwrap();
+    assert_eq!(payload(&session), original);
+    assert!(!undone.dirty && !undone.can_undo && undone.can_redo);
+    let noop = session
+        .prepare_auto_weights(
+            undone.revision,
+            locked_auto(attachment, initial.bones[1].id),
+            None,
+        )
+        .unwrap()
+        .solve()
+        .unwrap();
+    session.commit_auto_weights(noop).unwrap();
+    assert_staged_auto_unchanged(&session, &undone, &original);
+    let redone = session.edit(undone.revision, RigEdit::Redo).unwrap();
+    assert_eq!(payload(&session), result);
+    assert!(redone.dirty && redone.can_undo && !redone.can_redo);
+
+    let committed = model(&session);
+    let target = directory.path().join("staged.fbones");
+    session
+        .save_snapshot(session.prepare_save(true).unwrap(), target.clone())
+        .unwrap();
+    assert_eq!(model(&session).slots, committed.slots);
+    let saved = payload(&session);
+    let reopened = Session::default();
+    reopened
+        .replace(open_document(target).unwrap(), false)
+        .unwrap();
+    assert_eq!(payload(&reopened), saved);
+    assert_eq!(
+        std::fs::read(directory.path().join("own-large.spine")).unwrap(),
+        source
+    );
+}
+
+#[test]
+fn staged_auto_rejects_an_intervening_edit_and_a_replaced_document() {
+    let (directory, session, source) = open(4, 3, false);
+    let initial = summary(&session);
+    let original = payload(&session);
+    let attachment = initial.slots[1].attachments[0].id;
+    let prepare = |revision| {
+        session
+            .prepare_auto_weights(
+                revision,
+                RigEdit::AutoAttachmentWeights {
+                    id: attachment,
+                    scope: None,
+                },
+                None,
+            )
+            .unwrap()
+    };
+    let pending = prepare(initial.revision);
+    let changed = session
+        .edit(
+            initial.revision,
+            RigEdit::Move {
+                id: initial.bones[1].id,
+                x: -31.,
+                y: 1.,
+            },
+        )
+        .unwrap();
+    let moved = payload(&session);
+    assert_ne!(moved, original);
+    assert_eq!(
+        session
+            .commit_auto_weights(pending.solve().unwrap())
+            .unwrap_err()
+            .code,
+        "ProjectChanged"
+    );
+    assert_staged_auto_unchanged(&session, &changed, &moved);
+    let undone = session.edit(changed.revision, RigEdit::Undo).unwrap();
+    assert_eq!(payload(&session), original);
+    assert!(!undone.can_undo);
+
+    let pending = prepare(undone.revision);
+    let path = directory.path().join("own-large.spine");
+    let replacement = session
+        .replace(open_document(path.clone()).unwrap(), false)
+        .unwrap();
+    assert_eq!(replacement.slots[1].attachments[0].id, attachment);
+    assert_ne!(replacement.logical_document_id, undone.logical_document_id);
+    // Match revision and payload to isolate the document identity guard.
+    session.lock().unwrap().revision = undone.revision;
+    let replacement = summary(&session);
+    assert_eq!(
+        session
+            .commit_auto_weights(pending.solve().unwrap())
+            .unwrap_err()
+            .code,
+        "ProjectChanged"
+    );
+    assert_staged_auto_unchanged(&session, &replacement, &original);
+    assert_eq!(std::fs::read(path).unwrap(), source);
+}
+
+#[test]
+fn staged_auto_validates_the_current_pose_even_for_a_locked_noop() {
+    let (directory, session, source) = open(4, 3, false);
+    let initial = summary(&session);
+    let original = payload(&session);
+    let attachment = initial.slots[1].attachments[0].id;
+    let candidate = initial.bones[1].id;
+    let old = sampled(&session, 0.);
+    let pending = session
+        .prepare_auto_weights(
+            initial.revision,
+            locked_auto(attachment, candidate),
+            Some(old.pose_epoch),
+        )
+        .unwrap();
+    let latest = sampled(&session, 6.);
+    assert_eq!(latest.revision, old.revision);
+    assert_ne!(latest.pose_epoch, old.pose_epoch);
+    assert_eq!(
+        session
+            .commit_auto_weights(pending.solve().unwrap())
+            .unwrap_err()
+            .code,
+        "StalePose"
+    );
+    assert_staged_auto_unchanged(&session, &initial, &original);
+
+    let current = session
+        .prepare_auto_weights(
+            initial.revision,
+            locked_auto(attachment, candidate),
+            Some(latest.pose_epoch),
+        )
+        .unwrap()
+        .solve()
+        .unwrap();
+    let unchanged = session.commit_auto_weights(current).unwrap();
+    assert_eq!(unchanged.revision, initial.revision);
+    assert_staged_auto_unchanged(&session, &initial, &original);
+    assert!(!unchanged.dirty && !unchanged.can_undo && !unchanged.can_redo);
+    assert_eq!(
+        session
+            .lock()
+            .unwrap()
+            .evaluation
+            .as_ref()
+            .unwrap()
+            .snapshot
+            .pose_epoch,
+        latest.pose_epoch
+    );
+    assert_eq!(
+        std::fs::read(directory.path().join("own-large.spine")).unwrap(),
+        source
+    );
+}
+
+#[test]
+fn scene_smooth_uses_selected_rows_and_only_authored_neighbors() {
+    let (directory, session, source) = open(3, 2, false);
+    let initial = summary(&session);
+    let slot = initial.slots[1].id;
+    let attachment = initial.slots[1].attachments[0].id;
+    let locked_bone = initial.bones[1].id;
+    let original = model(&session);
+    let mut mesh = original.slots[1].attachments[0].mesh().unwrap().clone();
+    assert_eq!(mesh.triangles, [0, 1, 4, 0, 4, 5, 1, 2, 3, 1, 3, 4]);
+    // Vertex 1 has hull neighbors 0 and 2, manual neighbor 4 and a generated edge to 3.
+    mesh.edges.extend([1, 4]);
+    mesh.bones.push(0);
+    for (row, weights) in mesh.vertices.iter_mut().zip([
+        [0.5, 0., 0.5],
+        [0.25, 0.5, 0.25],
+        [0.5, 0., 0.5],
+        [0., 1., 0.],
+        [0.5, 0.25, 0.25],
+        [0.25, 0., 0.75],
+    ]) {
+        row.weights = weights.to_vec();
+        row.positions.extend([row.positions[0] - 30., row.positions[1]]);
+    }
+    mesh.vertices[0].positions[2] = -0.;
+    let prepared = session
+        .edit(
+            initial.revision,
+            RigEdit::AttachmentEdit {
+                id: attachment,
+                edit: Box::new(RigEdit::ReplaceMesh {
+                    id: slot,
+                    mesh: Box::new(mesh),
+                }),
+            },
+        )
+        .unwrap();
+    let before = payload(&session);
+
+    assert_rejected(
+        &session,
+        json!({"type":"smoothAttachmentWeights","id":attachment,"vertices":[1,1],"lockedBones":[locked_bone]}),
+    );
+    let smoothed = command(
+        &session,
+        json!({"type":"smoothAttachmentWeights","id":attachment,"vertices":[1],"lockedBones":[locked_bone]}),
+    );
+    assert_eq!(smoothed.revision, prepared.revision + 1);
+    let after = model(&session);
+    let mesh = after.slots[1].attachments[0].mesh().unwrap();
+    // The editable sums are 0.75 and 1.5. Project them into the destination's 0.75 residual.
+    assert_eq!(mesh.vertices[1].weights, [0.25, 0.25, 0.5]);
+    let after_payload = payload(&session);
+
+    let undone = session.edit(smoothed.revision, RigEdit::Undo).unwrap();
+    assert_eq!(payload(&session), before);
+    let restored = model(&session);
+    let previous = restored.slots[1].attachments[0].mesh().unwrap();
+    assert_eq!(mesh.edges, previous.edges);
+    assert_eq!(mesh.triangles, previous.triangles);
+    assert_eq!(mesh.uvs, previous.uvs);
+    assert_eq!(mesh.bones, previous.bones);
+    for (vertex, (actual, old)) in mesh.vertices.iter().zip(&previous.vertices).enumerate() {
+        assert!(actual
+            .positions
+            .iter()
+            .map(|value| value.to_bits())
+            .eq(old.positions.iter().map(|value| value.to_bits())));
+        assert_eq!(actual.weights[0].to_bits(), old.weights[0].to_bits());
+        if vertex != 1 {
+            assert!(actual
+                .weights
+                .iter()
+                .map(|value| value.to_bits())
+                .eq(old.weights.iter().map(|value| value.to_bits())));
+        }
+    }
+    assert_eq!(previous.vertices[0].positions[2].to_bits(), (-0.0_f32).to_bits());
+    session.edit(undone.revision, RigEdit::Redo).unwrap();
+    assert_eq!(payload(&session), after_payload);
+    assert_eq!(
+        std::fs::read(directory.path().join("own-large.spine")).unwrap(),
+        source
+    );
+}
+
 #[test]
 fn large_mesh_session_whole_512_move_paint_history_portable_save_preserve_source_and_pngs() {
     let (directory, session, source) = open(32, 16, false);

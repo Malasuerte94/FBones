@@ -4,6 +4,15 @@ Routine UI checks run on Ubuntu with Playwright. The old hand-written Chrome
 CDP smoke runner is replaced by `pnpm test:ui`. Original Spine research and
 targeted native-platform acceptance remain separate evidence categories.
 
+## When to run checks
+
+Batch FBones checks at each checkpoint after at least 15 percentage points of
+implementation progress. Carry the last verification baseline across sessions
+and track progress by implemented workflows. Prepare regressions during the
+batch, then run the checks together and record results for each affected
+feature. Original Spine observations continue during the batch.
+[Contributor rules](../AGENTS.md#test-cadence)
+
 ## Commands
 
 ```sh
@@ -94,7 +103,7 @@ groups. Additional tool/gesture/pixel cases should be ported when touching those
 features, while preserving the accepted original/platform evidence. Consult
 `research/LINUX-E2E-COVERAGE-HANDOFF.md` for the current coverage audit.
 
-## Failure reports and focused iteration
+## Failure reports and checkpoint reruns
 
 The suite writes `.local/playwright/results.json`, an HTML report, per-failure
 screenshots and traces. Use the report's trace viewer to inspect the DOM,

@@ -1,6 +1,6 @@
 //! Opt-in JSONL test transport over the real native Session. No desktop window.
 use crate::{
-    project::{self, AppError, SaveSnapshot, Session},
+    project::{self, AppError, BoneAutoKey, SaveSnapshot, Session},
     rig::RigEdit,
 };
 use serde::Deserialize;
@@ -29,6 +29,7 @@ struct Args {
     save_as: bool,
     expected_revision: u64,
     pose_epoch: Option<u64>,
+    bone_auto_key: Option<BoneAutoKey>,
     document_id: u64,
     bone: u64,
     slot: u64,
@@ -52,6 +53,7 @@ impl Default for Args {
             save_as: false,
             expected_revision: 0,
             pose_epoch: None,
+            bone_auto_key: None,
             document_id: 0,
             bone: 0,
             slot: 0,
@@ -309,7 +311,9 @@ impl Host {
             attachment_order: vec![],
             attachment_sequences: vec![],
             attachment_colors: vec![],
+            linked_meshes: vec![],
             slot_dark_colors: vec![],
+            animation_folders: None,
             constraints: vec![Constraint::Transform(stored), Constraint::Transform(absent)],
         };
         let name = "transform-ranges.fbones";
@@ -325,6 +329,24 @@ impl Host {
     }
     fn execute(&mut self, command: &str, raw: Value) -> Result<Value, AppError> {
         self.check_tree()?;
+        if command == "preview_prune_weights" {
+            let a: crate::PrunePreviewArgs =
+                serde_json::from_value(raw).map_err(|e| invalid(e.to_string()))?;
+            return value(self.session.preview_prune_weights(
+                a.expected_revision,
+                a.request,
+                a.pose_epoch,
+            ));
+        }
+        if command == "save_gif_export" {
+            let request: crate::gif_export::Request =
+                serde_json::from_value(raw).map_err(|e| invalid(e.to_string()))?;
+            let pending = request.prepare(&self.session)?;
+            let Some(path) = self.dialog("save")? else {
+                return Ok(Value::Null);
+            };
+            return value(pending.write(&self.session, &path));
+        }
         let a: Args = serde_json::from_value(if raw.is_null() { json!({}) } else { raw })
             .map_err(|e| invalid(e.to_string()))?;
         match command {
@@ -755,12 +777,28 @@ impl Host {
                 };
                 value(self.session.save_snapshot(snapshot, path))
             }
+            "repair_linked_mesh_copy" => {
+                let snapshot = self
+                    .session
+                    .prepare_linked_mesh_repair(a.expected_revision)?;
+                let Some(path) = self.dialog("save")? else {
+                    return Ok(Value::Null);
+                };
+                value(self.session.open_repaired_linked_mesh_copy(snapshot, path))
+            }
             "export_runtime" => {
                 let snapshot = self.session.prepare_runtime_export(a.expected_revision)?;
                 let Some(parent) = self.dialog("folder")? else {
                     return Ok(Value::Null);
                 };
                 value(self.session.write_runtime_export(snapshot, &parent))
+            }
+            "export_spine_bundle" => {
+                let snapshot = self.session.prepare_spine_bundle(a.expected_revision)?;
+                let Some(parent) = self.dialog("folder")? else {
+                    return Ok(Value::Null);
+                };
+                value(self.session.write_spine_bundle(snapshot, &parent))
             }
             "e2e_prepare_save" => {
                 let snapshot = self.session.prepare_save(a.save_as)?;
@@ -797,11 +835,13 @@ impl Host {
                     self.path(path)?;
                     self.path(relative.to_str().ok_or_else(|| invalid("Invalid root."))?)?;
                 }
-                value(if let Some(epoch) = a.pose_epoch {
-                    self.session.edit_in_pose(a.expected_revision, epoch, edit)
-                } else {
-                    self.session.edit(a.expected_revision, edit)
-                })
+                value(crate::apply_rig_edit(
+                    &self.session,
+                    a.expected_revision,
+                    edit,
+                    a.pose_epoch,
+                    a.bone_auto_key,
+                ))
             }
             "evaluate_project" => value(
                 self.session.evaluate(

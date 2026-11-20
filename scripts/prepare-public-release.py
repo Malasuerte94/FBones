@@ -9,7 +9,7 @@ import shutil
 import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_TAG = 'v0.10.0-beta.2'
+DEFAULT_TAG = 'v0.10.1-beta.1'
 FILES = (
     '.gitignore', 'AGENTS.md', 'README.md', 'CONTRIBUTING.md', 'LICENSE',
     'THIRD_PARTY_NOTICES.md', 'Cargo.toml', 'Cargo.lock', 'package.json',
@@ -19,6 +19,9 @@ FILES = (
 TREES = ('.github', 'src', 'src-tauri', 'crates', 'tests', 'scripts', 'docs', 'packages/runtime')
 SKIP_PARTS = {'gen', '__pycache__', 'node_modules', 'target', 'dist', '.git', '.local', '.tools'}
 OWN_TEXT_FILES = {'packages/runtime/LICENSE',
+    'scripts/project-board/public/app.js',
+    'scripts/project-board/public/seen-activity.js',
+    'scripts/project-board/public/task-tree.js',
     'scripts/native-windows-upgrade/install-invoke.cs',
     'scripts/native-mac-upgrade/keyboard-bridge.c',
     'scripts/native-mac-upgrade/keyboard-bridge.h',

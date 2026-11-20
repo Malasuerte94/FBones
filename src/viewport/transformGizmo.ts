@@ -1,5 +1,6 @@
 import type { BoneView } from '../domain/project.ts';
-import { worldBones } from '../domain/rig.ts';
+import { localTranslationDisplacement, type LocalTranslationAxes } from '../domain/boneCompensation.ts';
+import { inverseVector, worldBones, type Affine } from '../domain/rig.ts';
 
 export interface GizmoPoint { x: number; y: number }
 export type GizmoTool = 'translate' | 'rotate' | 'scale' | 'shear' | 'pose';
@@ -7,6 +8,12 @@ export type GizmoHandle = 'translate' | 'translateX' | 'translateY' | 'rotate'
   | 'scale' | 'scaleX' | 'scaleY' | 'shearX' | 'shearY';
 export type PivotMode = 'individual' | 'group';
 export interface GizmoBasis { x: GizmoPoint; y: GizmoPoint }
+export interface ParentTranslation {
+  boneId: number;
+  parent: Affine;
+  basis: GizmoBasis;
+  lengths: GizmoPoint;
+}
 export const WORLD_GIZMO_BASIS:GizmoBasis = { x:{x:1,y:0}, y:{x:0,y:-1} };
 export const GIZMO_RADIUS = 48;
 export const GIZMO_AXIS = 64;
@@ -57,7 +64,12 @@ export function hitGizmo(tool: GizmoTool, origin: GizmoPoint, point: GizmoPoint,
   return shafts.sort((a,b)=>a.distance-b.distance)[0]?.handle??null;
 }
 
-export function gizmoCursor(handle: GizmoHandle | null): string {
+export function gizmoCursor(handle: GizmoHandle | null, translationBasis?: GizmoBasis): string {
+  if (translationBasis && (handle === 'translateX' || handle === 'translateY')) {
+    const axis = handle === 'translateX' ? translationBasis.x : translationBasis.y;
+    const angle = Math.round(Math.atan2(axis.y, axis.x) * 4 / Math.PI);
+    return ['ew-resize', 'nwse-resize', 'ns-resize', 'nesw-resize'][(angle + 4) % 4]!;
+  }
   switch (handle) {
     case 'rotate': return 'grab';
     case 'translate': return 'move';
@@ -66,6 +78,47 @@ export function gizmoCursor(handle: GizmoHandle | null): string {
     case 'scale': return 'nwse-resize';
     default: return 'default';
   }
+}
+
+export function parentTranslationAxes(boneId: number, parent: Affine): ParentTranslation | null {
+  const det = parent.a * parent.d - parent.b * parent.c;
+  const x = Math.hypot(parent.a, parent.b), y = Math.hypot(parent.c, parent.d);
+  if (!Number.isFinite(det) || Math.abs(det) < 1e-8 || !Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return { boneId, parent, lengths: { x, y }, basis: {
+    x: { x: parent.a / x, y: -parent.b / x },
+    y: { x: parent.c / y, y: -parent.d / y },
+  } };
+}
+
+export function parentTranslationDelta(axes: ParentTranslation, handle: GizmoHandle,
+  start: GizmoPoint, current: GizmoPoint, zoom: number): GizmoPoint {
+  const dx = current.x - start.x, dy = current.y - start.y;
+  if (handle !== 'translateX' && handle !== 'translateY') return inverseVector(axes.parent, dx / zoom, -dy / zoom);
+  const axis = handle === 'translateX' ? 'x' : 'y';
+  const direction = axes.basis[axis];
+  const projection = dx * direction.x + dy * direction.y;
+  const delta = { x: 0, y: 0 };
+  // An exactly perpendicular drag can leave roundoff in the projected component.
+  if (Math.abs(projection) > Number.EPSILON * (Math.abs(dx) + Math.abs(dy))) {
+    delta[axis] = projection / zoom / axes.lengths[axis];
+  }
+  return delta;
+}
+
+export function localTranslationScreenBasis(axes: LocalTranslationAxes): GizmoBasis {
+  const {a,b,c,d}=axes.worldBasis;
+  return {x:{x:a,y:-b},y:{x:c,y:-d}};
+}
+
+export function localTranslationDelta(axes: LocalTranslationAxes, handle: GizmoHandle,
+  start: GizmoPoint, current: GizmoPoint, zoom: number): GizmoPoint {
+  const dx=current.x-start.x,dy=current.y-start.y;
+  if(handle!=='translateX'&&handle!=='translateY')return localTranslationDisplacement(axes,dx/zoom,-dy/zoom);
+  const axis=handle==='translateX'?'x':'y',direction=localTranslationScreenBasis(axes)[axis];
+  const projection=dx*direction.x+dy*direction.y;
+  const delta={x:0,y:0};
+  if(Math.abs(projection)>Number.EPSILON*(Math.abs(dx)+Math.abs(dy)))delta[axis]=projection/zoom;
+  return delta;
 }
 
 /** Smallest signed increment prevents the +180/-180 pointer branch-cut jump. */

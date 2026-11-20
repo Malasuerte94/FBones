@@ -1,8 +1,10 @@
 import { invokeNative as invoke, desktop } from './bridge.ts';
-import {preserveDeformOffsetBits,preserveTemporaryDeformZeros} from '../domain/deformTransport.ts';
+import {preserveAnimationKeyZeros} from '../domain/animationTransport.ts';
+import type {BoneAutoKey} from '../domain/animation.ts';
+import {preserveDeformKeyBits,preserveTemporaryDeformZeros} from '../domain/deformTransport.ts';
 import {preserveConstraintKeyBits,preserveEventKeyBits,preserveEventPatchBits,preserveTemporaryConstraintZeros} from '../domain/constraintTransport.ts';
-import type {ConstraintPose} from '../domain/animationConstraints.ts';
-import { draftSummary, validProjectName, type ProjectSummary, type RigEdit, type TraceOptions, type TracePreview, type EvaluationSnapshot, type EvaluationMode, type ReplayMotion, type ReplayLocalPose } from '../domain/project.ts';
+import type {ConstraintDraftPose} from '../domain/animationConstraints.ts';
+import { draftSummary, validProjectName, type ProjectSummary, type RigEdit, type TraceOptions, type TracePreview, type PruneWeightRequest, type PruneWeightPreview, type EvaluationSnapshot, type EvaluationMode, type ReplayMotion, type ReplayLocalPose } from '../domain/project.ts';
 
 export { desktop };
 let previewProject: ProjectSummary | null = null;
@@ -21,6 +23,10 @@ export async function openProject(discardChanges: boolean): Promise<ProjectSumma
   if (!desktop) throw new Error('File operations are available in the desktop application.');
   return invoke('open_project', { discardChanges });
 }
+export async function repairLinkedMeshCopy(expectedRevision: number): Promise<ProjectSummary | null> {
+  if (!desktop) throw new Error('File operations are available in the desktop application.');
+  return invoke('repair_linked_mesh_copy', { expectedRevision });
+}
 export async function closeProject(discardChanges: boolean): Promise<void> {
   if (desktop) return invoke('close_project', { discardChanges });
   if (previewProject?.dirty && !discardChanges) throw new Error('The current project has unsaved changes.');
@@ -34,17 +40,26 @@ export async function exportRuntime(expectedRevision:number):Promise<{path:strin
   if(!desktop)throw new Error('Runtime export is available in the desktop application.');
   return invoke('export_runtime',{expectedRevision});
 }
-export async function editRig(edit: RigEdit, expectedRevision: number,poseEpoch?:number): Promise<ProjectSummary> {
+export async function exportSpineBundle(expectedRevision:number):Promise<{path:string;pageCount:number}|null>{
+  if(!desktop)throw new Error('Spine game bundle export is available in the desktop application.');
+  return invoke('export_spine_bundle',{expectedRevision});
+}
+export function saveGifExport(expectedRevision:number,documentId:number,bytesBase64:string,suggestedName:string):Promise<{path:string}|null>{
+  return invoke('save_gif_export',{expectedRevision,documentId,bytesBase64,suggestedName});
+}
+export async function editRig(edit: RigEdit, expectedRevision: number,poseEpoch?:number,boneAutoKey?:BoneAutoKey): Promise<ProjectSummary> {
   if (!desktop) throw new Error('Bone editing is available in the desktop application.');
-  if(edit.type==='setAnimationDeformKeys')edit={...edit,keys:edit.keys.map(preserveDeformOffsetBits)};
-  else if(edit.type==='setAnimationKeyBatch'&&edit.deformKeys)edit={...edit,deformKeys:edit.deformKeys.map(preserveDeformOffsetBits)};
+  if(edit.type==='setAnimationKey')edit=preserveAnimationKeyZeros(edit);
+  else if(edit.type==='setAnimationKeys')edit={...edit,keys:edit.keys.map(preserveAnimationKeyZeros)};
+  if(edit.type==='setAnimationDeformKeys')edit={...edit,keys:edit.keys.map(preserveDeformKeyBits)};
+  else if(edit.type==='setAnimationKeyBatch'&&edit.deformKeys)edit={...edit,deformKeys:edit.deformKeys.map(preserveDeformKeyBits)};
   if(edit.type==='setAnimationConstraintKeys')edit={...edit,keys:edit.keys.map(preserveConstraintKeyBits)};
   else if(edit.type==='setAnimationEventKeys')edit={...edit,keys:edit.keys.map(preserveEventKeyBits)};
   else if(edit.type==='updateEvent')edit=preserveEventPatchBits(edit);
-  else if(edit.type==='setAnimationKeyBatch')edit={...edit,...(edit.constraintKeys?{constraintKeys:edit.constraintKeys.map(preserveConstraintKeyBits)}:{}),...(edit.eventKeys?{eventKeys:edit.eventKeys.map(preserveEventKeyBits)}:{})};
-  return invoke('edit_rig', { edit, expectedRevision,...(poseEpoch===undefined?{}:{poseEpoch}) });
+  else if(edit.type==='setAnimationKeyBatch')edit={...edit,boneKeys:edit.boneKeys.map(preserveAnimationKeyZeros),...(edit.constraintKeys?{constraintKeys:edit.constraintKeys.map(preserveConstraintKeyBits)}:{}),...(edit.eventKeys?{eventKeys:edit.eventKeys.map(preserveEventKeyBits)}:{})};
+  return invoke('edit_rig', { edit, expectedRevision,...(poseEpoch===undefined?{}:{poseEpoch}),...(boneAutoKey?{boneAutoKey}:{}) });
 }
-export async function evaluateProject(expectedRevision:number,time:number,mode:EvaluationMode='replay',motion?:ReplayMotion,fromPoseEpoch?:number,animationId?:number,animationPose?:ReplayLocalPose[],geometry?:{constraintPose?:ConstraintPose[];deformTargets?:number[];drawOrderPose?:number[];deformPose?:{attachment:number;offsets:number[];negativeZeroIndices?:number[]}[]}):Promise<EvaluationSnapshot>{return invoke('evaluate_project',{expectedRevision,request:{mode,time,...(motion?{motion}:{}),...(fromPoseEpoch===undefined?{}:{fromPoseEpoch}),...(animationId===undefined?{}:{animationId}),...(animationPose===undefined?{}:{animationPose}),...geometry,...(geometry?.constraintPose?{constraintPose:geometry.constraintPose.map(preserveTemporaryConstraintZeros)}:{}),...(geometry?.deformPose?{deformPose:geometry.deformPose.map(preserveTemporaryDeformZeros)}:{})}});}
+export async function evaluateProject(expectedRevision:number,time:number,mode:EvaluationMode='replay',motion?:ReplayMotion,fromPoseEpoch?:number,animationId?:number,animationPose?:ReplayLocalPose[],geometry?:{constraintPose?:ConstraintDraftPose[];deformTargets?:number[];drawOrderPose?:number[];deformPose?:{attachment:number;offsets:number[];negativeZeroIndices?:number[]}[]}):Promise<EvaluationSnapshot>{return invoke('evaluate_project',{expectedRevision,request:{mode,time,...(motion?{motion}:{}),...(fromPoseEpoch===undefined?{}:{fromPoseEpoch}),...(animationId===undefined?{}:{animationId}),...(animationPose===undefined?{}:{animationPose}),...geometry,...(geometry?.constraintPose?{constraintPose:geometry.constraintPose.map(preserveTemporaryConstraintZeros)}:{}),...(geometry?.deformPose?{deformPose:geometry.deformPose.map(preserveTemporaryDeformZeros)}:{})}});}
 export async function importImage(bone: number, expectedRevision: number): Promise<ProjectSummary | null> {
   if (!desktop) throw new Error('Image import is available in the desktop application.');
   return invoke('import_image', { bone, expectedRevision });
@@ -71,3 +86,6 @@ export async function previewTrace(id:number,options:TraceOptions,expectedRevisi
 export async function applyTrace(id:number,options:TraceOptions,expectedRevision:number):Promise<ProjectSummary>{return invoke('apply_trace',{id,options,expectedRevision});}
 export async function previewTraceAttachment(id:number,options:TraceOptions,expectedRevision:number,poseEpoch?:number):Promise<TracePreview>{return invoke('preview_trace_attachment',{id,options,expectedRevision,...(poseEpoch===undefined?{}:{poseEpoch})});}
 export async function applyTraceAttachment(id:number,options:TraceOptions,expectedRevision:number,poseEpoch?:number):Promise<ProjectSummary>{return invoke('apply_trace_attachment',{id,options,expectedRevision,...(poseEpoch===undefined?{}:{poseEpoch})});}
+export async function previewPruneWeights(request:PruneWeightRequest,expectedRevision:number,poseEpoch?:number):Promise<PruneWeightPreview>{
+  return invoke('preview_prune_weights',{request,expectedRevision,...(poseEpoch===undefined?{}:{poseEpoch})});
+}

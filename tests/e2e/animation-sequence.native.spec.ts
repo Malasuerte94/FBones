@@ -1,6 +1,6 @@
 import {test,expect,openNativeEditor,type NativeSession} from './fixtures/native-session';
 import type {Page,Locator} from '@playwright/test';
-import type {ProjectSummary,RigEdit} from '../../src/domain/project';
+import type {EvaluationSnapshot,ProjectSummary,RigEdit} from '../../src/domain/project';
 import {inflateSync} from 'node:zlib';
 import {writeFile} from 'node:fs/promises';
 
@@ -48,4 +48,115 @@ test('@native Region Sequence settings, working frame, K, discrete Graph key his
 
 test('@native Mesh Sequence uses authored zero-metadata geometry with numbered frames in Main and Preview',async({page,native})=>{
  const f=await seed(native,'mesh'),source=attachment(f.p,f.id);expect(source.region).toMatchObject({width:0,height:0});await openNativeEditor(page);await page.getByTestId('editor-mode-animate').click();await page.getByTestId('animation-select').selectOption(String(clip(f.p).id));await select(page,f.id);await seek(page,4);await views(page,[105,70,160]);await seek(page,5.5);await views(page,[130,70,140]);await seek(page,12);await views(page,[180,70,100]);const after=(await native.snapshot())!;expect(after).toEqual(f.p);expect(attachment(after,f.id).mesh).toEqual(source.mesh);expect(after.slots.flatMap(s=>s.attachments??[])).toHaveLength(2);
+});
+
+test('@native Dopesheet Key Shown preserves an aligned Sequence phase and rejects an unaligned mixed request', async ({page, native}) => {
+  const f = await seed(native, 'mesh');
+  const mesh = attachment(f.p, f.mesh);
+  const bone = f.p.slots.find(slot => slot.id === mesh.slot)!.bone;
+  expect(mesh.sequence?.count).toBe(4);
+  const calls = (start: number) => native.calls.slice(start).filter(call => call.command === 'edit_rig');
+
+  await edit(native, {type: 'setAnimationFps', fps: 8});
+  const animation = (await edit(native, {type: 'createAnimation', name: 'Dopesheet Sequence phase'})).editedAnimation!;
+  const sequence = (model: ProjectSummary, owner = f.mesh) => model.animations!.find(clip => clip.id === animation)!
+    .sequenceTracks!.find(track => track.attachment === owner)!;
+  await edit(native, {type: 'setAnimationKeyBatch', animation, boneKeys: [
+    {bone, channel: 'translate', frame: 0, values: [0, 0], curve: 'linear'},
+    {bone, channel: 'translate', frame: 10, values: [20, 10], curve: 'linear'},
+  ], slotKeys: [], sequenceKeys: [
+    {attachment: f.mesh, frame: 0, mode: 2, index: 1, delay: .25},
+    {attachment: f.mesh, frame: 10, mode: 0, index: 3, delay: .25},
+    {attachment: f.region, frame: 0, mode: 2, index: 0, delay: .25},
+    {attachment: f.region, frame: 10, mode: 0, index: 2, delay: .25},
+  ]});
+
+  await openNativeEditor(page);
+  await page.getByTestId('editor-mode-animate').click();
+  await page.getByTestId('animation-select').selectOption(String(animation));
+  await expect(page.getByTestId('timeline-tab-dopesheet')).toHaveClass(/active/);
+  await page.locator(`[data-tree-kind="bone"][data-tree-id="${bone}"]`).getByRole('treeitem').click();
+  await expect(page.getByTestId(`timeline-key-bone-${bone}-translate`)).toBeVisible();
+  await expect(page.getByTestId(`timeline-key-sequence-${f.mesh}`)).toBeVisible();
+  await expect(page.getByTestId(`timeline-key-sequence-${f.region}`)).toHaveCount(0);
+  const current = page.getByTestId('timeline-current');
+  const keyShown = page.getByTestId('timeline-row-key-shown');
+  const before = (await native.snapshot())!;
+  expect(before.animationFps).toBe(8);
+
+  async function phase(model: ProjectSummary, frames: number[]) {
+    const samples: NonNullable<EvaluationSnapshot['sequencePose']> = [];
+    for (const frame of frames) {
+      const pose = await native.invoke<EvaluationSnapshot>('evaluate_project', {expectedRevision: model.revision,
+        request: {animationId: animation, mode: 'none', time: frame / 8}});
+      samples.push(pose.sequencePose!.find(row => row.attachment === f.mesh)!);
+    }
+    return samples;
+  }
+  const sampleFrames = [3.75, 4, 5.999, 6, 6.001, 9.75, 10, 10.25, 12];
+  const indices = await phase(before, sampleFrames);
+  expect(indices.map(row => row.index)).toEqual([2, 3, 3, 0, 0, 1, 3, 3, 3]);
+
+  await seek(page, 4);
+  const start = native.calls.length;
+  await keyShown.press('Space');
+  await expect.poll(async () => sequence((await native.snapshot())!).keys.map(key => key.frame)).toEqual([0, 4, 10]);
+  const aligned = (await native.snapshot())!;
+  expect(aligned.revision).toBe(before.revision + 1);
+  expect(calls(start)).toHaveLength(1);
+  expect(calls(start)[0]!.args).toMatchObject({expectedRevision: before.revision, edit: {
+    type: 'setAnimationKeyBatch', animation,
+    boneKeys: [{bone, channel: 'translate', frame: 4, values: [8, 4]}],
+    sequenceKeys: [{attachment: f.mesh, frame: 4, mode: 2, index: 3, delay: .25}],
+  }});
+  const [first, inserted, last] = sequence(aligned).keys;
+  expect(first).toEqual(sequence(before).keys[0]);
+  expect(inserted).toMatchObject({frame: 4, mode: 2, index: 3, delay: .25});
+  expect(last).toEqual(sequence(before).keys[1]);
+  expect(sequence(aligned, f.region)).toEqual(sequence(before, f.region));
+  expect(aligned.slots).toEqual(before.slots);
+  expect(aligned.bones).toEqual(before.bones);
+  expect(await phase(aligned, sampleFrames)).toEqual(indices);
+  await expect(current).toHaveValue('4');
+
+  const repeat = native.calls.length;
+  await keyShown.press('Enter');
+  expect(await native.snapshot()).toEqual(aligned);
+  expect(calls(repeat)).toHaveLength(0);
+
+  await seek(page, 5);
+  await expect(current).toHaveValue('5');
+  const unaligned = native.calls.length;
+  await keyShown.click();
+  const notice = page.getByRole('alert').filter({hasText: 'Sequence'});
+  await expect(notice).toContainText(mesh.name);
+  await expect(notice).toContainText('frame 5');
+  await expect(notice).toContainText('phase');
+  expect(calls(unaligned)).toHaveLength(0);
+  expect(await native.snapshot()).toEqual(aligned);
+  await page.getByRole('button', {name: 'Undo', exact: true}).click();
+  await expect.poll(async () => (await native.snapshot())!.animations).toEqual(before.animations);
+  expect(calls(start).map(call => (call.args.edit as RigEdit).type)).toEqual(['setAnimationKeyBatch', 'undo']);
+  await expect(current).toHaveValue('5');
+
+  await select(page, f.mesh);
+  await page.getByTestId('timeline-auto-key').click();
+  await expect(page.getByTestId('timeline-auto-key')).toHaveAttribute('aria-pressed', 'false');
+  const beforeDraft = (await native.snapshot())!;
+  const draftStart = native.calls.length;
+  await page.getByTestId('sequence-key-mode').selectOption('0');
+  await field(page, 'sequence-key-index', '1');
+  await expect(page.getByTestId('sequence-key-index')).toHaveValue('1');
+  expect(calls(draftStart)).toHaveLength(0);
+  expect(await native.snapshot()).toEqual(beforeDraft);
+  await keyShown.click();
+  await expect.poll(async () => sequence((await native.snapshot())!).keys.map(key => key.frame)).toEqual([0, 5, 10]);
+  const draft = (await native.snapshot())!;
+  expect(calls(draftStart)).toHaveLength(1);
+  expect(calls(draftStart)[0]!.args).toMatchObject({expectedRevision: beforeDraft.revision, edit: {
+    type: 'setAnimationKeyBatch', animation, sequenceKeys: [{attachment: f.mesh, frame: 5, mode: 0, index: 1, delay: .25}],
+  }});
+  expect((await phase(draft, [4.75, 5, 6, 10])).map(row => row.index)).toEqual([3, 1, 1, 3]);
+  expect(sequence(draft, f.region)).toEqual(sequence(before, f.region));
+  await expect(current).toHaveValue('5');
 });

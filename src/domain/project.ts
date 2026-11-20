@@ -17,7 +17,7 @@ export interface ReplayLocalPose {x:number;y:number;rotation:number;scaleX:numbe
 export interface ReplayMotion {initial:ReplayLocalPose[];changes:{tick:number;poses:ReplayLocalPose[]}[]}
 export interface EvaluationSnapshot {
   revision:number;documentId:number;poseEpoch:number;time:number;mode:EvaluationMode;
-  bones:{id:number;world:{x:number;y:number;a:number;b:number;c:number;d:number}}[];
+  bones:{id:number;world:{x:number;y:number;a:number;b:number;c:number;d:number};applied?:ReplayLocalPose}[];
   localBones?:BoneView[];
   animationId?:number|null;
   slotPose?:SlotAnimationPose[];
@@ -39,15 +39,30 @@ export interface DenseBindingView {
 export interface MeshView extends DenseBindingView {
   uvs: number[]; triangles: number[]; edges: number[]; hull: number;
 }
+export interface MeshOutlineDraft {
+  attachmentId: number;
+  documentId: number;
+  revision: number;
+  plane: MeshView;
+  points: [number, number][];
+}
 export type EditorTool = 'select'|'pan'|'create'|'translate'|'rotate'|'scale'|'shear'|'pose'|'length';
 export interface LibraryImage {key:string;width:number;height:number}
 export interface LibraryView {root:string;images:LibraryImage[];warnings:string[]}
 export interface AudioSound {key:string;channels:number;sampleRate:number;frames:number;duration:number;peak:number}
 export interface AudioLibraryView {root:string;sounds:AudioSound[];warnings:string[]}
 export type EditMode = 'bones' | 'images' | 'meshes' | 'weights' | 'clipping';
-export interface TraceOptions {alphaThreshold:number;tolerance:number;spacing:number;inner:boolean;innerThreshold:number;innerTolerance:number;innerSpacing:number;maxVertices:number}
+export interface TraceOptions {alphaThreshold:number;tolerance:number;spacing:number;padding?:number;inner:boolean;innerThreshold:number;innerTolerance:number;innerSpacing:number;maxVertices:number}
 export interface TraceGeometry {uvs:number[];triangles:number[];edges:number[];hull:number;innerCount:number;filledHoles:number;bridgedIslands:number;usedTolerance:number;usedSpacing:number;budgetAdjusted:boolean}
 export interface TracePreview {slotId:number;attachmentId?:number;poseEpoch?:number;expectedRevision:number;mesh:MeshView;geometry:TraceGeometry}
+export interface PruneWeightOptions {maxInfluences:number;threshold:number}
+export interface PruneWeightTarget {id:number;lockedBones?:number[]}
+export interface PruneWeightRequest extends PruneWeightOptions {targets:PruneWeightTarget[]}
+export interface PruneWeightRow {vertex:number;weights:number[]}
+export interface PruneWeightPreview {
+  documentId:number;revision:number;poseEpoch?:number;removed:number;
+  targets:{id:number;rows:PruneWeightRow[]}[];
+}
 export interface ClippingDraft {
   slot:number;name:string;endSlot:number;convex:boolean;inverse:boolean;
   points:{x:number;y:number}[];documentId:number;revision:number;
@@ -71,13 +86,24 @@ export type SlotBlendMode = 'normal'|'additive'|'multiply'|'screen';
 export interface ClippingView extends DenseBindingView {
   endSlot:number;convex:boolean;inverse:boolean;color:number;edges:number[];
 }
+export interface PathView extends DenseBindingView {
+  closed:boolean;constantSpeed:boolean;color:number;edges:number[];lengths:number[];
+}
 export interface AttachmentView {
-  id:number;slot:number;name:string;type:'region'|'mesh'|'clipping';
+  id:number;slot:number;name:string;type:'region'|'mesh'|'clipping'|'path';
+  /** Attachment that owns this linked mesh's geometry and weights. */
+  linkedMeshSourceId?:number;
+  /** Linked meshes inherit source animation timelines unless explicitly disabled. */
+  linkedMeshInheritsTimelines?:boolean;
   /** Setup attachment tint, independent of animated slot light RGBA. */
   color?:number;
   region:RegionView|null;mesh:MeshView|null;clipping:ClippingView|null;imageAvailable:boolean;
+  path?:PathView|null;
   sequence?:SequenceSettings|null;
   sequenceAvailableFrames?:number[];
+}
+export function linkedTimelineSourceId(attachment?:Pick<AttachmentView,'linkedMeshSourceId'|'linkedMeshInheritsTimelines'>|null):number|undefined {
+  return attachment?.linkedMeshInheritsTimelines===false?undefined:attachment?.linkedMeshSourceId;
 }
 export type TransformProperty = 'rotate'|'x'|'y'|'scaleX'|'scaleY'|'shearY';
 export type TransformChannels = [number,number,number,number,number,number];
@@ -104,18 +130,28 @@ export interface TransformConstraintView extends TransformConstraintInput {
   /** Read-only authoritative derived endpoints, in the same24-cell order. */
   readonly editorRangeValues?:readonly number[]|null;
 }
-export type ConstraintView = (IkConstraintInput|TransformConstraintView|PhysicsConstraintInput) & {id:number;order:number};
+export interface PathConstraintView {
+  type:'path';id:number;order:number;name:string;bones:number[];slot:number;
+  positionMode:'fixed'|'percent';spacingMode:'length'|'fixed'|'percent'|'proportional';
+  rotateMode:'tangent'|'chain'|'chainScale';
+  rotation:number;position:number;spacing:number;mixRotate:number;mixX:number;mixY:number;
+}
+export type ConstraintView = ((IkConstraintInput|TransformConstraintView|PhysicsConstraintInput) & {id:number;order:number})|PathConstraintView;
 /** Ephemeral Auto scope. Bone references are stable session IDs, not columns. */
 export interface AutoWeightScope {
   vertices?:number[];
   bones?:number[];
   lockedBones?:number[];
 }
+export interface AnimationOffsetRange {start:number;end:number}
 export type RigEdit =
   | {type:'createAnimation';name:string}
   | {type:'renameAnimation';id:number;name:string}
   | {type:'deleteAnimation';id:number}
   | {type:'duplicateAnimation';id:number;name:string}
+  | {type:'storeAnimationKeys';animation:number}
+  | {type:'clearStoredAnimationKeys';animation:number}
+  | {type:'swapStoredAnimationKeys';animation:number}
   | {type:'setAnimationFps';fps:number}
   | ({type:'setAnimationKey';animation:number}&AnimationKeyInput)
   | {type:'setAnimationKeys';animation:number;keys:AnimationKeyInput[]}
@@ -134,11 +170,22 @@ export type RigEdit =
   | {type:'setAnimationDeformKeys';animation:number;keys:DeformKeyInput[]}
   | {type:'setAnimationDeformVertices';animation:number;attachment:number;frame:number;vertices:{vertex:number;x:number;y:number}[];curve?:'linear'|'stepped'|'bezier';controls?:[number,number,number,number]}
   | {type:'deleteAnimationKeys';animation:number;keys:number[]}
-  | {type:'moveAnimationKeys';animation:number;keys:number[];deltaFrames:number}
+  | {type:'moveAnimationKeys';animation:number;keys:number[];deltaFrames:number;shift?:boolean}
+  | {type:'scaleAnimationKeys';animation:number;keys:number[];anchorFrame:number;fromEdgeFrame:number;toEdgeFrame:number}
+  | {type:'offsetAnimationKeys';animation:number;key:number;deltaFrames:number;continueOffset?:boolean;loopRange?:AnimationOffsetRange}
   | { type: 'create'; parent: number; x: number; y: number; rotation: number; length: number; color?:number }
   | { type: 'update'; id: number; name: string; x: number; y: number; rotation: number; length: number; scaleX?:number;scaleY?:number;shearX?:number;shearY?:number }
+  | { type: 'renameBones'; renames: {id:number;name:string}[] }
+  | { type: 'setBoneParentPosition'; id: number; x?: number; y?: number; compensateBones?: boolean; compensateImages?: boolean }
+  | { type: 'setBoneLocalPosition'; id: number; x?: number; y?: number; compensateBones?: boolean; compensateImages?: boolean }
+  | { type: 'setBoneWorldPosition'; id: number; axis: 'x' | 'y'; position: number; compensateBones?: boolean; compensateImages?: boolean }
+  | { type: 'setBoneWorldRotation'; id: number; angle: number; compensateBones?: boolean; compensateImages?: boolean }
   | { type: 'move' | 'tip' | 'length'; id: number; x: number; y: number }
   | {type:'transformBones';ids:number[];mode:'translate'|'rotate'|'scale'|'shear'|'pose';individual?:boolean;localAxes?:boolean;pivotX:number;pivotY:number;dx:number;dy:number;rotation:number;scaleX:number;scaleY:number;shearX:number;shearY:number}
+  | {type:'translateBoneWithCompensation';id:number;dx:number;dy:number;compensateBones:boolean;compensateImages:boolean}
+  | {type:'rotateBoneWithCompensation';id:number;mode:'localAbsolute'|'worldDelta';angle:number;compensateBones:boolean;compensateImages:boolean}
+  | {type:'scaleBoneWithCompensation';id:number;mode:'localAbsolute'|'localFactor';x?:number;y?:number;compensateBones:boolean;compensateImages:boolean}
+  | {type:'shearBoneWithCompensation';id:number;mode:'localAbsolute'|'worldDelta';axis:'x'|'y';angle:number;compensateBones:boolean;compensateImages:boolean}
   | {type:'setBoneColors';colors:{id:number;color:number}[]}
   | {type:'setBoneColor'|'setSlotColor';id:number;color:number}
   | {type:'setSlotDarkColor';id:number;enabled:boolean;color:number}
@@ -146,9 +193,12 @@ export type RigEdit =
   | {type:'createSlot';bone:number;name?:string}
   | {type:'setActiveAttachment';slot:number;attachment:number|null}
   | {type:'renameAttachment';id:number;name:string}
+  | {type:'createLinkedMesh';source:number;slot:number;name:string}
+  | {type:'setLinkedMeshInheritance';id:number;inheritTimelines:boolean}
   | {type:'moveAttachment';id:number;slot:number}
   | {type:'deleteAttachment';id:number}
-  | {type:'updateAttachment';id:number;x:number;y:number;rotation:number;scaleX:number;scaleY:number}
+  | {type:'updateAttachment';id:number;x?:number;y?:number;rotation?:number;scaleX?:number;scaleY?:number}
+  | {type:'setRegionPosition';id:number;x?:number|null;y?:number|null}
   | {type:'setAttachmentImagePath';id:number;path:string}
   | {type:'transformAttachments';ids:number[];mode:'translate'|'rotate'|'scale';pivotX:number;pivotY:number;dx:number;dy:number;rotation:number;scaleX:number;scaleY:number}
   | {type:'attachmentEdit';id:number;edit:RigEdit}
@@ -157,11 +207,18 @@ export type RigEdit =
   | {type:'moveClippingVertices';id:number;vertices:{vertex:number;x:number;y:number}[]}
   | {type:'insertClippingVertex';id:number;index:number;point:{x:number;y:number}}
   | {type:'deleteClippingVertex';id:number;vertex:number}
+  | {type:'generateMeshVertices';id:number}
+  | {type:'replaceMeshOutline';id:number;uvs:[number,number][]}
   | {type:'bindAttachment';id:number;bones:number[]}
   | {type:'setAttachmentWeight';id:number;vertex:number;bone:number;value:number;lockedBones?:number[]}
   | {type:'paintAttachmentWeights';id:number;bone:number;changes:{vertex:number;value:number}[];lockedBones?:number[]}
   | {type:'normalizeAttachmentWeights';id:number;lockedBones?:number[]}
   | {type:'autoAttachmentWeights';id:number;scope?:AutoWeightScope}
+  | {type:'smoothAttachmentWeights';id:number;vertices?:number[];lockedBones?:number[]}
+  | {type:'swapAttachmentWeights';id:number;bones:[number,number];lockedBones?:number[]}
+  | {type:'updateAttachmentBindings';id:number}
+  | {type:'pruneAttachmentWeights';request:PruneWeightRequest}
+  | {type:'pasteAttachmentWeights';id:number;bones:number[];rows:{vertex:number;weightBits:number[]}[];lockedBones?:number[]}
   | {type:'addConstraint';constraint:ConstraintInput}
   | {type:'addPhysicsToBones';bones:number[]}
   | {type:'updateConstraint';id:number;constraint:ConstraintInput}
@@ -190,11 +247,17 @@ export type RigEdit =
   | { type: 'setWeight'; id: number; vertex: number; bone: number; value: number }
   | { type: 'undo' | 'redo' };
 
+export type ProjectInspectionReason =
+  | {kind:'roundtripMismatch';offset?:number}
+  | {kind:'unsupportedStructure'|'linkedMeshChain'|'clippingScopes'|'attachmentProfile'|'imageResources'|'unsafeImagePath'|'ambiguousImagePath'};
+
 export interface ProjectSummary {
   name: string;
   path: string | null;
   dirty: boolean;
   inspectionOnly: boolean;
+  inspectionReason?: ProjectInspectionReason;
+  canRepairLinkedMeshCopy?: boolean;
   canSave: boolean;
   canCopy: boolean;
   version: string;
@@ -217,6 +280,8 @@ export interface ProjectSummary {
   editedAttachment?:number|null;
   constraints?:ConstraintView[];
   animations?:AnimationView[];
+  /** Native session comparison of committed keys. Never written to the project. */
+  storedAnimation?:AnimationView;
   animationChannels?:AnimationChannel[];
   animationFps?:number;
   editedAnimation?:number|null;

@@ -2,21 +2,26 @@
  * New Scene weight commands preserve all bind coordinates; legacy mesh edits
  * retain their older zero-row initialization policy explicitly. */
 import type {BoneView,DenseBindingView} from './project.ts';
-import {worldBones,transformPoint,inverseVector,localPoint,segmentDistance} from './rig.ts';
+import {worldBones,transformPoint,inverseVector,localPoint,segmentDistance,type WorldBone} from './rig.ts';
 export interface Point {x:number;y:number}
+/** Queries for the same evaluated pose throughout one draw. */
+export interface AttachmentGeometryContext {
+  readonly evaluated: ReadonlyMap<number,WorldBone>;
+  pointsFor(binding: DenseBindingView): Point[];
+}
 export type WeightPreviewPolicy='scene'|'legacy';
 type VertexMove={vertex:number;x:number;y:number};
 type WeightChange={vertex:number;value:number};
 function invalid(){return new Error('The binding contains an invalid vertex row or influence.');}
-function bindingPoses(bones:readonly BoneView[],binding:DenseBindingView){
-  const poses=new Map(worldBones(bones).map(b=>[b.id,b]));
+function bindingPoses(bones:readonly BoneView[],binding:DenseBindingView,evaluated?:ReadonlyMap<number,WorldBone>){
+  const poses=evaluated??new Map(worldBones(bones).map(b=>[b.id,b]));
   if(!binding.bones.length||new Set(binding.bones).size!==binding.bones.length)throw invalid();
   if(binding.bones.some(id=>!poses.has(id)))throw new Error('A binding influence bone no longer exists.');
   for(const row of binding.vertices){const sum=row.weights.reduce((a,b)=>a+b,0);if(row.weights.length!==binding.bones.length||row.positions.length!==binding.bones.length*2||!Number.isFinite(sum)||sum<=0||row.weights.some(w=>!Number.isFinite(w)||w<0)||row.positions.some(p=>!Number.isFinite(p)))throw invalid();}
   return poses;
 }
-export function bindingPoints(bones:readonly BoneView[],binding:DenseBindingView):Point[]{
-  const poses=bindingPoses(bones,binding);
+export function bindingPoints(bones:readonly BoneView[],binding:DenseBindingView,evaluated?:ReadonlyMap<number,WorldBone>):Point[]{
+  const poses=bindingPoses(bones,binding,evaluated);
   return binding.vertices.map(row=>{
     let x=0,y=0;binding.bones.forEach((id,i)=>{const weight=row.weights[i]!;if(!weight)return;const p=transformPoint(poses.get(id)!,row.positions[i*2]!,row.positions[i*2+1]!);x+=p.x*weight;y+=p.y*weight;});
     if(!Number.isFinite(x)||!Number.isFinite(y))throw invalid();return{x,y};

@@ -2,6 +2,12 @@
 //! existing image mapping while deformation preserves UVs and triangle topology.
 use crate::{mesh, project::AppError, rig::Pose, triangulation};
 use fbones_format::minimal::meshes::Mesh;
+
+#[cfg(feature = "scene-editing")]
+mod generate;
+#[cfg(feature = "scene-editing")]
+pub(crate) use generate::generate_vertices;
+
 type Point = [f64; 2];
 const EPS: f64 = 1e-8;
 fn invalid(message: &str) -> AppError {
@@ -93,13 +99,17 @@ impl Plane {
             self.y[0] * p[0] + self.y[1] * p[1] + self.y[2],
         ]
     }
-    fn inverse(self, p: Point) -> Result<Point, AppError> {
+    fn determinant(self) -> Result<f64, AppError> {
         let det = self.x[0] * self.y[1] - self.x[1] * self.y[0];
         if !det.is_finite() || det.abs() < 1e-12 {
             return Err(invalid(
                 "The current image plane is collapsed and cannot be edited.",
             ));
         }
+        Ok(det)
+    }
+    fn inverse(self, p: Point) -> Result<Point, AppError> {
+        let det = self.determinant()?;
         let (x, y) = (p[0] - self.x[2], p[1] - self.y[2]);
         Ok([
             (x * self.y[1] - y * self.x[1]) / det,
@@ -176,6 +186,102 @@ fn valid_uvs(uvs: &[f32], hull: usize, edges: &[u32], triangles: &[u16]) -> Resu
     }
     Ok(())
 }
+
+/// Fit the source image in its owning bone's local space and replace only its
+/// geometry with the submitted boundary. The materialized UVs are already f32.
+#[cfg(feature = "scene-editing")]
+pub(crate) fn replace_outline(mesh: &Mesh, uvs: &[[f32; 2]]) -> Result<Mesh, AppError> {
+    use crate::clip_edit::is_simple_polygon;
+    use fbones_format::minimal::meshes::Vertex;
+
+    let hull = uvs.len();
+    if !(3..=256).contains(&hull)
+        || uvs.iter().flatten().any(|value| !(0.0..=1.0).contains(value))
+    {
+        return Err(invalid("Use 3–256 outline vertices inside the image."));
+    }
+    let points: Vec<_> = uvs.iter().map(|uv| uv.map(f64::from)).collect();
+    if !is_simple_polygon(&points, 1e-10, 1e-10) {
+        return Err(invalid("Use a simple closed outline with distinct vertices."));
+    }
+
+    let count = mesh.vertices.len();
+    if mesh.weighted
+        || mesh.bones.len() != 1
+        || !(3..=mesh::MAX_VERTICES).contains(&count)
+        || mesh.uvs.len() != count * 2
+        || mesh.uvs.iter().any(|value| !(0.0..=1.0).contains(value))
+        || mesh.vertices.iter().any(|vertex| {
+            vertex.weights != [1.0]
+                || vertex.positions.len() != 2
+                || vertex.positions.iter().any(|value| !value.is_finite())
+        })
+    {
+        return Err(invalid("Use an unweighted mesh with finite image coordinates."));
+    }
+    let source_local: Vec<_> = mesh
+        .vertices
+        .iter()
+        .map(|vertex| [vertex.positions[0], vertex.positions[1]].map(f64::from))
+        .collect();
+    let plane = Plane::fit(&uv_points(mesh), &source_local)?;
+    let direction = plane.determinant()?.signum();
+    let project = |uv| plane.point(uv).map(|axis| axis as f32);
+    let collapsed = || invalid("The outline collapses on the image plane at stored precision.");
+    let corners = [[0., 0.], [1., 0.], [1., 1.], [0., 1.]].map(|uv| project(uv).map(f64::from));
+    if corners.iter().flatten().any(|value| !value.is_finite())
+        || (0..4).any(|i| {
+            triangulation::cross(corners[i], corners[(i + 1) % 4], corners[(i + 2) % 4]) * direction
+                <= 0.0
+        })
+    {
+        return Err(collapsed());
+    }
+
+    let stored_uvs: Vec<_> = uvs.iter().flatten().copied().collect();
+    // The tessellator already constrains the cyclic hull. Persist those same
+    // edges explicitly below so they remain visible and editable in Setup.
+    let triangles = triangulation::triangulate_with_metric(
+        &stored_uvs,
+        hull,
+        &[],
+        [f64::from(mesh.image.width), f64::from(mesh.image.height)],
+    )?;
+    let positions: Vec<_> = points.iter().copied().map(project).collect();
+    if positions.iter().flatten().any(|value| !value.is_finite()) {
+        return Err(collapsed());
+    }
+    let local: Vec<_> = positions.iter().map(|point| point.map(f64::from)).collect();
+    if !is_simple_polygon(&local, 0.0, 0.0)
+        || triangles.chunks_exact(3).any(|face| {
+            let [a, b, c] = [face[0], face[1], face[2]].map(usize::from);
+            let uv_side = triangulation::cross(points[a], points[b], points[c]);
+            let local_side = triangulation::cross(local[a], local[b], local[c]);
+            uv_side * local_side * direction <= 0.0
+        })
+    {
+        return Err(collapsed());
+    }
+    Ok(Mesh {
+        image: mesh.image.clone(),
+        weighted: false,
+        uvs: stored_uvs,
+        triangles,
+        edges: (0..hull)
+            .flat_map(|i| [i as u32, ((i + 1) % hull) as u32])
+            .collect(),
+        hull,
+        bones: mesh.bones.clone(),
+        vertices: positions
+            .into_iter()
+            .map(|point| Vertex {
+                weights: vec![1.0],
+                positions: point.to_vec(),
+            })
+            .collect(),
+    })
+}
+
 /// Preserve exact existing rows; interpolate dense weighted local positions in
 /// old UV faces, including the plain dormant local field. Outside the old hull,
 /// extend the nearest complete row by inverse world-delta vectors on ALL columns.

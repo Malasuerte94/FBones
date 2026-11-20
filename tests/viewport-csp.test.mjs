@@ -69,3 +69,49 @@ test('actual Region and Mesh two-color filter construction and cleanup work with
  assert.equal(context.passed,true);assert.equal(context.filterCount,2);assert.equal(context.remaining,0);
  for(const filter of context.filterState){assert.equal(filter.blend,'add');assert.equal(filter.gl,true);assert.equal(filter.gpu,true);assert.equal(filter.matrix[9],128/255);assert.equal(filter.matrix[14],64/255);}
 });
+
+test('actual Pixi position buffer stays current across identical, camera and deformed Mesh redraws', async () => {
+ const context = await runUnderStrictCsp(`
+  import {ImageLayer} from './src/viewport/ImageLayer.ts';
+  import {Texture,BufferImageSource} from 'pixi.js';
+  const layer = new ImageLayer(async () => {throw Error('No image request');}, () => {});
+  const bones = [{id:0,parent:null,name:'own',x:0,y:0,rotation:0,length:0}];
+  const screen = (x,y) => ({x,y});
+  layer.draw(1,bones,[],null,screen,1);
+  layer.textures.set('own',new Texture({source:new BufferImageSource({resource:new Uint8Array([0,0,0,255]),width:1,height:1})}));
+  const region={name:'own',image:'own',x:0,y:0,rotation:0,scaleX:1,scaleY:1,width:32,height:24};
+  const mesh = {weighted:false,bones:[0],uvs:[0,0,1,0,0,1],triangles:[0,1,2],edges:[],hull:3,
+   vertices:[[0,0],[32,0],[0,24]].map(positions => ({weights:[1],positions}))};
+  const slot = {id:0,name:'own',bone:0,visible:true,imageAvailable:true,region,mesh};
+  const draw = (project = screen, binding = mesh) => layer.draw(1,bones,[{...slot,mesh:binding}],null,project,1);
+  draw();
+  const geometry = layer.sprites.get(0).geometry;
+  const buffer = geometry.getBuffer('aPosition');
+  const initial = geometry.positions;
+  const versions = [buffer._updateID];
+  draw((x,y) => ({x: x===32 ? x+1e-8 : x,y}));
+  versions.push(buffer._updateID);
+  globalThis.retained = geometry.positions === initial;
+  draw((x,y) => ({x:x+4,y}));
+  versions.push(buffer._updateID);
+  globalThis.panX = geometry.positions[0];
+  const deformed = {...mesh,vertices:[{weights:[1],positions:[5,0]},...mesh.vertices.slice(1)]};
+  draw((x,y) => ({x:x+4,y}),deformed);
+  versions.push(buffer._updateID);
+  globalThis.deformX = geometry.positions[0];
+  draw((x,y) => ({x:x===0 ? -0 : x,y}));
+  versions.push(buffer._updateID);
+  globalThis.negativeZero = Object.is(geometry.positions[0],-0);
+  draw();
+  versions.push(buffer._updateID);
+  globalThis.positiveZero = Object.is(geometry.positions[0],0);
+  globalThis.steps = versions.slice(1).map((version,index) => version-versions[index]);
+  layer.destroy();
+ `);
+ assert.deepEqual(Array.from(context.steps), [0, 1, 1, 1, 1]);
+ assert.equal(context.retained, true);
+ assert.equal(context.panX, 4);
+ assert.equal(context.deformX, 9);
+ assert.equal(context.negativeZero, true);
+ assert.equal(context.positiveZero, true);
+});

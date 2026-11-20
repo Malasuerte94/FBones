@@ -4,6 +4,7 @@
 //! snapshot. Physics state is per playback instance and absolute-time clock.
 mod ik;
 mod math;
+pub(crate) mod path;
 mod physics;
 #[cfg(test)]
 mod tests;
@@ -236,6 +237,7 @@ fn evaluate_through(
             Constraint::Transform(c) => {
                 transform::apply(scene, &mut frame, c, sampled.map(|v| &v[i]))?
             }
+            Constraint::Path(c) => path::apply(scene, &mut frame, c, sampled.map(|v| &v[i]))?,
             Constraint::Physics(c) => physics::apply(
                 scene,
                 &mut frame,
@@ -305,6 +307,7 @@ fn validate_constraints(scene: &SceneProject, mode: StepMode) -> Result<(), Solv
         let bones = match c {
             Constraint::Ik(c) => Some(&c.bones),
             Constraint::Transform(c) => Some(&c.bones),
+            Constraint::Path(c) => Some(&c.bones),
             Constraint::Physics(_) => None,
         };
         if let Some(indices) = bones {
@@ -365,6 +368,7 @@ fn validate_constraints(scene: &SceneProject, mode: StepMode) -> Result<(), Solv
                     }
                 }
             }
+            Constraint::Path(c) => path::validate(scene, c)?,
             Constraint::Physics(c) => {
                 if c.bone >= scene.rig.bones.len()
                     || [

@@ -1,12 +1,24 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {preserveDeformOffsetBits,preserveTemporaryDeformZeros} from '../src/domain/deformTransport.ts';
+import {preserveDeformKeyBits,preserveDeformOffsetBits,preserveTemporaryDeformZeros} from '../src/domain/deformTransport.ts';
 
 test('raw deformation carriers preserve dormant signed zero across actual JSON encoding',()=>{
  const key={attachment:7,frame:10,offsets:[1,-0,.123456789,0],dataPresent:true,curve:'linear'},before=structuredClone(key),wire=JSON.parse(JSON.stringify(preserveDeformOffsetBits(key)));
  assert.equal(Object.is(wire.offsets[1],-0),false);assert.deepEqual(wire.offsetBits,[0x3f800000,0x80000000,0x3dfcd6ea,0]);
  const view=new DataView(new ArrayBuffer(4));const recovered=wire.offsetBits.map(bits=>{view.setUint32(0,bits,false);return view.getFloat32(0,false);});assert.ok(Object.is(recovered[1],-0));assert.equal(recovered[2],Math.fround(key.offsets[2]));assert.deepEqual(key,before);
  const ordinary={...key,offsets:[1,0]};assert.strictEqual(preserveDeformOffsetBits(ordinary),ordinary);
+});
+test('deform keys preserve signed progress controls and offsets together',()=>{
+ const key={attachment:7,frame:0,offsets:[1,-0],curve:'bezier',controls:[4,-0,8,.625]};
+ const wire=JSON.parse(JSON.stringify(preserveDeformKeyBits(key)));
+ assert.deepEqual(wire.controls,[4,0,8,.625]);
+ assert.deepEqual(wire.controlsBits,[0x40800000,0x80000000,0x41000000,0x3f200000]);
+ assert.deepEqual(wire.offsetBits,[0x3f800000,0x80000000]);
+ assert.ok(Object.is(key.controls[1],-0));
+ const ordinary={...key,offsets:[1,0],controls:[4,0,8,.625]};
+ assert.strictEqual(preserveDeformKeyBits(ordinary),ordinary);
+ const explicit={...key,offsetBits:wire.offsetBits,controlsBits:wire.controlsBits};
+ assert.strictEqual(preserveDeformKeyBits(explicit),explicit);
 });
 test('temporary carriers preserve zero signs without reducing nonzero f64 pose precision',()=>{
  const pose={attachment:7,offsets:[.123456789012345,-0,0,1.123456789012345]},wire=JSON.parse(JSON.stringify(preserveTemporaryDeformZeros(pose)));

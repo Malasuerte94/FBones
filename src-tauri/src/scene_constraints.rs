@@ -319,6 +319,9 @@ impl ConstraintInput {
         frame: &SceneFrame,
         previous: &Constraint,
     ) -> Result<Constraint, AppError> {
+        if matches!(previous, Constraint::Path(_)) {
+            return Err(invalid("Imported Path constraint settings are read-only."));
+        }
         let mut next = self.build(frame)?;
         if let (Constraint::Transform(old), Constraint::Transform(new)) = (previous, &mut next) {
             new.editor_ranges = old.editor_ranges;

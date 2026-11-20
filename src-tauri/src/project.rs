@@ -1,19 +1,31 @@
 use crate::images::{valid_image_stem, ImageAsset, ImageBundle, ImageCache};
 #[cfg(not(feature = "scene-editing"))]
 use crate::rig::image_stem;
+#[cfg(feature = "scene-editing")]
+use crate::rig::PruneWeightsRequest;
 #[cfg(not(feature = "scene-editing"))]
 use crate::rig::RigHistory;
 use crate::rig::{BoneView, ImagePlacement, RigEdit, SlotView};
 #[cfg(feature = "scene-editing")]
-use crate::scene_edit::SceneRigHistory as RigHistory;
+use crate::scene_edit::{AutoWeightWork, SceneEdit, SceneRigHistory as RigHistory};
+#[cfg(all(test, not(feature = "scene-editing")))]
+use fbones_format::minimal::regions::decode_regions;
 #[cfg(not(feature = "scene-editing"))]
-use fbones_format::minimal::regions::{decode_regions, encode_regions, RegionProject};
+use fbones_format::minimal::regions::{
+    decode_regions_with_diagnostics as decode_profile, encode_regions, RegionProject,
+};
+#[cfg(all(test, feature = "scene-editing"))]
+use fbones_format::minimal::scene::decode_scene as decode_regions;
 #[cfg(feature = "scene-editing")]
 use fbones_format::minimal::scene::{
-    decode_scene as decode_regions, encode_scene as encode_regions, SceneProject as RegionProject,
+    decode_scene_with_diagnostics as decode_profile, encode_scene as encode_regions,
+    SceneProject as RegionProject,
 };
-use fbones_format::{minimal::MinimalProject, FormatError, ProjectEnvelope, MAX_FILE_BYTES};
-use serde::Serialize;
+use fbones_format::{
+    minimal::MinimalProject, FormatError, ProfileDecodeError, ProfileRejection, ProjectEnvelope,
+    MAX_FILE_BYTES,
+};
+use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
     fs::File,
@@ -53,6 +65,29 @@ impl From<FormatError> for AppError {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum InspectionReason {
+    UnsupportedStructure,
+    LinkedMeshChain,
+    RoundtripMismatch { offset: usize },
+    ClippingScopes,
+    AttachmentProfile,
+    ImageResources,
+    UnsafeImagePath,
+    AmbiguousImagePath,
+}
+
+impl From<ProfileRejection> for InspectionReason {
+    fn from(rejection: ProfileRejection) -> Self {
+        match rejection {
+            ProfileRejection::UnsupportedStructure => Self::UnsupportedStructure,
+            ProfileRejection::LinkedMeshChain => Self::LinkedMeshChain,
+            ProfileRejection::RoundtripMismatch { offset } => Self::RoundtripMismatch { offset },
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectSummary {
@@ -61,6 +96,10 @@ pub struct ProjectSummary {
     pub path: Option<String>,
     pub dirty: bool,
     pub inspection_only: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub inspection_reason: Option<InspectionReason>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_repair_linked_mesh_copy: Option<bool>,
     pub can_save: bool,
     pub can_copy: bool,
     pub version: String,
@@ -84,6 +123,9 @@ pub struct ProjectSummary {
     pub constraints: Vec<serde_json::Value>,
     #[cfg(feature = "scene-editing")]
     pub animations: Vec<crate::animation::AnimationView>,
+    #[cfg(feature = "scene-editing")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stored_animation: Option<crate::animation::AnimationView>,
     #[cfg(feature = "scene-editing")]
     pub edited_animation: Option<u64>,
     #[cfg(feature = "scene-editing")]
@@ -135,6 +177,8 @@ pub enum Document {
     Inspected {
         path: PathBuf,
         envelope: ProjectEnvelope,
+        reason: InspectionReason,
+        repaired_copy: Option<Vec<u8>>,
     },
 }
 impl Document {
@@ -160,6 +204,8 @@ impl Document {
                 path: path.as_ref().map(|p| p.to_string_lossy().into_owned()),
                 dirty: *dirty,
                 inspection_only: false,
+                inspection_reason: None,
+                can_repair_linked_mesh_copy: None,
                 can_save: true,
                 can_copy: true,
                 version: "4.3.26".into(),
@@ -182,6 +228,8 @@ impl Document {
                 constraints: rig.constraint_views(),
                 #[cfg(feature = "scene-editing")]
                 animations: crate::animation::views(rig.history.frame()),
+                #[cfg(feature = "scene-editing")]
+                stored_animation: rig.history.stored_animation(),
                 #[cfg(feature = "scene-editing")]
                 edited_animation: rig.history.frame().focus.animation,
                 #[cfg(feature = "scene-editing")]
@@ -207,7 +255,12 @@ impl Document {
                 animation_fps: f64::from(project.fps),
                 library: crate::library::view(&project.images_root, images, library_warnings),
             },
-            Self::Inspected { path, envelope } => ProjectSummary {
+            Self::Inspected {
+                path,
+                envelope,
+                reason,
+                repaired_copy,
+            } => ProjectSummary {
                 scene_editing: false,
                 name: path
                     .file_stem()
@@ -217,6 +270,8 @@ impl Document {
                 path: Some(path.to_string_lossy().into_owned()),
                 dirty: false,
                 inspection_only: true,
+                inspection_reason: Some(*reason),
+                can_repair_linked_mesh_copy: repaired_copy.as_ref().map(|_| true),
                 can_save: false,
                 can_copy: true,
                 version: "4.3.26".into(),
@@ -239,6 +294,8 @@ impl Document {
                 constraints: vec![],
                 #[cfg(feature = "scene-editing")]
                 animations: vec![],
+                #[cfg(feature = "scene-editing")]
+                stored_animation: None,
                 #[cfg(feature = "scene-editing")]
                 edited_animation: None,
                 #[cfg(feature = "scene-editing")]
@@ -286,6 +343,76 @@ impl SessionState {
 #[derive(Default)]
 pub struct Session(Mutex<SessionState>);
 
+#[derive(Clone, Copy, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) enum BoneAutoKeySource {
+    NumericField,
+    ViewportPose,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[cfg_attr(not(feature = "scene-editing"), allow(dead_code))]
+pub(crate) struct BoneAutoKey {
+    pub(crate) source: BoneAutoKeySource,
+    pub(crate) lanes: Vec<[bool; 2]>,
+}
+
+#[cfg(feature = "scene-editing")]
+/// One owned input snapshot. The solver runs without borrowing the Session.
+pub(crate) struct AutoWeightsJob {
+    revision: u64,
+    document_id: u64,
+    pose_epoch: Option<u64>,
+    work: AutoWeightWork,
+}
+
+#[cfg(feature = "scene-editing")]
+pub(crate) struct AutoWeightsCommit {
+    revision: u64,
+    document_id: u64,
+    pose_epoch: Option<u64>,
+    edit: SceneEdit,
+}
+
+#[cfg(feature = "scene-editing")]
+impl AutoWeightsJob {
+    pub(crate) fn solve(self) -> Result<AutoWeightsCommit, AppError> {
+        Ok(AutoWeightsCommit {
+            revision: self.revision,
+            document_id: self.document_id,
+            pose_epoch: self.pose_epoch,
+            edit: self.work.solve()?,
+        })
+    }
+}
+
+#[cfg(feature = "scene-editing")]
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct PruneWeightsPreview {
+    pub(crate) document_id: u64,
+    pub(crate) revision: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) pose_epoch: Option<u64>,
+    pub(crate) removed: usize,
+    pub(crate) targets: Vec<PruneWeightsPreviewTarget>,
+}
+
+#[cfg(feature = "scene-editing")]
+#[derive(Serialize)]
+pub(crate) struct PruneWeightsPreviewTarget {
+    pub(crate) id: u64,
+    pub(crate) rows: Vec<PruneWeightsPreviewRow>,
+}
+
+#[cfg(feature = "scene-editing")]
+#[derive(Serialize)]
+pub(crate) struct PruneWeightsPreviewRow {
+    pub(crate) vertex: usize,
+    pub(crate) weights: Vec<f32>,
+}
+
 pub struct SaveSnapshot {
     revision: u64,
     bytes: Vec<u8>,
@@ -303,7 +430,176 @@ pub struct SaveSnapshot {
     #[cfg(feature = "scene-editing")]
     write_audio: bool,
 }
+
+#[cfg(feature = "scene-editing")]
+pub struct LinkedMeshRepairSnapshot {
+    revision: u64,
+    pub source_directory: PathBuf,
+    bytes: Vec<u8>,
+    pub suggested_name: String,
+}
+
 impl Session {
+    #[cfg(feature = "scene-editing")]
+    pub fn prepare_linked_mesh_repair(
+        &self,
+        expected_revision: u64,
+    ) -> Result<LinkedMeshRepairSnapshot, AppError> {
+        let state = self.lock()?;
+        if expected_revision != state.revision {
+            return Err(AppError::new(
+                "ProjectChanged",
+                "The project changed before repair.",
+            ));
+        }
+        let Some(Document::Inspected {
+            path,
+            repaired_copy: Some(bytes),
+            ..
+        }) = &state.document
+        else {
+            return Err(AppError::new(
+                "InspectionOnly",
+                "This project has no verified Linked Mesh repair.",
+            ));
+        };
+        let stem = path.file_stem().unwrap_or_default().to_string_lossy();
+        Ok(LinkedMeshRepairSnapshot {
+            revision: state.revision,
+            source_directory: project_directory(path).canonicalize()?,
+            bytes: bytes.clone(),
+            suggested_name: format!("{stem}-repaired.fbones"),
+        })
+    }
+
+    #[cfg(feature = "scene-editing")]
+    pub fn open_repaired_linked_mesh_copy(
+        &self,
+        snapshot: LinkedMeshRepairSnapshot,
+        destination: PathBuf,
+    ) -> Result<ProjectSummary, AppError> {
+        let mut state = self.lock()?;
+        if state.revision != snapshot.revision {
+            return Err(AppError::new(
+                "ProjectChanged",
+                "The project changed while choosing the repaired copy.",
+            ));
+        }
+        let destination = if destination.extension().is_none() {
+            destination.with_extension("fbones")
+        } else {
+            destination
+        };
+        let folder = project_directory(&destination)
+            .canonicalize()
+            .map_err(|_| {
+                AppError::new(
+                    "InvalidFile",
+                    "Choose a new .fbones file in the original project folder.",
+                )
+            })?;
+        if folder != snapshot.source_directory
+            || !destination
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("fbones"))
+        {
+            return Err(AppError::new(
+                "InvalidFile",
+                "Choose a new .fbones file in the original project folder.",
+            ));
+        }
+        // Resolve the parent once, then create a new directory entry exclusively.
+        let destination =
+            folder.join(destination.file_name().ok_or_else(|| {
+                AppError::new("InvalidFile", "Choose a name for the repaired copy.")
+            })?);
+        if destination.symlink_metadata().is_ok() {
+            return Err(AppError::new(
+                "DestinationExists",
+                "Choose an unused name for the repaired copy.",
+            ));
+        }
+        let document = open_document_bytes(destination.clone(), snapshot.bytes.clone(), true)?;
+        if !matches!(document, Document::Editable { .. }) {
+            return Err(AppError::new(
+                "InspectionOnly",
+                "The repaired copy is still outside the supported editing profile.",
+            ));
+        }
+        let logical_document_id = state.logical_document_id.checked_add(1).ok_or_else(|| {
+            AppError::new("Internal", "Logical document identity space exhausted.")
+        })?;
+        let mut temporary = tempfile::NamedTempFile::new_in(folder)?;
+        temporary.write_all(&snapshot.bytes)?;
+        temporary.as_file_mut().sync_all()?;
+        temporary.persist_noclobber(&destination).map_err(|error| {
+            if error.error.kind() == std::io::ErrorKind::AlreadyExists {
+                AppError::new(
+                    "DestinationExists",
+                    "Choose an unused name for the repaired copy.",
+                )
+            } else {
+                AppError::from(error.error)
+            }
+        })?;
+        state.document = Some(document);
+        state.logical_document_id = logical_document_id;
+        state.document_id += 1;
+        state.revision += 1;
+        Ok(state.summary().unwrap())
+    }
+
+    #[cfg(feature = "scene-editing")]
+    pub fn prepare_spine_bundle(
+        &self,
+        expected_revision: u64,
+    ) -> Result<crate::spine_bundle_export::Snapshot, AppError> {
+        let state = self.lock()?;
+        if state.revision != expected_revision {
+            return Err(AppError::new(
+                "ProjectChanged",
+                "The project changed before Spine export.",
+            ));
+        }
+        let Some(Document::Editable {
+            project,
+            images,
+            audio,
+            ..
+        }) = state.document.as_ref()
+        else {
+            return Err(AppError::new(
+                "InspectionOnly",
+                "Spine export requires an editable project.",
+            ));
+        };
+        encode_regions(project)?;
+        let json = crate::spine_json_export::serialize(project)?;
+        crate::spine_bundle_export::Snapshot::new(
+            state.revision,
+            state.document_id,
+            json,
+            images,
+            audio,
+        )
+    }
+
+    #[cfg(feature = "scene-editing")]
+    pub fn write_spine_bundle(
+        &self,
+        snapshot: crate::spine_bundle_export::Snapshot,
+        parent: &Path,
+    ) -> Result<crate::spine_bundle_export::ResultBundle, AppError> {
+        let state = self.lock()?;
+        if state.revision != snapshot.revision || state.document_id != snapshot.document_id {
+            return Err(AppError::new(
+                "ProjectChanged",
+                "The project changed while choosing the Spine export destination.",
+            ));
+        }
+        snapshot.write(parent)
+    }
+
     #[cfg(feature = "scene-editing")]
     pub fn prepare_runtime_export(
         &self,
@@ -348,6 +644,30 @@ impl Session {
         }
         // Hold the revision lock through bounded writes. Export never marks saved.
         snapshot.write(parent)
+    }
+
+    #[cfg(feature = "scene-editing")]
+    pub(crate) fn with_gif_export<T>(
+        &self,
+        expected_revision: u64,
+        document_id: u64,
+        export: impl FnOnce() -> Result<T, AppError>,
+    ) -> Result<T, AppError> {
+        let state = self.lock()?;
+        if state.revision != expected_revision || state.document_id != document_id {
+            return Err(AppError::new(
+                "ProjectChanged",
+                "The project changed during GIF export.",
+            ));
+        }
+        if !matches!(state.document.as_ref(), Some(Document::Editable { .. })) {
+            return Err(AppError::new(
+                "InspectionOnly",
+                "GIF export requires an editable project.",
+            ));
+        }
+        // Do not let the chosen destination outlive the checked source revision.
+        export()
     }
 
     pub fn import_image(
@@ -1077,7 +1397,7 @@ impl Session {
                 saved_project = Some(saved);
                 (bytes, path.clone(), bundle, missing)
             }
-            Document::Inspected { path, envelope } if copy => (
+            Document::Inspected { path, envelope, .. } if copy => (
                 envelope.original_bytes().to_vec(),
                 Some(path.clone()),
                 ImageBundle::default(),
@@ -1117,7 +1437,7 @@ impl Session {
         })
     }
     pub fn edit(&self, expected_revision: u64, edit: RigEdit) -> Result<ProjectSummary, AppError> {
-        self.edit_impl(expected_revision, edit, None)
+        self.edit_impl(expected_revision, edit, None, None)
     }
     #[cfg(feature = "scene-editing")]
     pub fn edit_in_pose(
@@ -1126,14 +1446,152 @@ impl Session {
         pose_epoch: u64,
         edit: RigEdit,
     ) -> Result<ProjectSummary, AppError> {
-        self.edit_impl(expected_revision, edit, Some(pose_epoch))
+        self.edit_impl(expected_revision, edit, Some(pose_epoch), None)
     }
+
+    pub(crate) fn edit_bone_auto_key(
+        &self,
+        expected_revision: u64,
+        edit: RigEdit,
+        pose_epoch: Option<u64>,
+        intent: BoneAutoKey,
+    ) -> Result<ProjectSummary, AppError> {
+        self.edit_impl(expected_revision, edit, pose_epoch, Some(intent))
+    }
+
+    pub(crate) fn is_background_auto_edit(edit: &RigEdit) -> bool {
+        #[cfg(feature = "scene-editing")]
+        {
+            match edit {
+                RigEdit::AutoAttachmentWeights { .. } | RigEdit::AutoWeights { .. } => true,
+                RigEdit::AttachmentEdit { edit, .. } => {
+                    matches!(edit.as_ref(), RigEdit::AutoWeights { .. })
+                }
+                _ => false,
+            }
+        }
+        #[cfg(not(feature = "scene-editing"))]
+        {
+            let _ = edit;
+            false
+        }
+    }
+
+    #[cfg(feature = "scene-editing")]
+    pub(crate) fn prepare_auto_weights(
+        &self,
+        expected_revision: u64,
+        edit: RigEdit,
+        pose_epoch: Option<u64>,
+    ) -> Result<AutoWeightsJob, AppError> {
+        let state = self.lock()?;
+        if state.revision != expected_revision {
+            return Err(AppError::new(
+                "ProjectChanged",
+                "The project changed. Try the bone edit again.",
+            ));
+        }
+        let frozen = Self::geometry_poses(&state, pose_epoch)?;
+        let Some(Document::Editable { rig, .. }) = &state.document else {
+            return Err(AppError::new("NoProject", "Open an editable project."));
+        };
+        Ok(AutoWeightsJob {
+            revision: expected_revision,
+            document_id: state.document_id,
+            pose_epoch,
+            work: rig.prepare_auto_weights(edit, frozen)?,
+        })
+    }
+
+    #[cfg(feature = "scene-editing")]
+    pub(crate) fn commit_auto_weights(
+        &self,
+        commit: AutoWeightsCommit,
+    ) -> Result<ProjectSummary, AppError> {
+        let mut state = self.lock()?;
+        if state.revision != commit.revision || state.document_id != commit.document_id {
+            return Err(AppError::new(
+                "ProjectChanged",
+                "The project changed while computing weights. Run Auto again.",
+            ));
+        }
+        // Evaluation can supersede the frozen pose without authoring a revision.
+        Self::geometry_poses(&state, commit.pose_epoch)?;
+        let Some(Document::Editable {
+            project,
+            rig,
+            dirty,
+            ..
+        }) = &mut state.document
+        else {
+            return Err(AppError::new("NoProject", "Open an editable project."));
+        };
+        let changed = rig.commit_auto_weights(project, commit.edit)?;
+        *dirty = rig.dirty(project);
+        if changed {
+            state.revision += 1;
+        }
+        Ok(state.summary().unwrap())
+    }
+
+    #[cfg(feature = "scene-editing")]
+    pub(crate) fn preview_prune_weights(
+        &self,
+        expected_revision: u64,
+        request: PruneWeightsRequest,
+        pose_epoch: Option<u64>,
+    ) -> Result<PruneWeightsPreview, AppError> {
+        let (document_id, frozen, candidate) = {
+            let state = self.lock()?;
+            if state.revision != expected_revision {
+                return Err(AppError::new(
+                    "ProjectChanged",
+                    "The project changed before previewing Prune.",
+                ));
+            }
+            let frozen = Self::setup_binding_geometry_poses(&state, pose_epoch)?;
+            let Some(Document::Editable { rig, .. }) = &state.document else {
+                return Err(AppError::new("NoProject", "Open an editable project."));
+            };
+            (state.document_id, frozen, rig.scratch_for_prune_preview())
+        };
+        let (removed, targets) = candidate.preview_prune_weights(request, frozen)?;
+        let state = self.lock()?;
+        if state.revision != expected_revision || state.document_id != document_id {
+            return Err(AppError::new(
+                "ProjectChanged",
+                "The project changed while previewing Prune.",
+            ));
+        }
+        Self::setup_binding_geometry_poses(&state, pose_epoch)?;
+        Ok(PruneWeightsPreview {
+            document_id,
+            revision: expected_revision,
+            pose_epoch,
+            removed,
+            targets,
+        })
+    }
+
     fn edit_impl(
         &self,
         expected_revision: u64,
         edit: RigEdit,
         pose_epoch: Option<u64>,
+        bone_auto_key: Option<BoneAutoKey>,
     ) -> Result<ProjectSummary, AppError> {
+        #[cfg(not(feature = "scene-editing"))]
+        if bone_auto_key.is_some() {
+            return Err(AppError::new(
+                "UnsupportedProfile",
+                "Bone Auto Key requires Scene editing.",
+            ));
+        }
+        #[cfg(feature = "scene-editing")]
+        if bone_auto_key.is_none() && Self::is_background_auto_edit(&edit) {
+            let work = self.prepare_auto_weights(expected_revision, edit, pose_epoch)?;
+            return self.commit_auto_weights(work.solve()?);
+        }
         let mut state = self.lock()?;
         if state.revision != expected_revision {
             return Err(AppError::new(
@@ -1142,11 +1600,24 @@ impl Session {
             ));
         }
         #[cfg(feature = "scene-editing")]
-        let edit = if matches!(&edit, RigEdit::SetAnimationDeformVertices { .. }) {
-            Self::deform_vertex_edit(&state, pose_epoch, &edit)?
-        } else {
-            edit
-        };
+        if let Some(intent) = &bone_auto_key {
+            if !matches!(&edit, RigEdit::SetAnimationKeys { .. }) {
+                return Err(AppError::new(
+                    "InvalidAnimation",
+                    "Bone Auto Key requires a bone key batch.",
+                ));
+            }
+            if !matches!(
+                (intent.source, pose_epoch),
+                (BoneAutoKeySource::NumericField, None)
+                    | (BoneAutoKeySource::ViewportPose, Some(_))
+            ) {
+                return Err(AppError::new(
+                    "InvalidPose",
+                    "Viewport Auto Key requires a frozen pose. Numeric Auto Key uses the authored frame.",
+                ));
+            }
+        }
         #[cfg(feature = "scene-editing")]
         let authoring_frame = if let RigEdit::MatchTransform { id, .. } = &edit {
             Some(Self::authoring_evaluation(&state, pose_epoch, *id)?)
@@ -1154,30 +1625,72 @@ impl Session {
             None
         };
         #[cfg(feature = "scene-editing")]
-        let animation_key_epoch = if let Some(epoch) = pose_epoch {
-            if matches!(
-                &edit,
-                RigEdit::SetAnimationKey { .. }
-                    | RigEdit::SetAnimationKeys { .. }
-                    | RigEdit::SetAnimationSlotKeys { .. }
-                    | RigEdit::SetAnimationKeyBatch { .. }
-                    | RigEdit::SetAnimationDrawOrderKeys { .. }
-                    | RigEdit::SetAnimationDeformKeys { .. }
-                    | RigEdit::SetAnimationConstraintKeys { .. }
-                    | RigEdit::SetAnimationEventKeys { .. }
-                    | RigEdit::SetAnimationSequenceKeys { .. }
-            ) {
-                Self::animation_key_context(&state, epoch, &edit)?;
-                true
-            } else {
-                false
+        let (edit, animation_key_epoch) = match (edit, pose_epoch) {
+            (edit @ RigEdit::SetAnimationDeformVertices { .. }, epoch) => {
+                // The world action validates the frozen Current attachment before
+                // deriving any predecessor rewrites from the locked Scene.
+                (Self::deform_vertex_edit(&state, epoch, &edit)?, true)
             }
-        } else {
-            false
+            (
+                edit @ (RigEdit::SetAnimationKey { .. }
+                | RigEdit::SetAnimationKeys { .. }
+                | RigEdit::SetAnimationSlotKeys { .. }
+                | RigEdit::SetAnimationKeyBatch { .. }
+                | RigEdit::SetAnimationDrawOrderKeys { .. }
+                | RigEdit::SetAnimationDeformKeys { .. }
+                | RigEdit::SetAnimationConstraintKeys { .. }
+                | RigEdit::SetAnimationEventKeys { .. }
+                | RigEdit::SetAnimationSequenceKeys { .. }),
+                Some(epoch),
+            ) => {
+                Self::animation_key_context(&state, epoch, &edit)?;
+                (edit, true)
+            }
+            (edit, _) => (edit, false),
         };
         #[cfg(feature = "scene-editing")]
-        let geometry_poses = if RigHistory::geometry_edit(&edit) {
-            Self::geometry_poses(&state, pose_epoch)?
+        let edit = if let Some(intent) = bone_auto_key {
+            // Authorize only the supplied Current keys before deriving any
+            // predecessor control rewrites from the locked authored frame.
+            let RigEdit::SetAnimationKeys { animation, keys } = edit else {
+                unreachable!("Bone Auto Key only accepts a bone key batch");
+            };
+            let Some(Document::Editable { rig, .. }) = &state.document else {
+                return Err(AppError::new("NoProject", "Open an editable project."));
+            };
+            let keys = crate::animation::expand_auto_bone_keys(
+                rig.history.frame(),
+                animation,
+                keys,
+                intent.lanes,
+            )?;
+            RigEdit::SetAnimationKeys { animation, keys }
+        } else {
+            edit
+        };
+        #[cfg(feature = "scene-editing")]
+        let geometry_poses = if matches!(
+            &edit,
+            RigEdit::GenerateMeshVertices { .. } | RigEdit::ReplaceMeshOutline { .. }
+        ) {
+            // These edits use stored local positions and UVs. An optional lease
+            // proves Setup context without changing that geometry.
+            if pose_epoch.is_some() {
+                Self::setup_binding_geometry_poses(&state, pose_epoch)?
+            } else {
+                None
+            }
+        } else if RigHistory::geometry_edit(&edit) {
+            if matches!(
+                &edit,
+                RigEdit::UpdateAttachmentBindings { .. }
+                    | RigEdit::PruneAttachmentWeights { .. }
+                    | RigEdit::PasteAttachmentWeights { .. }
+            ) {
+                Self::setup_binding_geometry_poses(&state, pose_epoch)?
+            } else {
+                Self::geometry_poses(&state, pose_epoch)?
+            }
         } else {
             if pose_epoch.is_some() && authoring_frame.is_none() && !animation_key_epoch {
                 return Err(AppError::new(
@@ -1223,7 +1736,10 @@ impl Session {
                         .attachment(*id)?
                         .image()
                         .ok_or_else(|| {
-                            AppError::new("InvalidImage", "Clipping has no image path.")
+                            AppError::new(
+                                "InvalidImage",
+                                "Choose an image attachment to edit its PNG path.",
+                            )
                         })?;
                     let key = if image_path.is_empty() {
                         &image.name
@@ -1529,7 +2045,11 @@ pub fn new_document(name: String) -> Result<Document, AppError> {
         #[cfg(feature = "scene-editing")]
         attachment_colors: vec![],
         #[cfg(feature = "scene-editing")]
+        linked_meshes: vec![],
+        #[cfg(feature = "scene-editing")]
         slot_dark_colors: vec![],
+        #[cfg(feature = "scene-editing")]
+        animation_folders: None,
         #[cfg(feature = "scene-editing")]
         constraints: vec![],
     };
@@ -1572,17 +2092,51 @@ fn open_document_profile(path: PathBuf, allow_regions: bool) -> Result<Document,
     File::open(&path)?
         .take(MAX_FILE_BYTES as u64 + 1)
         .read_to_end(&mut bytes)?;
+    open_document_bytes(path, bytes, allow_regions)
+}
+
+#[cfg(feature = "scene-editing")]
+fn project_directory(path: &Path) -> &Path {
+    path.parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or(Path::new("."))
+}
+
+fn open_document_bytes(
+    path: PathBuf,
+    bytes: Vec<u8>,
+    allow_regions: bool,
+) -> Result<Document, AppError> {
     let envelope = ProjectEnvelope::inspect(bytes)?;
     let payload = envelope.decoded_payload()?;
-    match decode_regions(&payload) {
+    match decode_profile(&payload) {
         Ok(project) => {
             #[cfg(feature = "scene-editing")]
             if crate::scene_edit::check_active_clipping(&project).is_err() {
-                return Ok(Document::Inspected { path, envelope });
+                return Ok(Document::Inspected {
+                    path,
+                    envelope,
+                    reason: InspectionReason::ClippingScopes,
+                    repaired_copy: None,
+                });
+            }
+            #[cfg(feature = "scene-editing")]
+            if crate::scene_edit::check_static_path_constraints(&project).is_err() {
+                return Ok(Document::Inspected {
+                    path,
+                    envelope,
+                    reason: InspectionReason::UnsupportedStructure,
+                    repaired_copy: None,
+                });
             }
             // Only explicitly supported portable resources become editable.
             if !allow_regions && !project.slots.is_empty() {
-                return Ok(Document::Inspected { path, envelope });
+                return Ok(Document::Inspected {
+                    path,
+                    envelope,
+                    reason: InspectionReason::AttachmentProfile,
+                    repaired_copy: None,
+                });
             }
             let directory = crate::library::directory(Some(&path), &project.images_root);
             let (images, library_warnings) = match crate::library::scan(&directory) {
@@ -1593,7 +2147,14 @@ fn open_document_profile(path: PathBuf, allow_regions: bool) -> Result<Document,
             #[cfg(feature = "scene-editing")]
             let image_names = match crate::animation_sequence::all_image_keys(&project) {
                 Ok(names) => names,
-                Err(_) => return Ok(Document::Inspected { path, envelope }),
+                Err(_) => {
+                    return Ok(Document::Inspected {
+                        path,
+                        envelope,
+                        reason: InspectionReason::ImageResources,
+                        repaired_copy: None,
+                    })
+                }
             };
             #[cfg(not(feature = "scene-editing"))]
             let image_names = project_images(&project)
@@ -1601,14 +2162,24 @@ fn open_document_profile(path: PathBuf, allow_regions: bool) -> Result<Document,
                 .map(|image| image_stem(image).to_owned())
                 .collect::<Vec<_>>();
             for name in &image_names {
-                if !valid_image_stem(name)
-                    || names
-                        .get(&name.to_lowercase())
-                        .is_some_and(|previous| *previous != name)
-                {
-                    return Ok(Document::Inspected { path, envelope });
+                if !valid_image_stem(name) {
+                    return Ok(Document::Inspected {
+                        path,
+                        envelope,
+                        reason: InspectionReason::UnsafeImagePath,
+                        repaired_copy: None,
+                    });
                 }
-                names.insert(name.to_lowercase(), name);
+                let folded = name.to_lowercase();
+                if names.get(&folded).is_some_and(|previous| *previous != name) {
+                    return Ok(Document::Inspected {
+                        path,
+                        envelope,
+                        reason: InspectionReason::AmbiguousImagePath,
+                        repaired_copy: None,
+                    });
+                }
+                names.insert(folded, name);
             }
             #[cfg(feature = "scene-editing")]
             let (audio, audio_warnings) =
@@ -1633,8 +2204,26 @@ fn open_document_profile(path: PathBuf, allow_regions: bool) -> Result<Document,
                 decoded_bytes: Some(envelope.decoded_bytes()),
             })
         }
-        Err(FormatError::UnsupportedProfile) => Ok(Document::Inspected { path, envelope }),
-        Err(error) => Err(error.into()),
+        Err(ProfileDecodeError {
+            error: FormatError::UnsupportedProfile,
+            rejection,
+        }) => {
+            #[cfg(feature = "scene-editing")]
+            let repaired_copy = (rejection == ProfileRejection::LinkedMeshChain)
+                .then(|| fbones_format::minimal::scene::recover_direct_linked_mesh_chain(&payload))
+                .and_then(Result::ok)
+                .flatten()
+                .and_then(|data| fbones_format::encode_envelope(&data).ok());
+            #[cfg(not(feature = "scene-editing"))]
+            let repaired_copy = None;
+            Ok(Document::Inspected {
+                path,
+                envelope,
+                reason: rejection.into(),
+                repaired_copy,
+            })
+        }
+        Err(failure) => Err(failure.error.into()),
     }
 }
 
@@ -2041,19 +2630,30 @@ mod tests {
         };
         let outer = session.preview_trace(placed.revision, id, low).unwrap();
         let preview = session.preview_trace(placed.revision, id, strong).unwrap();
+        let padded_options = crate::trace::TraceOptions {
+            padding: 4,
+            ..strong
+        };
+        let padded = session
+            .preview_trace(placed.revision, id, padded_options)
+            .unwrap();
         let span = |uvs: &[f32]| {
             let xs: Vec<_> = uvs.iter().step_by(2).copied().collect();
             xs.iter().copied().fold(f32::NEG_INFINITY, f32::max)
                 - xs.iter().copied().fold(f32::INFINITY, f32::min)
         };
         assert!(span(&preview.mesh.uvs) < span(&outer.mesh.uvs));
+        assert!(span(&preview.mesh.uvs) < span(&padded.mesh.uvs));
+        assert!(span(&padded.mesh.uvs) < span(&outer.mesh.uvs));
         assert_eq!(
             session.summary().unwrap().unwrap().revision,
             placed.revision
         );
         assert!(session.summary().unwrap().unwrap().slots[0].mesh.is_none());
-        let applied = session.apply_trace(placed.revision, id, strong).unwrap();
-        assert!(applied.slots[0].mesh.is_some());
+        let applied = session
+            .apply_trace(placed.revision, id, padded_options)
+            .unwrap();
+        assert_eq!(applied.slots[0].mesh.as_ref(), Some(&padded.mesh));
         let geometry = applied.slots[0].mesh.clone();
         let undo = session.edit(applied.revision, RigEdit::Undo).unwrap();
         assert!(undo.slots[0].mesh.is_none());
@@ -2444,6 +3044,7 @@ mod tests {
             .replace(open_document(source.clone()).unwrap(), false)
             .unwrap();
         assert!(summary.inspection_only && !summary.can_save && summary.can_copy);
+        assert!(summary.inspection_reason.is_some());
         assert!(session.prepare_save(false).is_err());
         let copy = dir.path().join("copy.fbones");
         session
@@ -2756,6 +3357,7 @@ impl Session {
                 edit: Box::new(RigEdit::ReplaceMesh { id: slot, mesh }),
             },
             pose_epoch,
+            None,
         )
     }
     pub(crate) fn preview_trace(
@@ -2836,7 +3438,7 @@ impl Session {
         state: &SessionState,
         pose_epoch: u64,
         edit: &RigEdit,
-    ) -> Result<(), AppError> {
+    ) -> Result<f64, AppError> {
         let mut bones = vec![];
         let mut slots = vec![];
         let mut deforms = vec![];
@@ -2930,7 +3532,8 @@ impl Session {
         let Some(Document::Editable { project, rig, .. }) = &state.document else {
             return Err(AppError::new("NoProject", "Open an editable project."));
         };
-        let position = (cache.snapshot.time * f64::from(project.fps)) as f32;
+        let sampled_frame = cache.snapshot.time * f64::from(project.fps);
+        let position = sampled_frame as f32;
         if (bones.is_empty()
             && slots.is_empty()
             && deforms.is_empty()
@@ -2976,7 +3579,7 @@ impl Session {
                 "The animation frame or target changed during this key gesture.",
             ));
         }
-        Ok(())
+        Ok(sampled_frame)
     }
     fn deform_vertex_edit(
         state: &SessionState,
@@ -3000,7 +3603,7 @@ impl Session {
                 "Freeze the current animation geometry before moving deform vertices.",
             )
         })?;
-        Self::animation_key_context(state, epoch, edit)?;
+        let sampled_frame = Self::animation_key_context(state, epoch, edit)?;
         let Some(Document::Editable { rig, .. }) = &state.document else {
             return Err(AppError::new("NoProject", "Open an editable project."));
         };
@@ -3041,16 +3644,17 @@ impl Session {
             .iter()
             .map(|bone| bone.world)
             .collect::<Vec<_>>();
-        let key = crate::animation_deform::from_world_targets(
+        let keys = crate::animation_deform::from_world_targets(
             state_frame,
-            &state_frame.project.animations[index],
+            index,
             sampled,
             &worlds,
             edit,
+            sampled_frame,
         )?;
         Ok(RigEdit::SetAnimationDeformKeys {
             animation: *animation,
-            keys: vec![key],
+            keys,
         })
     }
     /// Match samples precise frozen authored poses with scratch Physics.
@@ -3122,6 +3726,25 @@ impl Session {
         )
         .map_err(|e| AppError::new("InvalidTransformMatch", e.to_string()))
     }
+    fn setup_binding_geometry_poses(
+        state: &SessionState,
+        pose_epoch: Option<u64>,
+    ) -> Result<Option<Vec<crate::rig::Pose>>, AppError> {
+        let poses = Self::geometry_poses(state, pose_epoch)?;
+        if pose_epoch.is_some()
+            && state
+                .evaluation
+                .as_ref()
+                .is_some_and(|cache| cache.snapshot.animation_id.is_some())
+        {
+            return Err(AppError::new(
+                "InvalidPose",
+                "Freeze a Setup pose before editing this attachment.",
+            ));
+        }
+        Ok(poses)
+    }
+
     fn geometry_poses(
         state: &SessionState,
         pose_epoch: Option<u64>,

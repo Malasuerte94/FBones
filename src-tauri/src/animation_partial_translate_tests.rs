@@ -54,8 +54,7 @@ fn with_y(mut project: SceneProject, keys: Vec<BoneKeyframe>) -> SceneProject {
 fn insert_y(history: &mut SceneHistory, frame: f32, value: f32) {
     let clip = history.frame().animation_ids[0];
     let bone = history.frame().bone_ids[history.frame().project.animations[0]
-        .split_modes
-        .iter()
+        .bone_split_modes()
         .find(|row| row.mode == BoneSplitMode::Translate)
         .unwrap()
         .bone];

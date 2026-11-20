@@ -28,6 +28,55 @@ pub fn snapshot(
     images: ImageCache,
     audio: AudioCache,
 ) -> Result<RuntimeExportSnapshot, AppError> {
+    if summary
+        .slots
+        .iter()
+        .flat_map(|slot| &slot.attachments)
+        .any(|attachment| attachment.kind == "path")
+        || summary.constraints.iter().any(|constraint| constraint["type"] == "path")
+    {
+        return Err(AppError::new(
+            "RuntimeExport",
+            "FBones Runtime JSON does not support Path attachments or constraints. Use Spine game export for this project.",
+        ));
+    }
+    if summary.animations.iter().any(|animation| {
+        !animation.slot_split_modes.is_empty()
+            || animation.slot_tracks.iter().any(|track| {
+                matches!(
+                    track,
+                    crate::animation_slots::SlotTrackView::Rgb2 { .. }
+                        | crate::animation_slots::SlotTrackView::Alpha { .. }
+                )
+            })
+    }) {
+        return Err(AppError::new(
+            "RuntimeExport",
+            "FBones Runtime JSON does not support split RGB/Alpha slot color animations. Use Spine game export for this project.",
+        ));
+    }
+    for child in summary.slots.iter().flat_map(|slot| &slot.attachments) {
+        let Some(source) = child
+            .linked_mesh_source_id
+            .filter(|_| child.linked_mesh_inherits_timelines == Some(false))
+        else {
+            continue;
+        };
+        if summary.animations.iter().any(|clip| {
+            clip.deform_tracks
+                .iter()
+                .any(|track| track.attachment == source)
+                && !clip
+                    .deform_tracks
+                    .iter()
+                    .any(|track| track.attachment == child.id)
+        }) {
+            return Err(AppError::new(
+                "RuntimeExport",
+                "FBones Runtime JSON cannot preserve this independent linked mesh's deformation. Use Spine game export for this project.",
+            ));
+        }
+    }
     let mut export_images = ImageCache::default();
     let mut export_audio = AudioCache::default();
     let mut require_image = |key: &str| -> Result<(), AppError> {
@@ -134,7 +183,7 @@ impl RuntimeExportSnapshot {
     }
 }
 
-fn write_resource(path: &Path, bytes: &[u8]) -> Result<(), AppError> {
+pub(crate) fn write_resource(path: &Path, bytes: &[u8]) -> Result<(), AppError> {
     fs::create_dir_all(path.parent().unwrap())?;
     let mut file = fs::OpenOptions::new()
         .write(true)

@@ -1,6 +1,6 @@
 import {test,expect,openNativeEditor,type NativeSession} from './fixtures/native-session';
 import type {Page} from '@playwright/test';
-import type {ProjectSummary} from '../../src/domain/project';
+import type {ProjectSummary,RigEdit} from '../../src/domain/project';
 import type {AnimationChannel} from '../../src/domain/animation';
 
 // Own independently encoded complete-pair and known X-only Translate fixtures. These scenarios require actual
@@ -41,10 +41,34 @@ test('@native shared HUD axis Key and K retain sibling drafts, family Key is ato
  const source=await seed(native),bone=familyBone(source,1),setup=source.bones.find(b=>b.id===bone)!;await openNativeEditor(page);await page.getByTestId('editor-mode-animate').click();await select(page,bone);if(await page.getByTestId('timeline-auto-key').getAttribute('aria-pressed')==='true')await page.getByTestId('animate-auto-key').click();
  // Mode1 requires X even when Y is present; deleting every X key is atomic rejection.
  const requiredX=track(source,bone,'translateX');for(const [index,key]of requiredX.keys.entries())await page.getByTestId('timeline-key-'+key.id).click(index?{modifiers:['Shift']}:{});const beforeDelete=(await native.snapshot())!;await page.getByTestId('timeline-delete-keys').click();await expect.poll(()=>native.calls.filter(c=>c.command==='edit_rig'&&c.error).length).toBeGreaterThan(0);expect(await native.snapshot()).toEqual(beforeDelete);
- // Inserting into the existing 0→12 Bézier span cannot rewrite its neighbors.
- await seek(page,11);const beforeBezier=(await native.snapshot())!,guardStart=native.calls.length;await page.getByTestId(`timeline-key-bone-${bone}-translateX`).click();await expect.poll(()=>native.calls.slice(guardStart).filter(c=>c.command==='edit_rig'&&c.error).length).toBe(1);expect(await native.snapshot()).toEqual(beforeBezier);
+ // The original time cubic is x(t)=12t. Subdivide it at t=11/12.
+ await seek(page,11);
+ const beforeBezier=(await native.snapshot())!,insertStart=native.calls.length;
+ await page.getByTestId(`timeline-key-bone-${bone}-translateX`).click();
+ await expect.poll(async()=>track((await native.snapshot())!,bone,'translateX').keys.map(k=>k.frame)).toEqual([-0,11,12,24]);
+ const split=(await native.snapshot())!,originalX=track(beforeBezier,bone,'translateX');
+ const [left,newKey]=track(split,bone,'translateX').keys;
+ expect(left).toEqual({...originalX.keys[0],controls:[[Math.fround(11/3),-0,Math.fround(22/3),Math.fround(121/24)],[0,0,0,0]]});
+ expect(newKey).toMatchObject({frame:11,values:[Math.fround(847/144),0],curve:'bezier',
+  controls:[[Math.fround(34/3),Math.fround(143/24),Math.fround(35/3),6],[0,0,0,0]]});
+ expect(originalX.keys.some(key=>key.id===newKey!.id)).toBe(false);
+ expect(track(split,bone,'translateX').keys.slice(2)).toEqual(originalX.keys.slice(1));
+ expect(track(split,bone,'translateY')).toEqual(track(beforeBezier,bone,'translateY'));
+ const insertion=native.calls.slice(insertStart).filter(call=>call.command==='edit_rig');
+ expect(insertion).toHaveLength(1);
+ expect(insertion[0]!.args.expectedRevision).toBe(beforeBezier.revision);
+ const insert=insertion[0]!.args.edit as RigEdit;
+ if(insert.type!=='setAnimationKeys')throw new Error('Row Key must dispatch one key batch.');
+ expect(insert.animation).toBe(clip(beforeBezier).id);
+ expect(insert.keys.map(key=>({bone:key.bone,channel:key.channel,keyId:key.keyId}))).toEqual([
+  {bone,channel:'translateX',keyId:originalX.keys[0]!.id},{bone,channel:'translateX',keyId:undefined},
+ ]);
+ await expect(page.getByTestId('timeline-current')).toHaveValue('11');
+ await page.getByRole('button',{name:'Undo',exact:true}).click();
+ await expect.poll(async()=>clip((await native.snapshot())!)).toEqual(clip(beforeBezier));
+ const afterSplitUndo=(await native.snapshot())!;
  // Positive draft/key transactions use the existing linear 12→24 interval.
- await seek(page,21);const xDraft=setup.x+50,yDraft=setup.y+20;await field(page,'animate-bone-x',xDraft);await field(page,'animate-bone-y',yDraft);expect(await native.snapshot()).toEqual(beforeDelete);const axisStart=native.calls.length;await page.getByTestId(`timeline-key-bone-${bone}-translateY`).click();await expect.poll(async()=>track((await native.snapshot())!,bone,'translateY').keys.some(k=>k.frame===21)).toBe(true);expect(native.calls.slice(axisStart).filter(c=>c.command==='edit_rig')).toHaveLength(1);expect(track((await native.snapshot())!,bone,'translateX')).toEqual(track(source,bone,'translateX'));await expect(page.getByTestId('animate-bone-x')).toHaveValue(String(xDraft));
+ await seek(page,21);const xDraft=setup.x+50,yDraft=setup.y+20;await field(page,'animate-bone-x',xDraft);await field(page,'animate-bone-y',yDraft);expect(await native.snapshot()).toEqual(afterSplitUndo);const axisStart=native.calls.length;await page.getByTestId(`timeline-key-bone-${bone}-translateY`).click();await expect.poll(async()=>track((await native.snapshot())!,bone,'translateY').keys.some(k=>k.frame===21)).toBe(true);expect(native.calls.slice(axisStart).filter(c=>c.command==='edit_rig')).toHaveLength(1);expect(track((await native.snapshot())!,bone,'translateX')).toEqual(track(source,bone,'translateX'));await expect(page.getByTestId('animate-bone-x')).toHaveValue(String(xDraft));
  const keyStart=native.calls.length;await page.getByTestId('viewport').locator('canvas').focus();await page.keyboard.press('k');await expect.poll(async()=>track((await native.snapshot())!,bone,'translateX').keys.some(k=>k.frame===21)).toBe(true);const calls=native.calls.slice(keyStart).filter(c=>c.command==='edit_rig');expect(calls).toHaveLength(1);expect((calls[0]!.args.edit as{keys:{channel:string}[]}).keys.map(k=>k.channel)).toEqual(['translateX']);expect((await native.snapshot())!.bones).toEqual(source.bones);
  await seek(page,22);const familyStart=native.calls.length;await page.getByTestId('animation-tools').getByRole('button',{name:'Key Translate',exact:true}).click();await expect.poll(async()=>track((await native.snapshot())!,bone,'translateY').keys.some(k=>k.frame===22)).toBe(true);const familyCalls=native.calls.slice(familyStart).filter(c=>c.command==='edit_rig');expect(familyCalls).toHaveLength(1);expect((familyCalls[0]!.args.edit as{keys:{channel:string}[]}).keys.map(k=>k.channel)).toEqual(['translateX','translateY']);expect(clip((await native.snapshot())!).splitModes).toEqual(clip(source).splitModes);
  // Scale X already samples1.25 at frame8; use a distinct value to test authoring.

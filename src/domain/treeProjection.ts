@@ -1,8 +1,10 @@
+import type {AttachmentView} from './project.ts';
+
 /** Tree filters project existing identities; they never change ownership or activation. */
 export type TreeKind = 'bone' | 'slot' | 'attachment' | 'constraint';
 export interface TreeFilterState { bone:boolean; slot:boolean; attachment:boolean; constraint:boolean }
 export interface TreeBoneNode { id:number; parent:number|null; name:string }
-export interface TreeAttachmentNode { id:number; name:string; type?:'region'|'mesh'|'clipping' }
+export interface TreeAttachmentNode { id:number; name:string; type?:AttachmentView['type'] }
 export interface TreeSlotNode { id:number; bone:number; name:string; attachments:readonly TreeAttachmentNode[] }
 export interface TreeConstraintNode { id:number; name:string }
 export interface TreeProjectionInput {

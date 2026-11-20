@@ -7,7 +7,9 @@ import AppButton from '../atoms/AppButton.vue';
 import AppIcon from '../atoms/AppIcon.vue';
 const w=useWorkspace(),{t}=useI18n(),mesh=computed(()=>w.selectedSlot?.mesh),animate=computed(()=>w.editorMode==='animate'),deform=computed(()=>animate.value?w.selectedAttachment?.mesh??w.selectedAttachment?.clipping:null),binding=computed(()=>animate.value?deform.value:mesh.value);
 const point=computed(()=>binding.value&&w.selectedVertex!==null?bindingPoints(w.renderedBones,binding.value)[w.selectedVertex]:undefined);
-const editable=computed(()=>w.canEdit&&!w.busy&&!w.traceOpen&&(!animate.value||!!w.activeAnimation));
+const linkedMesh=computed(()=>w.selectedAttachment?.linkedMeshSourceId!==undefined);
+const inheritedDeform=computed(()=>w.selectedDeformSourceId!==undefined);
+const editable=computed(()=>!(animate.value?inheritedDeform.value:linkedMesh.value)&&w.canEdit&&!w.busy&&!w.traceOpen&&!w.meshOutlineDraft&&(!animate.value||!!w.activeAnimation));
 const zeroImageSize=computed(()=>!!mesh.value&&!!w.selectedSlot?.region&&(w.selectedSlot.region.width===0||w.selectedSlot.region.height===0));
 const pending=new Map<string,Promise<boolean>>();
 function editMesh(){if(animate.value){w.meshEditUvs=false;w.setMode(w.selectedAttachment?.clipping?'clipping':'meshes');}else w.setMode('meshes');w.meshTool='move';}
@@ -40,7 +42,9 @@ function cancelPosition(axis:'x'|'y',event:KeyboardEvent){(event.target as HTMLI
     <template v-if="binding&&w.selectedSlot">
       <div class="my-3 flex items-center justify-between gap-1 text-muted"><span class="truncate">{{ w.selectedAttachment?.name??w.selectedSlot.name }}</span><span class="shrink-0">{{ binding.vertices.length }} {{ t('vertices') }}</span></div>
       <AppButton v-if="w.editMode!==(w.selectedAttachment?.clipping?'clipping':'meshes')" class="w-full" :disabled="!editable" @click="editMesh">{{ animate?'Edit deformation':t('editMesh') }}</AppButton><AppButton v-if="animate&&w.selectedAttachment" class="mt-1 w-full" :disabled="!editable" data-testid="deform-key" aria-label="Key deformation" @click="w.insertDeformKey(w.selectedAttachment.id)"><AppIcon name="key"/> Key deformation</AppButton>
-      <p class="my-3 text-[11px] leading-4 text-muted">{{ animate?'Move vertices to change this pose. Use Auto Key or Key deformation to save it.':t(w.editMode==='meshes'?'meshHint_'+w.meshTool:'meshOpenHint') }}</p>
+      <p v-if="animate&&inheritedDeform" class="my-3 text-[11px] leading-4 text-muted">{{t('linkedMeshDeformReadOnly')}}</p>
+      <p v-else-if="!animate&&linkedMesh" class="my-3 text-[11px] leading-4 text-muted">{{t('linkedMeshGeometryReadOnly')}}</p>
+      <p v-else class="my-3 text-[11px] leading-4 text-muted">{{ animate?'Move vertices to change this pose. Use Auto Key or Key deformation to save it.':t(w.editMode==='meshes'?'meshHint_'+w.meshTool:'meshOpenHint') }}</p>
       <fieldset :disabled="!editable" class="control-group space-y-2">
         <label v-if="!animate" class="flex items-center gap-2"><input type="checkbox" :checked="!w.meshEditUvs" @change="w.meshEditUvs=!($event.target as HTMLInputElement).checked">{{ t('deformed') }}</label>
         <p v-if="!animate" class="text-[10px] leading-4 text-muted">{{ t(w.meshEditUvs?'setupMeshHint':'deformedMeshHint') }}</p>
@@ -49,7 +53,7 @@ function cancelPosition(axis:'x'|'y',event:KeyboardEvent){(event.target as HTMLI
       </fieldset>
       <div v-if="!animate" class="mt-3 grid grid-cols-2 gap-1">
         <AppButton :disabled="!editable" @click="w.editRig({type:'triangulateMesh',id:w.selectedSlot.id})">{{ t('triangulate') }}</AppButton>
-        <AppButton :disabled="!w.canEdit||w.busy||w.traceOpen||w.selectedVertex===null" @click="w.editRig({type:'deleteVertex',id:w.selectedSlot.id,vertex:w.selectedVertex!})">{{ t('deleteVertex') }}</AppButton>
+        <AppButton :disabled="!editable||w.selectedVertex===null" @click="w.editRig({type:'deleteVertex',id:w.selectedSlot.id,vertex:w.selectedVertex!})">{{ t('deleteVertex') }}</AppButton>
         <AppButton :disabled="!editable" @click="w.openTrace(false)">{{ t('trace') }}</AppButton>
         <AppButton :disabled="!editable" @click="w.openTrace(true)">{{ t('innerTrace') }}</AppButton>
         <AppButton class="col-span-2" :disabled="!editable||zeroImageSize" :title="zeroImageSize?t('zeroImageSizeResetHint'):undefined" data-testid="mesh-reset" @click="resetMesh">{{ t('resetQuad') }}</AppButton>
@@ -58,6 +62,6 @@ function cancelPosition(axis:'x'|'y',event:KeyboardEvent){(event.target as HTMLI
       <dl v-if="mesh" class="mt-4 grid grid-cols-2 gap-y-2 border-t border-line pt-3 text-muted"><dt>{{ t('triangles') }}</dt><dd class="text-right">{{ mesh.triangles.length/3 }}</dd><dt>{{ t('hull') }}</dt><dd class="text-right">{{ mesh.hull }}</dd><dt>{{ t('binding') }}</dt><dd class="text-right">{{ t(mesh.weighted?'weighted':'rigid') }}</dd></dl>
     </template>
     <div v-else-if="animate" class="py-4"><p class="leading-5 text-muted" data-testid="select-deform-attachment-hint">Select a mesh or clipping attachment to edit deformation.</p></div>
-    <div v-else class="py-4"><p class="mb-3 leading-5 text-muted">{{ t('selectMeshImage') }}</p><AppButton class="w-full" :disabled="animate||!w.canEdit||w.busy||w.traceOpen||!w.selectedSlot?.region" @click="convert">{{ t('convertMesh') }}</AppButton><AppButton v-if="!animate&&w.selectedSlot?.region" class="mt-1 w-full" :disabled="!editable" @click="w.openTrace(false)">{{ t('trace') }}</AppButton></div>
+    <div v-else class="py-4"><p class="mb-3 leading-5 text-muted">{{ t('selectMeshImage') }}</p><AppButton class="w-full" :disabled="animate||!editable||!w.selectedSlot?.region" @click="convert">{{ t('convertMesh') }}</AppButton><AppButton v-if="!animate&&w.selectedSlot?.region" class="mt-1 w-full" :disabled="!editable" @click="w.openTrace(false)">{{ t('trace') }}</AppButton></div>
   </div>
 </template>

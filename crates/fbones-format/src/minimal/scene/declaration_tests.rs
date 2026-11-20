@@ -52,6 +52,7 @@ fn noncanonical() -> WireConstraintDeclarations {
     WireConstraintDeclarations {
         ik: vec![4, 2],
         transform: vec![3, 0],
+        path: vec![],
         physics: vec![5, 1],
     }
 }
@@ -100,6 +101,7 @@ fn mixed_declarations_change_only_inventory_order_not_authored_execution() {
         WireConstraintDeclarations {
             ik: vec![2, 4],
             transform: vec![0, 3],
+            path: vec![],
             physics: vec![1, 5],
         }
     );
@@ -133,6 +135,7 @@ fn canonical_before_execution_reorder_can_preserve_semantic_declarations() {
     wire.constraint_declarations = Some(WireConstraintDeclarations {
         ik: vec![2, 4],
         transform: vec![3, 0],
+        path: vec![],
         physics: vec![1, 5],
     });
     p.wire = Some(wire);

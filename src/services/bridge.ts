@@ -2,6 +2,11 @@
 // Keep native integration here so the editor remains previewable in a browser.
 interface NativeWindow {
   setTitle(title: string): Promise<void>;
+  isDecorated(): Promise<boolean>;
+  isMaximized(): Promise<boolean>;
+  minimize(): Promise<void>;
+  toggleMaximize(): Promise<void>;
+  onResized(handler: () => void): Promise<() => void>;
   destroy(): Promise<void>;
   onCloseRequested(handler: (event: { preventDefault(): void }) => void): Promise<() => void>;
 }
@@ -14,6 +19,7 @@ function bridge(): NativeBridge | undefined {
   return (globalThis as typeof globalThis & { __TAURI__?: NativeBridge }).__TAURI__;
 }
 export const desktop = bridge() !== undefined;
+export const macDesktop = desktop && /\bMacintosh\b/.test(navigator.userAgent);
 function requiredBridge(): NativeBridge {
   const api = bridge();
   if (!api) throw new Error('This operation requires the desktop application.');

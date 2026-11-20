@@ -93,6 +93,117 @@ fn sample(s: &Session, clip: u64, frame: f64) -> crate::evaluation::EvaluationSn
     )
     .unwrap()
 }
+
+#[test]
+fn imported_split_color_samples_independently_and_survives_other_edits() {
+    use crate::scene_edit::{SceneEdit, SceneHistory};
+    use fbones_format::minimal::scene::{
+        decode_scene, encode_scene_payload, SlotSplitConfig, SlotSplitMode,
+    };
+
+    let mut project = crate::scene_wire_fixture::project();
+    project.wire = None;
+    let mesh = project.slots[1].attachments[0].mesh_mut().unwrap();
+    mesh.image.width = 32.;
+    mesh.image.height = 24.;
+    let clip = &mut project.animations[0];
+    clip.slot_tracks.clear();
+    clip.split_modes.push(SplitModeConfig::Slot(SlotSplitConfig {
+        slot: 1,
+        mode: SlotSplitMode::RgbAlpha,
+    }));
+    clip.slot_tracks.extend([
+        SlotTimeline::Rgb2 {
+            slot: 1,
+            keys: vec![
+                SlotColorKey {
+                    frame: 2.,
+                    values: [0., 1., 0., 0., 0., 0.],
+                    curve: SlotColorCurve::Linear,
+                },
+                SlotColorKey {
+                    frame: 10.,
+                    values: [1., 0., 0., 0., 0., 0.],
+                    curve: SlotColorCurve::Linear,
+                },
+            ],
+        },
+        SlotTimeline::Alpha {
+            slot: 1,
+            keys: vec![
+                SlotColorKey {
+                    frame: 4.,
+                    values: [1.],
+                    curve: SlotColorCurve::Linear,
+                },
+                SlotColorKey {
+                    frame: 8.,
+                    values: [0.],
+                    curve: SlotColorCurve::Linear,
+                },
+            ],
+        },
+    ]);
+    let payload = encode_scene_payload(&project).unwrap();
+    let mut history = SceneHistory::new(decode_scene(&payload).unwrap(), true).unwrap();
+    let frame = history.frame();
+    let clip_id = frame.animation_ids[0];
+    let slot_id = frame.slot_ids[1];
+    let rgb = frame.project.animations[0]
+        .slot_tracks
+        .iter()
+        .position(|track| matches!(track, SlotTimeline::Rgb2 { .. }))
+        .unwrap();
+    let key_id = frame.animation_slot_key_ids[0][rgb][0];
+    let sampled = sample_at_frame(frame, Some(&frame.project.animations[0]), 6.).unwrap();
+    assert_eq!(sampled[1].color, [0.5, 0.5, 0., 0.5]);
+
+    for edit in [
+        json!({"type":"setAnimationSlotKeys","animation":clip_id,"keys":[rgba(slot_id,6.,[1.;4],"linear")]}),
+        json!({"type":"deleteAnimationKeys","animation":clip_id,"keys":[key_id]}),
+        json!({"type":"moveAnimationKeys","animation":clip_id,"keys":[key_id],"deltaFrames":2}),
+    ] {
+        let error = history
+            .apply(SceneEdit::Animation(serde_json::from_value(edit).unwrap()))
+            .unwrap_err();
+        assert_eq!(error.code, "InvalidAnimation");
+        assert_eq!(
+            encode_scene_payload(&history.frame().project).unwrap(),
+            payload
+        );
+    }
+
+    history
+        .apply(SceneEdit::ReorderSlot { id: slot_id, index: 0 })
+        .unwrap();
+    history
+        .apply(SceneEdit::Animation(
+            serde_json::from_value(json!({
+                "type":"setAnimationSlotKeys",
+                "animation":clip_id,
+                "keys":[attachment(slot_id,6.,None)]
+            }))
+            .unwrap(),
+        ))
+        .unwrap();
+    let frame = history.frame();
+    let clip = &frame.project.animations[0];
+    assert_eq!(clip.slot_split_mode(0), Some(SlotSplitMode::RgbAlpha));
+    let view = crate::animation::view(frame, 0);
+    assert_eq!(view.slot_split_modes[0].slot, slot_id);
+    assert!(view.slot_tracks.iter().any(|track| matches!(
+        track, SlotTrackView::Rgb2 { slot, keys } if *slot == slot_id && keys[0].id == key_id
+    )));
+    let sampled = sample_at_frame(frame, Some(clip), 6.).unwrap();
+    assert_eq!(sampled[0].color, [0.5, 0.5, 0., 0.5]);
+    assert_eq!(sampled[0].attachment, None);
+    let saved = encode_scene_payload(&frame.project).unwrap();
+    assert_eq!(
+        encode_scene_payload(&decode_scene(&saved).unwrap()).unwrap(),
+        saved
+    );
+}
+
 #[test]
 fn mixed_bone_attachment_rgba_batch_is_one_history_action_and_portable_nonbaked_save() {
     let (d, s) = setup();
@@ -233,6 +344,8 @@ fn mixed_keys_move_delete_duplicate_and_structural_references_keep_stable_ids() 
         .flat_map(|t| match t {
             SlotTrackView::Attachment { keys, .. } => keys.iter().map(|k| k.id).collect::<Vec<_>>(),
             SlotTrackView::Rgba { keys, .. } => keys.iter().map(|k| k.id).collect(),
+            SlotTrackView::Rgb2 { keys, .. } => keys.iter().map(|k| k.id).collect(),
+            SlotTrackView::Alpha { keys, .. } => keys.iter().map(|k| k.id).collect(),
         })
         .collect::<Vec<_>>();
     let duplicate = edit(
@@ -245,6 +358,8 @@ fn mixed_keys_move_delete_duplicate_and_structural_references_keep_stable_ids() 
         .flat_map(|t| match t {
             SlotTrackView::Attachment { keys, .. } => keys.iter().map(|k| k.id).collect::<Vec<_>>(),
             SlotTrackView::Rgba { keys, .. } => keys.iter().map(|k| k.id).collect(),
+            SlotTrackView::Rgb2 { keys, .. } => keys.iter().map(|k| k.id).collect(),
+            SlotTrackView::Alpha { keys, .. } => keys.iter().map(|k| k.id).collect(),
         })
         .collect::<Vec<_>>();
     assert!(selected.iter().all(|id| !copied.contains(id)));
@@ -349,6 +464,240 @@ fn rgba_bezier_preserves_four_precise_axes_moves_handles_and_rejects_neighbor_lo
         panic!("RGBA")
     };
     assert_eq!(stored[0].id, ids[0]);
+}
+
+#[test]
+fn rgba_subdivision_transports_authoritative_zero_signs_through_history_and_reopen() {
+    fn rows(p: &ProjectSummary) -> &[RgbaKeyView] {
+        let SlotTrackView::Rgba { keys, .. } = &p.animations[0].slot_tracks[0] else {
+            panic!("RGBA fixture")
+        };
+        keys
+    }
+
+    let (d, s) = setup();
+    let p = summary(&s);
+    let slot = p.slots[0].id;
+    let clip = p.animations[0].id;
+    let before = keys(
+        &s,
+        clip,
+        vec![
+            json!({"channel":"rgba","slot":slot,"frame":0,"values":[0.125,-0.0,0.25,1],"curve":"bezier",
+            "controls":[[8,0.25,16,0.5],[8,-0.0,16,-0.0],[8,0.375,16,0.625],[8,0.875,16,0.625]]}),
+            rgba(slot, 24., [0.625, -0.0, 0.75, 0.5], "linear"),
+        ],
+    );
+    let old = rows(&before);
+    let negative = (-0.0_f32).to_bits();
+    let bits = |axes: [[f32; 4]; 4]| axes.map(|axis| axis.map(f32::to_bits));
+    assert_eq!(old[0].values[1].to_bits(), negative);
+    assert_eq!(old[0].controls.unwrap()[1][3].to_bits(), negative);
+    let left = [
+        [4., 0.1875, 8., 0.40625],
+        [4., 0., 8., 0.],
+        [4., 0.3125, 8., 0.40625],
+        [4., 0.9375, 8., 0.84375],
+    ];
+    let right = [
+        [16., 0.59375, 20., 0.5625],
+        [16., 0., 20., 0.],
+        [16., 0.59375, 20., 0.6875],
+        [16., 0.65625, 20., 0.5625],
+    ];
+    let changed = keys(
+        &s,
+        clip,
+        vec![
+            json!({"channel":"rgba","slot":slot,"frame":0,"keyId":old[0].id,"values":[0.125,0,0.25,1],"curve":"bezier",
+            "controls":left,"negativeZeroIndices":[1,9]}),
+            json!({"channel":"rgba","slot":slot,"frame":12,"values":[0.5,0,0.5,0.75],"curve":"bezier",
+            "controls":right,"negativeZeroIndices":[1,9,11]}),
+        ],
+    );
+    assert_eq!(changed.revision, before.revision + 1);
+    assert_eq!(
+        serde_json::to_value((&changed.bones, &changed.slots)).unwrap(),
+        serde_json::to_value((&before.bones, &before.slots)).unwrap()
+    );
+    let stored = rows(&changed);
+    assert_eq!(
+        stored.iter().map(|row| row.frame).collect::<Vec<_>>(),
+        [0., 12., 24.]
+    );
+    assert_eq!(stored[0].id, old[0].id);
+    assert_eq!(
+        serde_json::to_value(&stored[2]).unwrap(),
+        serde_json::to_value(&old[1]).unwrap()
+    );
+    let mut signed_left = left;
+    signed_left[1][1] = -0.0;
+    let mut signed_right = right;
+    signed_right[1][1] = -0.0;
+    signed_right[1][3] = -0.0;
+    assert_eq!(bits(stored[0].controls.unwrap()), bits(signed_left));
+    assert_eq!(bits(stored[1].controls.unwrap()), bits(signed_right));
+    assert_eq!(stored[0].values[1].to_bits(), negative);
+    assert_eq!(
+        stored[1].values.map(f32::to_bits),
+        [0.5, -0.0, 0.5, 0.75].map(f32::to_bits)
+    );
+    let committed = serde_json::to_value(&changed.animations).unwrap();
+    let undone = s.edit(changed.revision, RigEdit::Undo).unwrap();
+    assert_eq!(
+        serde_json::to_value(&undone.animations).unwrap(),
+        serde_json::to_value(&before.animations).unwrap()
+    );
+    let redone = s.edit(undone.revision, RigEdit::Redo).unwrap();
+    assert_eq!(serde_json::to_value(&redone.animations).unwrap(), committed);
+
+    let addressed = json!({"channel":"rgba","slot":slot,"frame":12,"keyId":stored[1].id,"values":[0.5,0,0.5,0.75],"curve":"bezier","controls":right});
+    let mut null = addressed.clone();
+    null["negativeZeroIndices"] = Value::Null;
+    for legacy in [addressed.clone(), null] {
+        let unchanged = keys(&s, clip, vec![legacy]);
+        assert_eq!(unchanged.revision, redone.revision);
+        assert_eq!(
+            serde_json::to_value(&unchanged.animations).unwrap(),
+            committed
+        );
+    }
+    let mut explicit = addressed;
+    explicit["values"][1] = json!(-0.0);
+    explicit["controls"] = json!(signed_right);
+    explicit["negativeZeroIndices"] = json!([]);
+    let cleared = keys(&s, clip, vec![explicit]);
+    assert_eq!(cleared.revision, redone.revision + 1);
+    assert_eq!(rows(&cleared)[1].values[1].to_bits(), 0);
+    assert_eq!(bits(rows(&cleared)[1].controls.unwrap()), bits(right));
+    let restored = s.edit(cleared.revision, RigEdit::Undo).unwrap();
+    assert_eq!(
+        serde_json::to_value(&restored.animations).unwrap(),
+        committed
+    );
+
+    let destination = d.path().join("portable/rgba-zeros.fbones");
+    s.save_snapshot(s.prepare_save(true).unwrap(), destination.clone())
+        .unwrap();
+    let envelope =
+        fbones_format::ProjectEnvelope::inspect(std::fs::read(&destination).unwrap()).unwrap();
+    let decoded =
+        fbones_format::minimal::scene::decode_scene(&envelope.decoded_payload().unwrap()).unwrap();
+    let SlotTimeline::Rgba { keys: written, .. } = &decoded.animations[0].slot_tracks[0] else {
+        panic!("encoded RGBA")
+    };
+    assert_eq!(written.len(), stored.len());
+    for (raw, expected) in written.iter().zip(stored) {
+        assert_eq!(raw.frame.to_bits(), expected.frame.to_bits());
+        assert_eq!(
+            raw.values.map(f32::to_bits),
+            expected.values.map(f32::to_bits)
+        );
+        if let Some(expected) = expected.controls {
+            let SlotRgbaCurve::Bezier { controls, .. } = raw.curve else {
+                panic!("encoded Bézier")
+            };
+            assert_eq!(bits(controls), bits(expected));
+        }
+    }
+    s.close(false).unwrap();
+    let reopened = s
+        .replace(open_document(destination).unwrap(), false)
+        .unwrap();
+    assert!(!reopened.inspection_only && !reopened.dirty);
+    let actual = rows(&reopened);
+    assert_eq!(actual[1].values[1].to_bits(), negative);
+    assert_eq!(bits(actual[0].controls.unwrap()), bits(signed_left));
+    assert_eq!(bits(actual[1].controls.unwrap()), bits(signed_right));
+}
+
+#[test]
+fn malformed_light_rgba_zero_masks_are_atomic_in_standalone_and_mixed_edits() {
+    let (_d, s) = setup();
+    let p = summary(&s);
+    let slot = p.slots[0].id;
+    let clip = p.animations[0].id;
+    let bone = p.bones[0].id;
+    let initial = state(&s);
+    let good = rgba(slot, 6., [0.25, 0., 0.5, 1.], "linear");
+    let controls = [[16., 0.25, 20., 0.375]; 4];
+    let mut base = rgba(slot, 12., [0.125, 0., 0.5, 1.], "bezier");
+    base["controls"] = json!(controls);
+    for (mut row, mask) in [
+        (base.clone(), json!([1, 1])),
+        (base.clone(), json!([20])),
+        (base, json!([0])),
+        (rgba(slot, 12., [0.125, 0., 0.5, 1.], "linear"), json!([9])),
+    ] {
+        row["negativeZeroIndices"] = mask;
+        let standalone = json!({"type":"setAnimationSlotKeys","animation":clip,"keys":[good.clone(),row.clone(),rgba(slot,24.,[0.625,0.,0.75,0.5],"linear")]});
+        let mixed = json!({"type":"setAnimationKeyBatch","animation":clip,
+            "boneKeys":[{"bone":bone,"channel":"translate","frame":12,"values":[4,5],"curve":"linear"}],
+            "slotKeys":[good.clone(),row,rgba(slot,24.,[0.625,0.,0.75,0.5],"linear")]});
+        for operation in [standalone, mixed] {
+            let edit = serde_json::from_value(operation).unwrap();
+            assert_eq!(
+                s.edit(p.revision, edit).unwrap_err().code,
+                "InvalidAnimation"
+            );
+            assert_eq!(state(&s), initial);
+        }
+    }
+}
+
+#[test]
+fn addressed_rgba_bezier_edit_preserves_unchanged_negative_zero_controls() {
+    let (_dir, s) = setup();
+    let p = summary(&s);
+    let clip = p.animations[0].id;
+    let slot = p.slots[0].id;
+    let values = [0.125, 0.25, 0.5, 1.0];
+    let controls = [
+        [8.0_f32, 0.25, 16.0, 0.375],
+        [8.0, 0.375, 16.0, -0.0],
+        [8.0, 0.625, 16.0, 0.75],
+        [8.0, 0.875, 16.0, 0.75],
+    ];
+    let p = keys(
+        &s,
+        clip,
+        vec![
+            json!({"channel":"rgba","slot":slot,"frame":0,"values":values,"curve":"bezier","controls":controls}),
+            rgba(slot, 24.0, [0.5, 0.75, 1.0, 0.5], "linear"),
+        ],
+    );
+    let SlotTrackView::Rgba { keys: stored, .. } = &p.animations[0].slot_tracks[0] else {
+        panic!("RGBA")
+    };
+    let id = stored[0].id;
+    let before = stored[0].controls.unwrap();
+    assert_eq!(before[1][3].to_bits(), (-0.0_f32).to_bits());
+
+    let mut request = before;
+    request[1][3] = 0.0; // JSON transport representation of the unchanged ordinate.
+    request[2][1] = 0.6875;
+    let p = keys(
+        &s,
+        clip,
+        vec![
+            json!({"channel":"rgba","slot":slot,"frame":0,"keyId":id,"values":values,"curve":"bezier","controls":request}),
+        ],
+    );
+    let SlotTrackView::Rgba { keys: stored, .. } = &p.animations[0].slot_tracks[0] else {
+        panic!("RGBA")
+    };
+    assert_eq!(stored[0].id, id);
+    let bits = |axes: [[f32; 4]; 4]| axes.map(|axis| axis.map(f32::to_bits));
+    let mut expected = before;
+    expected[2][1] = request[2][1];
+    assert_eq!(bits(stored[0].controls.unwrap()), bits(expected));
+
+    let p = s.edit(p.revision, RigEdit::Undo).unwrap();
+    let SlotTrackView::Rgba { keys: stored, .. } = &p.animations[0].slot_tracks[0] else {
+        panic!("RGBA")
+    };
+    assert_eq!(stored[0].id, id);
+    assert_eq!(bits(stored[0].controls.unwrap()), bits(before));
 }
 
 #[test]

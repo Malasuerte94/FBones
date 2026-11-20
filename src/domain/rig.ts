@@ -36,6 +36,7 @@ export function previewTransformBones(bones:readonly BoneView[],edit:TransformEd
 }
 export function previewEdit(bones:readonly BoneView[],edit:RigEdit):BoneView[]{
  if(edit.type==='transformBones')return previewTransformBones(bones,edit);
+ if(edit.type==='setBoneParentPosition')return bones.map(bone=>bone.id===edit.id?{...bone,x:edit.x??bone.x,y:edit.y??bone.y}:bone);
  if(edit.type==='create')return[...bones,{...edit,id:-1,name:'New bone',scaleX:1,scaleY:1,shearX:0,shearY:0}];
  if(!['move','tip','length'].includes(edit.type))return[...bones];
  if(edit.type!=='move'&&edit.type!=='tip'&&edit.type!=='length')return[...bones];

@@ -1,15 +1,18 @@
 //! Authoritative typed scene transactions. Kept behind the migration gate until
 //! the application view/command bridge supports the complete attachment model.
 use crate::{
+    animation_offset::{self, OffsetBasis},
+    animation_snapshot::AnimationSnapshot,
     images::valid_image_stem,
     project::AppError,
+    rig::RigEdit,
     rig::{poses, ImagePlacement},
 };
 use fbones_format::minimal::{
     regions::{BlendMode, Region},
     scene::{
-        encode_scene_payload, AttachmentAddress, Constraint, SceneAttachment, SceneProject,
-        SceneSlot,
+        encode_scene_payload, Animation, AttachmentAddress, AttachmentSequence, Constraint,
+        LinkedMesh, SceneAttachment, SceneProject, SceneSlot, SlotTimeline,
     },
     Bone,
 };
@@ -111,6 +114,11 @@ pub enum SceneEdit {
         id: u64,
         attachment: SceneAttachment,
     },
+    ApplyAutoWeights {
+        id: u64,
+        attachment: SceneAttachment,
+        clear_vertex: bool,
+    },
     SetAttachmentColor {
         id: u64,
         color: u32,
@@ -118,6 +126,15 @@ pub enum SceneEdit {
     SetAttachmentSequence {
         id: u64,
         sequence: Option<crate::animation_sequence::SettingsInput>,
+    },
+    SetLinkedMeshInheritance {
+        id: u64,
+        inherit_timelines: bool,
+    },
+    CreateLinkedMesh {
+        source: u64,
+        slot: u64,
+        name: String,
     },
     SetActive {
         slot: u64,
@@ -187,6 +204,8 @@ pub struct SceneHistory {
     // authored bits participate without encoding on every summary/dirty read.
     encoded: Vec<u8>,
     saved_encoded: Option<Vec<u8>>,
+    stored_animation: Option<AnimationSnapshot>,
+    offset_basis: Option<OffsetBasis>,
     ids: Ids,
 }
 impl SceneFrame {
@@ -213,6 +232,23 @@ impl SceneFrame {
             })
             .ok_or_else(|| invalid("Choose an existing attachment."))
     }
+    pub(crate) fn require_editable_geometry(
+        &self,
+        address: AttachmentAddress,
+    ) -> Result<(), AppError> {
+        if self.project.linked_mesh(address).is_some() {
+            return Err(invalid(
+                "Edit the source mesh to change linked geometry or weights.",
+            ));
+        }
+        if self.project.slots[address.slot].attachments[address.attachment]
+            .path()
+            .is_some()
+        {
+            return Err(invalid("Imported Path geometry is read-only."));
+        }
+        Ok(())
+    }
     pub fn constraint_index(&self, id: u64) -> Result<usize, AppError> {
         self.constraint_ids
             .iter()
@@ -222,6 +258,72 @@ impl SceneFrame {
     pub fn attachment(&self, id: u64) -> Result<&SceneAttachment, AppError> {
         let a = self.attachment_address(id)?;
         Ok(&self.project.slots[a.slot].attachments[a.attachment])
+    }
+    fn insert_attachment(
+        &mut self,
+        ids: &mut Ids,
+        slot: usize,
+        attachment: SceneAttachment,
+        activate: bool,
+    ) -> Result<AttachmentAddress, AppError> {
+        let destination = &mut self.project.slots[slot];
+        let address = AttachmentAddress {
+            slot,
+            attachment: destination.attachments.len(),
+        };
+        let id = allocate(&mut ids.attachment)?;
+        destination.attachments.push(attachment);
+        self.attachment_ids[slot].push(id);
+        self.project.attachment_order.push(address);
+        if activate {
+            destination.active_attachment = Some(address.attachment);
+        }
+        self.focus = SceneFocus {
+            bone: self.bone_ids[destination.bone],
+            slot: Some(self.slot_ids[slot]),
+            attachment: Some(id),
+            constraint: None,
+            vertex: None,
+            animation: self.focus.animation,
+            event: self.focus.event,
+        };
+        Ok(address)
+    }
+    fn set_linked_mesh_inheritance(
+        &mut self,
+        id: u64,
+        inherit_timelines: bool,
+        stored: Option<&AnimationSnapshot>,
+    ) -> Result<bool, AppError> {
+        let attachment = self.attachment_address(id)?;
+        let link = self
+            .project
+            .linked_meshes
+            .iter_mut()
+            .find(|link| link.attachment == attachment)
+            .ok_or_else(|| invalid("Choose an existing linked mesh."))?;
+        if link.inherit_timelines == inherit_timelines {
+            return Ok(false);
+        }
+        if inherit_timelines {
+            let conflicts = |clip: &Animation| {
+                clip.deform_tracks
+                    .iter()
+                    .any(|track| track.attachment == attachment)
+            };
+            if self.project.animations.iter().any(conflicts) {
+                return Err(invalid(
+                    "Clear this linked mesh's Deform keys in every animation before enabling timeline inheritance.",
+                ));
+            }
+            if stored.is_some_and(|snapshot| conflicts(snapshot.clip())) {
+                return Err(invalid(
+                    "Clear the stored animation before changing this linked mesh's timeline inheritance.",
+                ));
+            }
+        }
+        link.inherit_timelines = inherit_timelines;
+        Ok(true)
     }
     fn add_physics_to_bones(&mut self, ids: &mut Ids, bones: &[u64]) -> Result<(), AppError> {
         if bones.is_empty() || bones.len() > 128 {
@@ -362,6 +464,7 @@ fn generated_physics_name(bone: &str, name: &str) -> bool {
 impl SceneHistory {
     pub fn new(project: SceneProject, saved: bool) -> Result<Self, AppError> {
         check_active_clipping(&project)?;
+        check_static_path_constraints(&project)?;
         let encoded = encode_scene_payload(&project)?;
         let mut ids = Ids::default();
         let mut bone_ids = vec![];
@@ -474,6 +577,8 @@ impl SceneHistory {
             saved_encoded: saved.then(|| encoded.clone()),
             encoded,
             ids,
+            stored_animation: None,
+            offset_basis: None,
         };
         crate::animation_slots::validate(&history.frame)?;
         crate::animation_deform::validate(&history.frame)?;
@@ -501,6 +606,22 @@ impl SceneHistory {
             self.encoded.clone_from(encoded);
         }
     }
+    pub(crate) fn stored_animation(&self) -> Option<crate::animation::AnimationView> {
+        self.stored_animation
+            .as_ref()
+            .map(|snapshot| snapshot.view.clone())
+    }
+
+    fn discard_incompatible_store(&mut self) {
+        if self
+            .stored_animation
+            .as_ref()
+            .is_some_and(|snapshot| !snapshot.compatible(&self.frame))
+        {
+            self.stored_animation = None;
+        }
+    }
+
     pub fn apply(&mut self, edit: SceneEdit) -> Result<bool, AppError> {
         match edit {
             SceneEdit::Undo => {
@@ -509,6 +630,8 @@ impl SceneHistory {
                     let previous = self.undo.pop().unwrap();
                     self.redo.push(std::mem::replace(&mut self.frame, previous));
                     self.encoded = encoded;
+                    self.offset_basis = None;
+                    self.discard_incompatible_store();
                     return Ok(true);
                 }
                 return Ok(false);
@@ -519,22 +642,84 @@ impl SceneHistory {
                     let next = self.redo.pop().unwrap();
                     self.undo.push(std::mem::replace(&mut self.frame, next));
                     self.encoded = encoded;
+                    self.offset_basis = None;
+                    self.discard_incompatible_store();
                     return Ok(true);
                 }
                 return Ok(false);
             }
+            SceneEdit::Animation(RigEdit::StoreAnimationKeys { animation }) => {
+                let a = AnimationSnapshot::clip_index(&self.frame, animation)?;
+                self.stored_animation = Some(AnimationSnapshot::capture(&self.frame, a)?);
+                return Ok(false);
+            }
+            SceneEdit::Animation(RigEdit::ClearStoredAnimationKeys { animation }) => {
+                if self
+                    .stored_animation
+                    .as_ref()
+                    .is_some_and(|snapshot| snapshot.view.id == animation)
+                {
+                    self.stored_animation = None;
+                }
+                return Ok(false);
+            }
+            SceneEdit::Rig(
+                RigEdit::GenerateMeshVertices { id } | RigEdit::ReplaceMeshOutline { id, .. },
+            )
+            | SceneEdit::RigInPose {
+                edit: RigEdit::GenerateMeshVertices { id } | RigEdit::ReplaceMeshOutline { id, .. },
+                ..
+            } if self
+                .stored_animation
+                .as_ref()
+                .is_some_and(|snapshot| snapshot.depends_on_deform_geometry(&self.frame, id)) =>
+            {
+                return Err(AnimationSnapshot::unavailable(
+                    "Clear the stored animation before changing this attachment's topology.",
+                ));
+            }
             _ => (),
         }
+        let mut outgoing_animation = None;
+        let mut offset_basis = None;
+        let mut new_linked_mesh = None;
         let mut before = self.frame.clone();
         let mut next = before.clone();
         let mut ids = self.ids;
         let structural = !matches!(&edit, SceneEdit::Animation(_));
+        let preserve_store = matches!(
+            &edit,
+            SceneEdit::Rig(
+                RigEdit::RotateBoneWithCompensation { .. }
+                    | RigEdit::ScaleBoneWithCompensation { .. }
+                    | RigEdit::ShearBoneWithCompensation { .. }
+                    | RigEdit::SetBoneWorldRotation { .. }
+                    | RigEdit::SetBoneLocalPosition { .. }
+            ) | SceneEdit::RigInPose {
+                edit: RigEdit::RotateBoneWithCompensation { .. }
+                    | RigEdit::ScaleBoneWithCompensation { .. }
+                    | RigEdit::ShearBoneWithCompensation { .. }
+                    | RigEdit::SetBoneWorldRotation { .. }
+                    | RigEdit::SetBoneLocalPosition { .. },
+                ..
+            }
+        );
+        let can_invalidate_store = (structural && !preserve_store)
+            || matches!(
+                &edit,
+                SceneEdit::Animation(
+                    RigEdit::CreateEvent { .. }
+                        | RigEdit::DeleteEvent { .. }
+                        | RigEdit::DeleteAnimation { .. }
+                )
+            );
         // Selection is frontend state. Targeted authored edits capture their
         // explicit address for Undo without relying on the last native gesture.
         if let SceneEdit::RenameAttachment { id, .. }
         | SceneEdit::DeleteAttachment { id }
         | SceneEdit::ReplaceAttachment { id, .. }
         | SceneEdit::SetAttachmentSequence { id, .. }
+        | SceneEdit::SetLinkedMeshInheritance { id, .. }
         | SceneEdit::SetAttachmentColor { id, .. } = &edit
         {
             let a = next.attachment_address(*id)?;
@@ -548,6 +733,38 @@ impl SceneHistory {
             next.focus = focus;
         }
         match edit {
+            SceneEdit::Animation(RigEdit::SwapStoredAnimationKeys { animation }) => {
+                let a = AnimationSnapshot::clip_index(&self.frame, animation)?;
+                let stored = self
+                    .stored_animation
+                    .as_ref()
+                    .filter(|snapshot| {
+                        snapshot.view.id == animation && snapshot.compatible(&self.frame)
+                    })
+                    .ok_or_else(|| {
+                        AnimationSnapshot::unavailable("Store this animation before swapping keys.")
+                    })?;
+                outgoing_animation = Some(AnimationSnapshot::capture(&self.frame, a)?);
+                stored.restore(&mut next, a);
+            }
+            SceneEdit::Animation(RigEdit::OffsetAnimationKeys {
+                animation,
+                key,
+                delta_frames,
+                continue_offset,
+                loop_range,
+            }) => {
+                offset_basis = animation_offset::apply(
+                    &mut next,
+                    &mut ids.animation_key,
+                    self.offset_basis.as_ref(),
+                    animation,
+                    key,
+                    delta_frames,
+                    continue_offset,
+                    loop_range,
+                )?;
+            }
             SceneEdit::Animation(edit) => crate::animation::apply(
                 &mut next,
                 &mut ids.animation,
@@ -560,6 +777,78 @@ impl SceneHistory {
             }
             SceneEdit::SetAttachmentSequence { id, sequence } => {
                 crate::animation_sequence::set_settings(&mut next, id, sequence)?
+            }
+            SceneEdit::SetLinkedMeshInheritance {
+                id,
+                inherit_timelines,
+            } => {
+                if !next.set_linked_mesh_inheritance(
+                    id,
+                    inherit_timelines,
+                    self.stored_animation.as_ref(),
+                )? {
+                    return Ok(false);
+                }
+            }
+            SceneEdit::CreateLinkedMesh { source, slot, name } => {
+                let source = next.attachment_address(source)?;
+                let target = next.slot_index(slot)?;
+                let source_slot = &next.project.slots[source.slot];
+                let mut mesh = source_slot.attachments[source.attachment]
+                    .mesh()
+                    .filter(|_| next.project.linked_mesh(source).is_none())
+                    .ok_or_else(|| {
+                        invalid("Choose an ordinary source mesh for the linked attachment.")
+                    })?
+                    .clone();
+                let sequence = next.project.sequence(source).cloned();
+                if mesh.image.width <= 0. || mesh.image.height <= 0. {
+                    return Err(invalid(
+                        "Choose a source mesh with positive image dimensions.",
+                    ));
+                }
+                let name = name.trim();
+                if name.is_empty() || name.len() > 1024 || name.chars().any(char::is_control) {
+                    return Err(invalid("Enter a valid name for the linked mesh."));
+                }
+                let destination = &next.project.slots[target];
+                if destination
+                    .attachments
+                    .iter()
+                    .any(|attachment| attachment.name() == name)
+                {
+                    return Err(invalid(
+                        "This slot already has an attachment with that name.",
+                    ));
+                }
+                let activate = destination.attachments.is_empty();
+                let image_key = if mesh.image.path.is_empty() {
+                    &mesh.image.name
+                } else {
+                    &mesh.image.path
+                };
+                if sequence.is_none() && !valid_image_stem(image_key) {
+                    return Err(invalid("Choose a source mesh with a portable image path."));
+                }
+                if mesh.image.path.is_empty() && mesh.image.name != name {
+                    mesh.image.path.clone_from(&mesh.image.name);
+                }
+                mesh.image.name = name.into();
+                bridge::focus_binding(&mut before, &mut next, source, true);
+                let attachment = next.insert_attachment(
+                    &mut ids,
+                    target,
+                    SceneAttachment::Mesh(Box::new(mesh)),
+                    activate,
+                )?;
+                new_linked_mesh = Some((
+                    LinkedMesh {
+                        attachment,
+                        source,
+                        inherit_timelines: true,
+                    },
+                    sequence,
+                ));
             }
             SceneEdit::CreateSlot { bone, name } => {
                 let bone_index = next.bone_index(bone)?;
@@ -768,30 +1057,22 @@ impl SceneHistory {
                 activate,
             } => {
                 let s = next.slot_index(slot)?;
-                let a = next.project.slots[s].attachments.len();
-                next.project.slots[s].attachments.push(attachment);
-                let id = allocate(&mut ids.attachment)?;
-                next.attachment_ids[s].push(id);
-                next.project.attachment_order.push(AttachmentAddress {
-                    slot: s,
-                    attachment: a,
-                });
-                if activate {
-                    next.project.slots[s].active_attachment = Some(a);
-                }
-                next.focus = SceneFocus {
-                    bone: next.bone_ids[next.project.slots[s].bone],
-                    slot: Some(slot),
-                    attachment: Some(id),
-                    constraint: None,
-                    vertex: None,
-                    animation: next.focus.animation,
-                    event: next.focus.event,
-                };
+                next.insert_attachment(&mut ids, s, attachment, activate)?;
             }
             SceneEdit::ReplaceAttachment { id, attachment } => {
                 let a = next.attachment_address(id)?;
+                next.require_editable_geometry(a)?;
                 next.project.slots[a.slot].attachments[a.attachment] = attachment;
+            }
+            SceneEdit::ApplyAutoWeights {
+                id,
+                attachment,
+                clear_vertex,
+            } => {
+                let address = next.attachment_address(id)?;
+                next.require_editable_geometry(address)?;
+                bridge::focus_binding(&mut before, &mut next, address, clear_vertex);
+                next.project.slots[address.slot].attachments[address.attachment] = attachment;
             }
             SceneEdit::SetActive { slot, attachment } => {
                 let s = next.slot_index(slot)?;
@@ -815,6 +1096,8 @@ impl SceneHistory {
                     image.name = name;
                 } else if let SceneAttachment::Clipping(clip) = attachment {
                     clip.name = name;
+                } else if let SceneAttachment::Path(path) = attachment {
+                    path.name = name;
                 }
             }
             SceneEdit::DeleteAttachment { id } => {
@@ -865,6 +1148,18 @@ impl SceneHistory {
             }
             SceneEdit::DeleteSlot { id } => {
                 let i = next.slot_index(id)?;
+                if next.project.constraints.iter().any(
+                    |constraint| matches!(constraint, Constraint::Path(path) if path.slot == i),
+                ) {
+                    return Err(invalid(
+                        "Remove the Path constraint before deleting its target slot.",
+                    ));
+                }
+                if next.project.slots[i].attachments.iter().any(|a| a.path().is_some()) {
+                    return Err(invalid(
+                        "Delete the imported Path explicitly before removing its slot.",
+                    ));
+                }
                 if next.project.slots.iter().enumerate().any(|(s, slot)| {
                     s != i
                         && slot
@@ -883,6 +1178,13 @@ impl SceneHistory {
                 for a in &mut next.project.attachment_order {
                     if a.slot > i {
                         a.slot -= 1;
+                    }
+                }
+                for constraint in &mut next.project.constraints {
+                    if let Constraint::Path(path) = constraint {
+                        if path.slot > i {
+                            path.slot -= 1;
+                        }
                     }
                 }
                 for slot in &mut next.project.slots {
@@ -924,6 +1226,11 @@ impl SceneHistory {
                     .collect();
                 for address in &mut next.project.attachment_order {
                     address.slot = remap[address.slot];
+                }
+                for constraint in &mut next.project.constraints {
+                    if let Constraint::Path(path) = constraint {
+                        path.slot = remap[path.slot];
+                    }
                 }
                 for slot in &mut next.project.slots {
                     for a in &mut slot.attachments {
@@ -974,6 +1281,9 @@ impl SceneHistory {
             SceneEdit::SetImagesRoot { path } => next.project.images_root = path,
             SceneEdit::Undo | SceneEdit::Redo => unreachable!(),
         }
+        // A source edit also changes the binding geometry of independent
+        // children. Reconcile that geometry before validating keyed layouts.
+        crate::scene_wire::reconcile_linked_meshes(&before, &mut next)?;
         if structural {
             crate::animation_order::remap_references(&before, &mut next)?;
             crate::animation_deform::remap_references(&before, &mut next)?;
@@ -982,6 +1292,16 @@ impl SceneHistory {
             crate::animation_sequence::remap_references(&before, &mut next)?;
             crate::attachment_color::remap(&before, &mut next)?;
             crate::slot_dark_color::remap(&before, &mut next)?;
+        }
+        // New attachment metadata already uses the current addresses.
+        if let Some((link, sequence)) = new_linked_mesh {
+            next.project.linked_meshes.push(link);
+            if let Some(settings) = sequence {
+                next.project.attachment_sequences.push(AttachmentSequence {
+                    attachment: link.attachment,
+                    settings,
+                });
+            }
         }
         crate::animation_slots::canonicalize(&mut next)?;
         crate::animation_deform::canonicalize(&mut next)?;
@@ -993,9 +1313,20 @@ impl SceneHistory {
         next.follow_physics_bone_names(&before);
         crate::scene_wire::reconcile(&before, &mut next)?;
         check_active_clipping(&next.project)?;
+        check_static_path_constraints(&next.project)?;
         let encoded = encode_scene_payload(&next.project)?;
         if next.project == self.frame.project && encoded == self.encoded {
             return Ok(false);
+        }
+        if preserve_store
+            && self
+                .stored_animation
+                .as_ref()
+                .is_some_and(|snapshot| !snapshot.compatible(&next))
+        {
+            return Err(AnimationSnapshot::unavailable(
+                "Clear the stored animation before changing its compensated bindings.",
+            ));
         }
         self.frame = next;
         self.encoded = encoded;
@@ -1005,6 +1336,12 @@ impl SceneHistory {
         }
         self.redo.clear();
         self.ids = ids;
+        self.offset_basis = offset_basis;
+        if let Some(snapshot) = outgoing_animation {
+            self.stored_animation = Some(snapshot);
+        } else if can_invalidate_store {
+            self.discard_incompatible_store();
+        }
         Ok(true)
     }
 }
@@ -1184,11 +1521,35 @@ mod tests {
 
 #[path = "scene_bridge.rs"]
 mod bridge;
+pub(crate) use bridge::AutoWeightWork;
 pub use bridge::{AttachmentView, ClippingView, SceneRigHistory};
 
 #[path = "scene_constraints.rs"]
 mod constraint_input;
 pub use constraint_input::ConstraintInput;
+
+/// The static Path solver resolves the target slot's current Setup attachment.
+/// A target-slot timeline needs a slot sample at each ordered replay tick.
+pub(crate) fn check_static_path_constraints(project: &SceneProject) -> Result<(), AppError> {
+    let targets: HashSet<_> = project
+        .constraints
+        .iter()
+        .filter_map(|constraint| match constraint {
+            Constraint::Path(path) => Some(path.slot),
+            _ => None,
+        })
+        .collect();
+    if !targets.is_empty()
+        && project.animations.iter().flat_map(|clip| &clip.slot_tracks).any(
+            |track| matches!(track, SlotTimeline::Attachment { slot, .. } if targets.contains(slot)),
+        )
+    {
+        return Err(invalid(
+            "Animating the target attachment of an imported Path constraint is unsupported.",
+        ));
+    }
+    Ok(())
+}
 
 /// Authoring/runtime support policy, distinct from binary structure acceptance.
 /// End-before-start rendering is unproven; overlapping active intervals are

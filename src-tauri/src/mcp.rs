@@ -526,6 +526,7 @@ fn is_read_only(name: &str) -> bool {
             | "fbones_capture_viewport"
             | "fbones_get_image_data"
             | "fbones_get_audio_data"
+            | "fbones_preview_prune_weights"
             | "fbones_preview_trace"
             | "fbones_preview_trace_attachment"
     )
@@ -683,6 +684,11 @@ fn value<T: Serialize>(result: Result<T, AppError>) -> Result<Value, AppError> {
 }
 fn dispatch(session: &Session, name: &str, raw: Value) -> Result<Value, AppError> {
     validate_args(name, &raw)?;
+    if name == "fbones_preview_prune_weights" {
+        let a: crate::PrunePreviewArgs =
+            serde_json::from_value(raw).map_err(|e| invalid(e.to_string()))?;
+        return value(session.preview_prune_weights(a.expected_revision, a.request, a.pose_epoch));
+    }
     let a: Args = serde_json::from_value(raw).map_err(|e| invalid(e.to_string()))?;
     match name {
         "fbones_get_project" => {
@@ -1117,7 +1123,16 @@ mod tests {
         let init = call("initialize", json!({"protocolVersion":"2025-06-18"}), false);
         assert_eq!(init["result"]["protocolVersion"], "2025-06-18");
         let tools = call("tools/list", json!({}), false);
-        assert_eq!(tools["result"]["tools"].as_array().unwrap().len(), 23);
+        assert_eq!(tools["result"]["tools"].as_array().unwrap().len(), 24);
+        let preview = call(
+            "tools/call",
+            json!({"name":"fbones_preview_prune_weights","arguments":{"expectedRevision":0,"request":{"targets":[{"id":1}],"maxInfluences":1,"threshold":0}}}),
+            false,
+        );
+        assert_eq!(
+            preview["result"]["structuredContent"]["error"]["code"],
+            "NoProject"
+        );
         let guide = call("resources/read", json!({"uri":"fbones://guide"}), false);
         assert!(guide["result"]["contents"][0]["text"]
             .as_str()

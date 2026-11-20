@@ -69,6 +69,114 @@ fn ids(h: &SceneHistory) -> BTreeMap<u64, (u64, u32, u8, u32, u32)> {
 }
 
 #[test]
+fn linked_sequences_keep_target_frame_ranges_and_dormant_child_keys() {
+    let mut project = fixture();
+    project.wire = None;
+    let child = address(0);
+    let source = address(1);
+    let source_mesh = project.slots[source.slot].attachments[0]
+        .mesh_mut()
+        .unwrap();
+    source_mesh.image.width = 32.;
+    source_mesh.image.height = 24.;
+    let mut child_mesh = source_mesh.clone();
+    child_mesh.image = project.slots[child.slot].attachments[0]
+        .image()
+        .unwrap()
+        .clone();
+    project.slots[child.slot].attachments[0] = SceneAttachment::Mesh(Box::new(child_mesh));
+    project.linked_meshes = vec![LinkedMesh {
+        attachment: child,
+        source,
+        inherit_timelines: true,
+    }];
+    project.attachment_sequences[0].settings.count = 2;
+    let mut clip = Animation::new("linked sequences".into());
+    clip.sequence_tracks = vec![
+        SequenceTimeline {
+            attachment: source,
+            keys: vec![
+                key(2., SequenceMode::Hold, 3, 0.125),
+                key(4., SequenceMode::Once, 3, 0.125),
+                key(10., SequenceMode::Loop, 3, 0.125),
+            ],
+        },
+        SequenceTimeline {
+            attachment: child,
+            keys: vec![key(0., SequenceMode::Hold, 0, 0.125)],
+        },
+    ];
+    project.animations = vec![clip];
+    roundtrip(&project);
+    let mut history = SceneHistory::new(project, true).unwrap();
+    let frame = history.frame();
+    let child_id = frame.attachment_ids[child.slot][0];
+    let source_id = frame.attachment_ids[source.slot][0];
+    let slot_id = frame.slot_ids[child.slot];
+    let clip_id = frame.animation_ids[0];
+    let child_key = frame.animation_sequence_key_ids[0][1][0];
+    let pose = |history: &SceneHistory, frame: f64| {
+        let model = history.frame();
+        sample(model, Some(&model.project.animations[0]), frame)
+            .unwrap()
+            .into_iter()
+            .find(|pose| pose.attachment == child_id)
+            .unwrap()
+            .image
+    };
+    for (frame, expected) in [
+        (0., "red8"),
+        (2., "red8"),
+        (4., "red8"),
+        (10., "red8"),
+        (13., "red7"),
+    ] {
+        assert_eq!(pose(&history, frame), expected);
+    }
+    let input = |key_id| RigEdit::SetAnimationSequenceKeys {
+        animation: clip_id,
+        keys: vec![SequenceKeyInput {
+            attachment: child_id,
+            frame: 0.,
+            mode: 0,
+            index: 1,
+            delay: 0.125,
+            key_id,
+        }],
+    };
+    assert!(history.apply(SceneEdit::Animation(input(None))).is_err());
+    assert!(history
+        .apply(SceneEdit::Animation(input(Some(child_key))))
+        .unwrap());
+    let tracks = ids(&history);
+    for (inherit_timelines, expected) in [(false, "red8"), (true, "red7")] {
+        assert!(history
+            .apply(SceneEdit::SetLinkedMeshInheritance {
+                id: child_id,
+                inherit_timelines
+            })
+            .unwrap());
+        assert_eq!(pose(&history, 13.), expected);
+        assert_eq!(ids(&history), tracks);
+        roundtrip(&history.frame().project);
+    }
+
+    assert!(history
+        .apply(SceneEdit::CreateLinkedMesh {
+            source: source_id,
+            slot: slot_id,
+            name: "another link".into(),
+        })
+        .unwrap());
+    let frame = history.frame();
+    let new = frame.project.linked_meshes[1].attachment;
+    assert_eq!(frame.project.sequence(new), frame.project.sequence(source));
+    assert_eq!(setup_image_key(&frame.project, new).unwrap(), "green013");
+    assert_eq!(ids(&history), tracks);
+    roundtrip(&frame.project);
+}
+
+#[test]
 fn sequence_native_sampler_preserves_setup_and_handles_boundaries_and_large_step_counts() {
     let s = SequenceSettings {
         start: 7,
@@ -110,6 +218,71 @@ fn sequence_native_sampler_preserves_setup_and_handles_boundaries_and_large_step
     assert_eq!(frame_path("own/shot", &s, 1).unwrap(), "own/shot008");
     assert!(frame_path("../shot", &s, 0).is_err());
     assert!(frame_path("shot", &s, 3).is_err());
+}
+
+#[test]
+fn sequence_reflected_and_reverse_modes_project_each_receiving_count() {
+    let settings = SequenceSettings {
+        start: 0,
+        count: 4,
+        digits: 1,
+        setup_index: 2,
+    };
+    let single = SequenceSettings {
+        count: 1,
+        setup_index: 0,
+        ..settings.clone()
+    };
+    let receiver = SequenceSettings {
+        count: 3,
+        ..settings.clone()
+    };
+    for (mode, expected, inherited) in [
+        (
+            SequenceMode::PingPong,
+            [1, 2, 3, 2, 1, 0, 1, 2],
+            [1, 0, 1, 2],
+        ),
+        (
+            SequenceMode::OnceReverse,
+            [2, 1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0],
+        ),
+        (
+            SequenceMode::LoopReverse,
+            [2, 1, 0, 3, 2, 1, 0, 3],
+            [2, 1, 0, 2],
+        ),
+        (
+            SequenceMode::PingPongReverse,
+            [2, 1, 0, 1, 2, 3, 2, 1],
+            [1, 2, 1, 0],
+        ),
+    ] {
+        let mut track = SequenceTimeline {
+            attachment: address(0),
+            keys: vec![key(2., mode, 1, 0.125)],
+        };
+        assert_eq!(sample_index(&settings, Some(&track), 1.999, 24.), 2);
+        for (step, expected) in expected.into_iter().enumerate() {
+            let frame = 2. + 3. * step as f64;
+            assert_eq!(
+                sample_index(&settings, Some(&track), frame, 24.),
+                expected,
+                "{mode:?} at {frame}"
+            );
+            assert_eq!(sample_index(&single, Some(&track), frame, 24.), 0);
+        }
+        track.keys[0].index = 3;
+        for (step, expected) in inherited.into_iter().enumerate() {
+            let frame = 2. + 3. * step as f64;
+            assert_eq!(
+                sample_index(&receiver, Some(&track), frame, 24.),
+                expected,
+                "{mode:?} at {frame} with receiver count three"
+            );
+        }
+    }
 }
 
 #[test]
@@ -212,7 +385,7 @@ fn sequence_native_invalid_settings_and_keys_reject_atomically() {
         assert_eq!(ids(&h), ids_before);
     }
     for bad in [
-        json!({"mode":3,"index":0,"delay":0.125}),
+        json!({"mode":7,"index":0,"delay":0.125}),
         json!({"mode":0,"index":3,"delay":0.125}),
         json!({"mode":0,"index":0,"delay":0}),
         json!({"mode":0,"index":0,"delay":-1}),
@@ -604,6 +777,7 @@ fn sequence_existing_negative_zero_frame_survives_payload_updates_noops_history_
                 animation,
                 keys: vec![key_id],
                 delta_frames: 1.,
+                shift: false,
             },
         )
         .unwrap();

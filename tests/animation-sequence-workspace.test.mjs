@@ -38,7 +38,20 @@ test('mixed bone and Sequence clipboard has one f32 origin and retains discrete 
 test('Sequence key updates are stable-ID addressed and invalid mode index or delay cannot send authoring commands',async()=>{
  const e=fixture();try{
   await e.animate();await e.w.updateSequenceAnimationKey({id:91,mode:0,index:2,delay:.25});assert.equal(e.edits[0].keys[0].keyId,91);assert.equal(e.edits[0].keys[0].frame,.3);assert.equal(e.project.value.animations[0].sequenceTracks[0].keys[0].id,91);
-  const count=e.edits.length;for(const value of [{mode:3,index:0,delay:.1},{mode:0,index:3,delay:.1},{mode:0,index:0,delay:0}])assert.equal(await e.w.setSequenceAnimationFields(9,value),false);assert.equal(e.edits.length,count);assert.equal(e.notices.length,3);
+  const count=e.edits.length;for(const value of [{mode:7,index:0,delay:.1},{mode:0,index:3,delay:.1},{mode:0,index:0,delay:0}])assert.equal(await e.w.setSequenceAnimationFields(9,value),false);assert.equal(e.edits.length,count);assert.equal(e.notices.length,3);
+ }finally{e.close();}
+});
+
+test('manual reverse Sequence Key encodes the sampled image as an authored offset',async()=>{
+ const e=fixture();try{
+  await e.animate();
+  assert.equal(await e.w.updateSequenceAnimationKey({id:92,mode:5,index:1,delay:.125}),true);
+  e.w.seekAnimation(16.5);
+  assert.equal(e.w.sequenceSlots.value[0].region.image,'frames/foo07');
+  assert.deepEqual(e.w.sequenceWorkingPose(9),{mode:5,index:2,delay:.125});
+  assert.equal(await e.w.insertSequenceAnimationKey(9),true);
+  assert.deepEqual(e.edits.at(-1).keys,[{attachment:9,frame:16.5,mode:5,index:2,delay:.125}]);
+  assert.equal(e.w.sequenceSlots.value[0].region.image,'frames/foo07');
  }finally{e.close();}
 });
 

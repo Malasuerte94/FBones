@@ -6,10 +6,11 @@
 .animation-timeline button.active{background:var(--color-accent-deep);border-color:var(--color-accent);color:var(--color-ink)}
 .animation-timeline input:not([type=range]),.animation-timeline select{height:23px;border:1px solid #343637;border-radius:2px;background:#434547;color:var(--color-ink);padding:2px 5px}
 .at-tabs{display:flex;height:27px;min-height:27px;align-items:end;gap:1px;padding:0 4px;border-bottom:1px solid #222425;background:#303233}
-.at-tabs>button{height:26px;border-radius:3px 3px 0 0;background:transparent;color:var(--color-muted);border-color:transparent;padding:3px 10px}
-.at-tabs>button.active{background:var(--color-panel);border-color:#252728;border-bottom-color:var(--color-panel);color:var(--color-ink)}
-.at-tabs>select{height:22px;width:145px;margin-bottom:2px}
-.at-tabs>button:nth-last-child(-n+3){height:22px;min-width:23px;padding:1px 4px;margin-bottom:2px}
+.at-header-scroller{display:flex;align-items:end;gap:1px;min-width:0;align-self:stretch;flex:1;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.at-header-scroller>button{height:26px;border-radius:3px 3px 0 0;background:transparent;color:var(--color-muted);border-color:transparent;padding:3px 10px}
+.at-header-scroller>button.active{background:var(--color-panel);border-color:#252728;border-bottom-color:var(--color-panel);color:var(--color-ink)}
+.at-header-scroller>select{height:22px;width:145px;min-width:80px;margin-bottom:2px}
+.at-header-scroller>button.at-clip-action{height:22px;min-width:23px;padding:1px 4px;margin-bottom:2px}
 .at-header-spacer{flex:1}
 .at-animation-name{display:flex;align-items:center;gap:2px;margin-bottom:2px}
 .at-toolbar{display:flex;gap:6px;min-height:37px;height:37px;align-items:center;flex-shrink:0;padding:3px 6px;background:#414345;overflow-x:auto;overflow-y:hidden;border-bottom:1px solid #2f3132}
@@ -32,7 +33,26 @@
 .at-playhead-tip{position:absolute;top:14px;transform:translateX(-5px);font-size:12px;color:#70e5eb;line-height:12px;z-index:3;pointer-events:none}
 .at-playhead-tip b{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:400;background:#454749;padding-inline:2px}
 .at-overview-diamond{position:absolute;bottom:2px;transform:translateX(-3px) rotate(45deg);width:6px;height:6px;background:#f07e48}
-.at-scroller{position:relative;flex:1;min-height:65px;overflow:auto;background:#242627;overscroll-behavior:contain}
+.at-plot{position:relative;display:flex;flex-direction:column;flex:1;min-width:0;min-height:65px}
+.at-panes,.at-pane{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0}
+.at-panes.is-stacked{display:grid;grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:1px;background:var(--color-line);container-type:inline-size}
+.at-panes.is-stacked .at-pane{--at-gutter:clamp(116px,34cqi,250px);position:relative}
+.at-panes.is-stacked .at-plot{min-height:32px}
+.at-panes.is-stacked .at-ruler-row{height:30px;min-height:30px}
+.at-panes.is-stacked .at-transport{min-width:0;overflow-x:auto;scrollbar-width:none}
+.at-panes .at-pane.is-gutterless{--at-gutter:0px}
+.at-pane.is-gutterless .at-ruler-row{grid-template-columns:minmax(0,1fr)}
+.at-pane.is-gutterless .at-ruler-row.has-transport{grid-template-rows:27px minmax(0,1fr);height:65px;min-height:65px}
+.at-panes.is-stacked .at-pane.is-gutterless .at-ruler-row.has-transport{height:57px;min-height:57px}
+.at-pane.is-gutterless .at-transport{align-items:center;padding:2px 6px}
+.at-pane.has-hidden-labels .at-time-cells{margin-inline-start:var(--at-gutter)}
+.at-panes.is-stacked .at-pane[data-active=true]{box-shadow:inset 2px 0 var(--color-accent)}
+.at-panes.is-stacked .at-pane[data-active=true] .at-ruler-row{box-shadow:inset 2px 0 var(--color-accent)}
+.animation-timeline .at-pane-title{justify-content:flex-start;align-self:center;height:24px;margin-inline:4px;background:transparent;border-color:transparent}
+.animation-timeline .at-pane-title[aria-pressed=true]{color:var(--color-accent)}
+.animation-timeline .at-stack-toggle{font-size:15px;align-self:center;height:22px;width:24px;padding:0}
+.at-panes.has-linked-time .at-scroller{scrollbar-gutter:stable}
+.at-scroller{position:relative;flex:1;min-height:0;overflow:auto;background:#242627;overscroll-behavior:contain}
 .at-track-area{position:relative;min-height:100%}
 .at-track-row{position:relative;display:flex;height:23px;border-bottom:1px solid #252728;box-sizing:border-box}
 .at-track-label{position:sticky;left:0;z-index:5;display:flex;align-items:center;gap:5px;flex:0 0 var(--at-gutter);width:var(--at-gutter);box-sizing:border-box;border-right:1px solid #1f2122;padding:0 7px;background:#4b4d4f;overflow:hidden;cursor:default}
@@ -64,19 +84,35 @@
 .at-key-inspector input{width:70px!important;height:21px!important;text-align:right}
 .at-key-inspector input[aria-invalid=true]{border-color:var(--color-danger)}
 .at-scroller.is-graph .at-track-label{z-index:6}
-.at-graph{position:absolute;left:var(--at-gutter);top:0;min-height:100%;background-color:#2b2d2f;background-image:linear-gradient(to right,#202223 1px,transparent 1px),linear-gradient(to bottom,#242627 1px,transparent 1px)}
+.at-graph{position:absolute;left:var(--at-gutter);top:0;min-height:100%;background-color:#2b2d2f;background-image:linear-gradient(to right,#202223 1px,transparent 1px)}
 .at-graph svg{display:block;overflow:visible}
+.at-graph>svg:not(.at-graph-context){position:relative}
+.at-graph .at-graph-context{position:absolute;inset:0;overflow:hidden;pointer-events:none;fill:none;stroke-width:1.25}
+.at-graph-holds{opacity:.65}
+.at-graph-repeats{opacity:.38}
+.at-graph-guides{pointer-events:none;stroke:#242627;shape-rendering:crispEdges}
+.at-favor-preview{pointer-events:none;fill:none;stroke-width:2;stroke-dasharray:4 3}
+.at-stored-curves{pointer-events:none;fill:none;opacity:.55;stroke-width:1.35;stroke-dasharray:4 4}
 .at-graph rect{cursor:ew-resize;touch-action:none}
 .at-curve-handles line{stroke:currentColor;stroke-width:1;opacity:.65;pointer-events:none}
 .at-curve-handles circle{fill:#303233;stroke:currentColor;stroke-width:1.5;cursor:move;touch-action:none}
 .at-curve-handles circle:hover{fill:currentColor;stroke:var(--color-ink);r:5px}
-.at-graph-axis{position:absolute;right:4px;top:102px;bottom:24px;z-index:7;width:45px;pointer-events:none;overflow:hidden}
+.at-curve-handles circle[aria-pressed=true],.at-curve-handles circle:focus-visible{fill:currentColor;stroke:var(--color-ink);stroke-width:2;r:5px}
+.at-graph-axis{position:absolute;right:4px;top:0;z-index:7;width:45px;pointer-events:none;overflow:hidden}
 .at-graph-axis span{position:absolute;right:0;transform:translateY(-50%);font-size:10px;color:var(--color-faint);background:#2b2d2fa0;padding-left:4px}
 @media(max-width:1000px){.animation-timeline{--at-gutter:210px}.at-channel-buttons button span{display:none}.at-channel-buttons button{width:28px}.at-transport{gap:1px;padding-inline:2px}.at-transport button{width:22px;font-size:9px}}
 .animation-timeline button.at-attachment-key{top:7px;width:8px;min-width:8px;height:8px;transform:translateX(-4px) rotate(45deg);border:1px solid #252728}
 .animation-timeline button.at-attachment-key.selected{width:8px;min-width:8px;transform:translateX(-4px) rotate(45deg)}
 .at-key-inspector select{max-width:170px;height:21px}
 .at-marquee{position:absolute;z-index:4;pointer-events:none;border:1px solid var(--color-accent);background:color-mix(in srgb,var(--color-accent) 14%,transparent);box-sizing:border-box}
+.at-selection-box{background:color-mix(in srgb,var(--color-accent) 8%,transparent)}
+.animation-timeline .at-selection-box .at-scale-edge{position:absolute;inset-block:0;width:10px;height:auto;padding:0;border:0;background:transparent;pointer-events:auto;cursor:ew-resize;touch-action:none}
+.at-scale-edge[data-edge=left]{left:-5px}
+.at-scale-edge[data-edge=right]{right:-5px}
+.at-scale-edge::before{content:'';height:12px;width:3px;background:var(--color-accent);border:1px solid var(--color-shell);border-radius:2px}
+.animation-timeline .at-selection-box .at-scale-edge:hover:not(:disabled){background:color-mix(in srgb,var(--color-accent) 30%,transparent)}
+.animation-timeline .at-selection-box .at-scale-edge:focus-visible{outline:1px solid var(--color-ink)}
+.animation-timeline .at-selection-box .at-scale-edge:disabled{opacity:.5;cursor:default}
 .at-scroller{touch-action:none}
 .at-global-row .at-track-label{padding-left:23px;background:#52505a}
 .at-deform-progress text{fill:currentColor;font-size:10px;pointer-events:none}

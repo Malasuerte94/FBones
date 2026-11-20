@@ -8,7 +8,7 @@ test('delayed Open shows feedback then an honest inspection explanation, and can
  await page.addInitScript(()=>{
   const own=globalThis as typeof globalThis&{__TAURI__?:unknown;__openingReply?:(value:unknown)=>void;__openFeedbackCalls:{command:string;args:unknown}[]};
   own.__openFeedbackCalls=[];
-  own.__TAURI__={core:{invoke:async(command:string,args:unknown)=>{own.__openFeedbackCalls.push({command,args});if(command==='get_project'||command==='frontend_ready'||command==='save_project')return null;if(command==='open_project')return new Promise(resolve=>{own.__openingReply=resolve;});throw Error('Unexpected transport fixture command '+command);}},event:{listen:async()=>()=>{}},window:{getCurrentWindow:()=>({setTitle:async(title:string)=>{document.title=title;},onCloseRequested:async()=>()=>{},destroy:async()=>{}})}};
+  own.__TAURI__={core:{invoke:async(command:string,args:unknown)=>{own.__openFeedbackCalls.push({command,args});if(command==='get_project'||command==='frontend_ready'||command==='save_project')return null;if(command==='open_project')return new Promise(resolve=>{own.__openingReply=resolve;});throw Error('Unexpected transport fixture command '+command);}},event:{listen:async()=>()=>{}},window:{getCurrentWindow:()=>({setTitle:async(title:string)=>{document.title=title;},isDecorated:async()=>true,onCloseRequested:async()=>()=>{},destroy:async()=>{}})}};
  });
  await page.goto('/');await expect(page.getByTestId('viewport').locator('canvas')).toBeVisible();
  await page.getByRole('button',{name:'Open project',exact:true}).first().click();

@@ -61,7 +61,7 @@ test('@native normalized RGBA precision, alpha-zero, four Bezier axes and mixed 
  for(const [id,value]of [['animation-slot-color-r',.123456789],['animation-slot-color-g',.75],['animation-slot-color-b',.25],['animation-slot-opacity',0]]as const)await field(page,id,value);
  await expect.poll(async()=>colorKeys((await native.snapshot())!,f.slot).at(-1)!.values).toEqual([Math.fround(.123456789),.75,.25,0]);const at30=await evaluated(native,30),pose=at30.slotPose!.find(s=>s.slot===f.slot)!;expect(pose.attachment).toBe(f.a);expect(pose.color).toEqual([Math.fround(.123456789),.75,.25,0]);await expect.poll(()=>worldPixel(page,-103,45)).not.toEqual(RED);await expect.poll(()=>previewPixel(page,'left')).not.toEqual(RED);
  await seek(page,15);const midpoint=(await evaluated(native,15)).slotPose!.find(s=>s.slot===f.slot)!;expect(midpoint.color).toEqual([(1+Math.fround(.123456789))/2,.875,.625,.5]);await expect.poll(()=>sampledColor(page,f.slot)).toEqual(midpoint.color);
- const original=(await native.snapshot())!,first=colorKeys(original,f.slot)[0]!;await page.getByTestId('timeline-key-'+first.id).click();await page.getByTestId('timeline-interpolation-bezier').click();await expect.poll(async()=>colorKeys((await native.snapshot())!,f.slot)[0]!.controls?.length).toBe(4);await page.getByTestId('timeline-tab-graph').click();await expect(page.getByTestId('animation-timeline').locator('svg[aria-label="Key value curves"] > g')).toHaveCount(4);
+ const original=(await native.snapshot())!,first=colorKeys(original,f.slot)[0]!;await page.getByTestId('timeline-key-'+first.id).click();await page.getByTestId('timeline-interpolation-bezier').click();await expect.poll(async()=>colorKeys((await native.snapshot())!,f.slot)[0]!.controls?.length).toBe(4);await page.getByTestId('timeline-tab-graph').click();await expect(page.getByTestId('animation-timeline').getByTestId(/^timeline-curve-/)).toHaveCount(4);
  const before=(await native.snapshot())!,controls=colorKeys(before,f.slot)[0]!.controls!,handle=page.getByTestId(`timeline-bezier-${first.id}-3-0`),bounds=(await handle.boundingBox())!,start=native.calls.length;await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);await page.mouse.down();await page.mouse.move(bounds.x+bounds.width/2+12,bounds.y+bounds.height/2-8,{steps:4});expect(await native.snapshot()).toEqual(before);await page.mouse.up();await expect.poll(async()=>colorKeys((await native.snapshot())!,f.slot)[0]!.controls![3]).not.toEqual(controls[3]);const changed=(await native.snapshot())!,newControls=colorKeys(changed,f.slot)[0]!.controls!;expect(newControls.slice(0,3)).toEqual(controls.slice(0,3));expect(authoring(native,start)).toHaveLength(1);
  await page.getByRole('button',{name:'Undo',exact:true}).click();await expect.poll(async()=>colorKeys((await native.snapshot())!,f.slot)[0]!.controls).toEqual(controls);await page.getByRole('button',{name:'Redo',exact:true}).click();await expect.poll(async()=>colorKeys((await native.snapshot())!,f.slot)[0]!.controls).toEqual(newControls);
  await page.getByTestId('timeline-tab-dopesheet').click();await seek(page,0);await page.getByTestId('tree-key-slot-'+f.slot).click();await tree(page,'bone',f.child).getByRole('treeitem').click();await page.getByTestId('timeline-key-translate').click();await expect.poll(async()=>clip((await native.snapshot())!).tracks.length).toBe(1);const source=(await native.snapshot())!,boneKey=clip(source).tracks[0]!.keys[0]!,pointer=attachmentKeys(source,f.slot)[0]!;
@@ -81,4 +81,107 @@ test('@native Auto Key off drafts sampled mesh and clipping activation, manual k
  await seek(page,0);await expect.poll(()=>worldPixel(page,90,40)).toEqual(GREEN);await seek(page,3);const stable=(await native.snapshot())!,draft=native.calls.length;await activate(page,f.b);await expect.poll(()=>worldPixel(page,-103,45)).toEqual(GREEN);expect(await native.snapshot()).toEqual(stable);expect(authoring(native,draft)).toHaveLength(0);await seek(page,4);await expect.poll(()=>worldPixel(page,-103,45)).toEqual(RED);
  await seek(page,18);await activate(page,f.b);await page.getByTestId('tree-key-slot-'+f.slot).click();await expect.poll(async()=>attachmentKeys((await native.snapshot())!,f.slot).map(k=>({frame:k.frame,attachment:k.attachment}))).toEqual([{frame:18,attachment:f.b}]);expect((await evaluated(native,0)).slotPose!.find(s=>s.slot===f.slot)!.attachment).toBe(f.a);expect((await evaluated(native,18)).slotPose!.find(s=>s.slot===f.slot)!.attachment).toBe(f.b);
  const authored=(await native.snapshot())!;expect(setupSemantic(authored)).toEqual(setupSemantic(f.before));const {saved,reopened}=await saveReopen(page,native,'slot-mesh-clipping.fbones');expect(animationSemantic(reopened)).toEqual(animationSemantic(saved));expect(setupSemantic(reopened)).toEqual(setupSemantic(f.before));await writeFile(info.outputPath('slot-clip-semantic.json'),JSON.stringify({before:f.before,authored,saved,reopened},null,2));
+});
+
+test('@native slot RGBA Key and numeric Auto Key split a Bezier at Current and preserve clean signed-zero lanes', async ({page, native}) => {
+  let project = await native.invoke<ProjectSummary>('create_project', {name: 'Own light color subdivision', discardChanges: true});
+  const bone = project.bones[0]!.id;
+  project = await edit(native, {type: 'createSlot', bone, name: 'Light color'});
+  const slot = project.editedSlot!;
+  project = await edit(native, {type: 'createSlot', bone, name: 'Sentinel color'});
+  const sentinel = project.editedSlot!;
+  await native.queueDialog('folder', 'images');
+  project = await native.invoke<ProjectSummary>('choose_images_folder', {expectedRevision: project.revision});
+  project = await native.invoke<ProjectSummary>('place_attachments', {expectedRevision: project.revision, slot, keys: ['red']});
+  const active = project.editedAttachment!;
+  project = await native.invoke<ProjectSummary>('place_attachments', {expectedRevision: project.revision, slot, keys: ['green']});
+  const alternate = project.editedAttachment!;
+  await edit(native, {type: 'setActiveAttachment', slot, attachment: active});
+  project = await edit(native, {type: 'createAnimation', name: NAME});
+  const animation = clip(project).id;
+  await native.invoke<ProjectSummary>('edit_rig', {expectedRevision: project.revision, edit: {
+    type: 'setAnimationSlotKeys', animation, keys: [
+      {slot, channel: 'rgba', frame: 0, values: [.125, 0, .25, .5], curve: 'bezier',
+        controls: [[8, .25, 16, .5], [8, 0, 16, 0], [6, .375, 18, .625], [10, .625, 14, .875]], negativeZeroIndices: [1, 9, 11]},
+      {slot, channel: 'rgba', frame: 24, values: [.625, 0, .75, 1], curve: 'linear', negativeZeroIndices: [1]},
+      {slot, channel: 'attachment', frame: 0, attachment: active},
+      {slot, channel: 'attachment', frame: 24, attachment: alternate},
+      {slot: sentinel, channel: 'rgba', frame: 0, values: [.75, .125, .5, 1], curve: 'stepped'},
+      {slot: sentinel, channel: 'rgba', frame: 24, values: [.25, .875, .5, .625], curve: 'linear'},
+    ],
+  }});
+
+  await openNativeEditor(page);
+  await page.getByTestId('editor-mode-animate').click();
+  await page.getByTestId('animation-select').selectOption(String(animation));
+  const slotRow = tree(page, 'slot', slot).getByRole('treeitem');
+  await slotRow.click();
+  const current = page.getByTestId('timeline-current');
+  await seek(page, 12);
+  await expect.poll(async () => (await sampledColor(page, slot))[0]).toBeCloseTo(.375, 7);
+  const baseline = (await native.snapshot())!;
+  const [first, last] = colorKeys(baseline, slot);
+  expect(first!.values[1]).toBe(-0);
+  expect(first!.controls![1]).toEqual([8, -0, 16, -0]);
+  expect(last!.values[1]).toBe(-0);
+
+  function expectSplit(result: ProjectSummary, red: number, incoming: number, outgoing: number) {
+    const [left, middle, right] = colorKeys(result, slot);
+    expect(left).toEqual({...first, controls: [[4, .1875, 8, incoming], [4, -0, 8, -0], [3, .3125, 7.5, .40625], [5, .5625, 8.5, .65625]]});
+    expect(middle).toMatchObject({frame: 12, values: [red, -0, .5, .75], curve: 'bezier',
+      controls: [[16, outgoing, 20, .5625], [16, -0, 20, -0], [16.5, .59375, 21, .6875], [15.5, .84375, 19, .9375]]});
+    expect(right).toEqual(last);
+    expect(result.slots).toEqual(baseline.slots);
+    expect(result.bones).toEqual(baseline.bones);
+    expect(attachmentKeys(result, slot)).toEqual(attachmentKeys(baseline, slot));
+    expect(colorKeys(result, sentinel)).toEqual(colorKeys(baseline, sentinel));
+  }
+  async function expectCommit(start: number, revision: number, red: number, incoming: number, outgoing: number) {
+    await expect.poll(async () => colorKeys((await native.snapshot())!, slot).map(key => key.frame)).toEqual([0, 12, 24]);
+    const result = (await native.snapshot())!;
+    const writes = authoring(native, start);
+    expect(writes).toHaveLength(1);
+    expect(writes[0]!.args).toMatchObject({expectedRevision: revision, edit: {type: 'setAnimationSlotKeys', animation, keys: [
+      {slot, channel: 'rgba', frame: 0, keyId: first!.id, curve: 'bezier', negativeZeroIndices: [1, 9, 11]},
+      {slot, channel: 'rgba', frame: 12, curve: 'bezier', negativeZeroIndices: [1, 9, 11]},
+    ]}});
+    expect(result.revision).toBe(revision + 1);
+    expectSplit(result, red, incoming, outgoing);
+    await expect(current).toHaveValue('12');
+    await expect(slotRow).toHaveAttribute('aria-selected', 'true');
+    return result;
+  }
+
+  const manualStart = native.calls.length;
+  await page.getByTestId(`timeline-key-slot-${slot}-rgba`).click();
+  const manual = await expectCommit(manualStart, baseline.revision, .375, .28125, .46875);
+  const undo = page.getByRole('button', {name: 'Undo', exact: true});
+  const redo = page.getByRole('button', {name: 'Redo', exact: true});
+  await undo.click();
+  await expect.poll(async () => (await native.snapshot())!.animations).toEqual(baseline.animations);
+  await redo.click();
+  await expect.poll(async () => (await native.snapshot())!.animations).toEqual(manual.animations);
+  await undo.click();
+  await expect.poll(async () => (await native.snapshot())!.animations).toEqual(baseline.animations);
+  await expect(current).toHaveValue('12');
+
+  await expect(page.getByTestId('timeline-auto-key')).toHaveAttribute('aria-pressed', 'true');
+  const revision = (await native.snapshot())!.revision;
+  const autoStart = native.calls.length;
+  await field(page, 'animation-slot-color-r', .5);
+  const auto = await expectCommit(autoStart, revision, .5, .40625, .59375);
+  await undo.click();
+  await expect.poll(async () => (await native.snapshot())!.animations).toEqual(baseline.animations);
+  await redo.click();
+  await expect.poll(async () => (await native.snapshot())!.animations).toEqual(auto.animations);
+  await expect(current).toHaveValue('12');
+  await expect(slotRow).toHaveAttribute('aria-selected', 'true');
+
+  const {saved, reopened} = await saveReopen(page, native, 'slot-rgba-interior-keys.fbones');
+  expect(animationSemantic(reopened)).toEqual(animationSemantic(saved));
+  expect(setupSemantic(reopened)).toEqual(setupSemantic(baseline));
+  const reopenedSlot = reopened.slots.find(row => row.name === 'Light color')!.id;
+  const reopenedMiddle = colorKeys(reopened, reopenedSlot)[1]!;
+  expect(reopenedMiddle.values[1]).toBe(-0);
+  expect(reopenedMiddle.controls![1]).toEqual([16, -0, 20, -0]);
 });

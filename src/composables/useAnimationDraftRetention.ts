@@ -2,7 +2,7 @@ import {watch,type Ref,type ShallowRef} from 'vue';
 import {sampleAnimation,sameAnimationFrame,animationBoneChannels,type AnimationChannel,type AnimationView} from '../domain/animation.ts';
 import {sampleSlotPoses} from '../domain/animationSlots.ts';
 import {sampleDeformPoses,sampleDrawOrder,deformDimension} from '../domain/animationGeometry.ts';
-import {constraintPose,physicsProperties,sampleConstraintPoses} from '../domain/animationConstraints.ts';
+import {constraintPose,isAnimatedConstraint,physicsProperties,sampleConstraintPoses} from '../domain/animationConstraints.ts';
 import type {BoneView,ProjectSummary,RigEdit} from '../domain/project.ts';
 import type {useSlotAnimationWorkspace} from './useSlotAnimationWorkspace.ts';
 import type {useGeometryAnimationWorkspace} from './useGeometryAnimationWorkspace.ts';
@@ -15,7 +15,7 @@ export const boneChannelFields={translate:['x','y'],rotate:['rotation'],scale:['
 export function boneChannelValues(bone:BoneView,channel:AnimationChannel):number[]{return boneChannelFields[channel].map(field=>bone[field]??(field==='scaleX'||field==='scaleY'?1:0));}
 const equal=(a:unknown,b:unknown)=>JSON.stringify(a,(_,value)=>Object.is(value,-0)?{negativeZero:true}:value)===JSON.stringify(b,(_,value)=>Object.is(value,-0)?{negativeZero:true}:value);
 interface Field {key:string;value:unknown;restore:()=>void}
-type Publication={kind:'edit';edit:RigEdit}|{kind:'save'}|{kind:'resources'};
+type Publication={kind:'edit';edit:RigEdit;keepWorkingPose?:boolean}|{kind:'save'}|{kind:'resources'};
 interface Options {
  project:ShallowRef<ProjectSummary|null>;active:Readonly<Ref<AnimationView|null>>;frame:Ref<number>;mode:Ref<'setup'|'animate'>;epoch:Ref<number>;
  bones:ShallowRef<BoneView[]|null>;slots:ReturnType<typeof useSlotAnimationWorkspace>;geometry:ReturnType<typeof useGeometryAnimationWorkspace>;constraints:ReturnType<typeof useConstraintAnimationWorkspace>;
@@ -64,9 +64,9 @@ export function useAnimationDraftRetention(o:Options){
   }
   const sampled=new Map(sampleConstraintPoses(model.constraints??[],clip.constraintTracks??[],frame).map(pose=>[pose.constraint,pose]));
   for(const[id,pose]of o.constraints.constraintDraft.value){
-   const setup=model.constraints?.find(c=>c.id===id),saved=sampled.get(id)??(setup?constraintPose(setup):null);if(!saved||saved.type!==pose.type)continue;
+   const setup=model.constraints?.find(c=>c.id===id),saved=sampled.get(id)??(setup&&isAnimatedConstraint(setup)?constraintPose(setup):null);if(!saved||saved.type!==pose.type)continue;
    const restore=(apply:(base:typeof pose)=>typeof pose)=>{
-    const view=o.constraints.animationConstraint(id);if(!view||view.type!==pose.type)return;
+    const view=o.constraints.animationConstraint(id);if(!view||!isAnimatedConstraint(view)||view.type!==pose.type)return;
     const base=o.constraints.constraintDraft.value.get(id)??constraintPose(view);
     o.constraints.constraintDraft.value=new Map(o.constraints.constraintDraft.value).set(id,apply(base));
    };
@@ -122,9 +122,10 @@ export function useAnimationDraftRetention(o:Options){
  function preparePublication(publication:Publication):(publish:()=>void,nextResource?:ProjectSummary)=>boolean{
   const model=o.project.value,logical=logicalDocumentKey(model);
   const document=o.project.value?.documentId,revision=o.project.value?.revision,epoch=o.epoch.value;
-  const before=new Map(intents),consume=publication.kind==='edit'?affected(publication.edit):new Set<string>();
+  const before=new Map(intents),consume=publication.kind==='edit'&&!publication.keepWorkingPose?affected(publication.edit):new Set<string>();
   // History and clip lifecycle transitions intentionally discard working poses.
-  const preserve=publication.kind!=='edit'||publication.edit.type.startsWith('setAnimation')||publication.edit.type==='moveAnimationKeys'||publication.edit.type==='deleteAnimationKeys'||publication.edit.type==='renameAnimation';
+  const preserve=publication.kind!=='edit'||publication.edit.type.startsWith('setAnimation')
+   ||['moveAnimationKeys','scaleAnimationKeys','offsetAnimationKeys','deleteAnimationKeys','renameAnimation','storeAnimationKeys','clearStoredAnimationKeys','swapStoredAnimationKeys'].includes(publication.edit.type);
   return (publish,nextResource)=>{
    if(o.project.value?.documentId!==document||o.project.value?.revision!==revision)return false;
    if(publication.kind==='resources'&&(!model||!nextResource||!validImageResourceUpdate(model,nextResource)))return false;
@@ -148,7 +149,7 @@ export function useAnimationDraftRetention(o:Options){
    return true;
   };
  }
- function prepareAnimationDraftCommit(edit:RigEdit){return preparePublication({kind:'edit',edit});}
+ function prepareAnimationDraftCommit(edit:RigEdit,keepWorkingPose=false){return preparePublication({kind:'edit',edit,keepWorkingPose});}
  function prepareAnimationSave(){return preparePublication({kind:'save'});}
  function prepareAnimationResourceUpdate(){const commit=preparePublication({kind:'resources'});return(next:ProjectSummary,publish:()=>void)=>commit(publish,next);}
  return{prepareAnimationDraftCommit,prepareAnimationSave,prepareAnimationResourceUpdate};

@@ -1,9 +1,9 @@
 import type { BoneView, SlotView } from './project.ts';
 import { meshContains } from './meshes.ts';
-import { radians, localPoint, worldBones, composeAffine } from './rig.ts';
+import { radians, localPoint, worldBones, composeAffine, type WorldBone } from './rig.ts';
 import {clippingAllows} from './clipping.ts';
-export function worldRegions(bones: readonly BoneView[], slots: readonly SlotView[]) {
-  const parents = new Map(worldBones(bones).map(b => [b.id, b]));
+export function worldRegions(bones: readonly BoneView[], slots: readonly SlotView[], evaluated?: ReadonlyMap<number, WorldBone>) {
+  const parents = evaluated ?? new Map(worldBones(bones).map(b => [b.id, b]));
   return slots.flatMap(slot => {
     const parent = parents.get(slot.bone), region = slot.region;
     if (!region || !parent) return [];

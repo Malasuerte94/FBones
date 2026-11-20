@@ -67,6 +67,146 @@ fn batch(s: &Session, id: u64, keys: Vec<Value>) -> ProjectSummary {
     )
 }
 #[test]
+fn rotate_delete_rejoins_the_stock_tangent_with_one_portable_history_edit() {
+    let s = new();
+    let p = edit(&s, json!({"type":"setAnimationFps","fps":24}));
+    let root = p.bones[0].id;
+    let animation = p.animations[0].id;
+    batch(
+        &s,
+        animation,
+        vec![
+            json!({"bone":root,"channel":"rotate","frame":0,"values":[7,0],"curve":"linear"}),
+            json!({"bone":root,"channel":"rotate","frame":6,"values":[29,0],"curve":"bezier","controls":[[7.5,20.6,10.5,-4.6],[0,0,0,0]]}),
+            json!({"bone":root,"channel":"rotate","frame":12,"values":[-13,0],"curve":"stepped"}),
+            json!({"bone":root,"channel":"rotate","frame":18,"values":[48,0],"curve":"bezier","controls":[[19.5,40.6,22.5,18.4],[0,0,0,0]]}),
+            json!({"bone":root,"channel":"rotate","frame":24,"values":[11,0],"curve":"linear"}),
+            json!({"bone":root,"channel":"translate","frame":6,"values":[1,2],"curve":"bezier","controls":[[7,3,10,5],[7,4,10,6]]}),
+            key(root, 12., 7., 8., "stepped"),
+            key(root, 18., 9., 10., "linear"),
+        ],
+    );
+    let directory = tempfile::tempdir().unwrap();
+    let source = directory.path().join("five-keys.fbones");
+    let p = s
+        .save_snapshot(s.prepare_save(true).unwrap(), source.clone())
+        .unwrap();
+    let original_file = std::fs::read(&source).unwrap();
+    let decode = |bytes| {
+        let envelope = fbones_format::ProjectEnvelope::inspect(bytes).unwrap();
+        fbones_format::minimal::scene::decode_scene(&envelope.decoded_payload().unwrap()).unwrap()
+    };
+    let mut expected = decode(original_file.clone());
+    let rotate_index = p.animations[0]
+        .tracks
+        .iter()
+        .position(|t| t.channel == "rotate")
+        .unwrap();
+    let rotate = &p.animations[0].tracks[rotate_index].keys;
+    let translate = &p.animations[0]
+        .tracks
+        .iter()
+        .find(|t| t.channel == "translate")
+        .unwrap()
+        .keys;
+    let removed = rotate[2].id;
+    let delete = |keys| RigEdit::DeleteAnimationKeys { animation, keys };
+    let original = state(&s);
+    assert!(!p.dirty);
+    assert_eq!(sample(&s, animation, 12.).local_bones[0].rotation, -13.);
+    assert_eq!(
+        s.edit(p.revision - 1, delete(vec![removed]))
+            .unwrap_err()
+            .code,
+        "ProjectChanged"
+    );
+    assert_eq!(
+        s.edit(p.revision, delete(vec![removed, translate[1].id]))
+            .unwrap_err()
+            .code,
+        "InvalidAnimation"
+    );
+    assert_eq!(state(&s), original);
+
+    let changed = s.edit(p.revision, delete(vec![removed])).unwrap();
+    assert_eq!(changed.revision, p.revision + 1);
+    assert!(changed.dirty);
+    let joined = &changed.animations[0].tracks[rotate_index].keys;
+    let controls = joined[1].controls.unwrap();
+    let [out_frame, out_value, in_frame, in_value] = controls[0];
+    assert!((in_frame - 14.148648).abs() < 2e-5);
+    // The export rounds seconds. This word uses the authored f32 40.6 ordinate.
+    assert_eq!(in_frame.to_bits(), 0x4162_60de);
+    assert_eq!(in_value.to_bits(), 67.0_f32.to_bits());
+    assert_eq!(
+        [out_frame, out_value].map(f32::to_bits),
+        [7.5, 20.6].map(f32::to_bits)
+    );
+    assert_eq!(controls[1].map(f32::to_bits), [0; 4]);
+    let next = joined[2].controls.unwrap()[0];
+    let arriving = (48. - in_value) / (18. - in_frame);
+    let leaving = (next[1] - 48.) / (next[0] - 18.);
+    assert!((arriving - leaving).abs() < 2e-5);
+    assert!((sample(&s, animation, 12.).local_bones[0].rotation - 45.435675).abs() < 5e-4);
+
+    let mut expected_summary = serde_json::to_value(&p.animations).unwrap();
+    let track = &mut expected_summary[0]["tracks"][rotate_index]["keys"];
+    track.as_array_mut().unwrap().remove(2);
+    track[1]["controls"] = serde_json::to_value(controls).unwrap();
+    assert_eq!(
+        serde_json::to_value(&changed.animations).unwrap(),
+        expected_summary
+    );
+    assert_eq!(
+        serde_json::to_value(&changed.bones).unwrap(),
+        original["bones"]
+    );
+
+    let undone = s.edit(changed.revision, RigEdit::Undo).unwrap();
+    assert!(!undone.dirty && undone.can_redo);
+    assert_eq!(
+        serde_json::to_value(&undone.animations).unwrap(),
+        original["animations"]
+    );
+    let redone = s.edit(undone.revision, RigEdit::Redo).unwrap();
+    assert_eq!(
+        serde_json::to_value(&redone.animations).unwrap(),
+        expected_summary
+    );
+
+    let rotate = expected.animations[0]
+        .tracks
+        .iter_mut()
+        .find(|t| t.channel == BoneChannel::Rotate)
+        .unwrap();
+    rotate.keys.remove(2);
+    rotate.keys[1].curve = KeyCurve::Bezier { controls };
+    let portable = directory.path().join("portable");
+    std::fs::create_dir(&portable).unwrap();
+    let path = portable.join("joined.fbones");
+    s.save_snapshot(s.prepare_save(true).unwrap(), path.clone())
+        .unwrap();
+    let written = decode(std::fs::read(&path).unwrap());
+    assert_eq!(written.animations, expected.animations);
+    assert_eq!(written.rig, expected.rig);
+    assert_eq!(written.fps, 24.);
+    s.close(false).unwrap();
+    let reopened = s.replace(open_document(path).unwrap(), false).unwrap();
+    assert!(!reopened.inspection_only && !reopened.dirty);
+    let reopened_animation = &reopened.animations[0];
+    let reopened_rotate = reopened_animation
+        .tracks
+        .iter()
+        .find(|t| t.channel == "rotate")
+        .unwrap();
+    assert_eq!(reopened_rotate.keys[1].controls.unwrap(), controls);
+    assert!(
+        (sample(&s, reopened_animation.id, 12.).local_bones[0].rotation - 45.435675).abs() < 5e-4
+    );
+    assert_eq!(std::fs::read(source).unwrap(), original_file);
+}
+
+#[test]
 fn atomic_animation_batch_stable_replacement_history_and_native_save_reopen() {
     let s = new();
     let root = snapshot(&s).bones[0].id;
@@ -254,6 +394,222 @@ fn viewport_key_epoch_rejects_other_clip_time_and_stale_revision() {
     assert_eq!(state(&s), before);
 }
 #[test]
+fn auto_key_derives_the_predecessor_and_current_in_one_guarded_edit() {
+    use crate::project::{BoneAutoKey, BoneAutoKeySource};
+
+    for viewport in [false, true] {
+        let s = new();
+        let p = snapshot(&s);
+        let bone = p.bones[0].id;
+        let animation = p.animations[0].id;
+        let other = edit(&s, json!({"type":"createAnimation","name":"Wrong clip"}))
+            .edited_animation
+            .unwrap();
+        let p = batch(
+            &s,
+            animation,
+            vec![
+                json!({"bone":bone,"channel":"translate","frame":0,"values":[0,0],"curve":"bezier","controls":[[10,20,20,40],[8,8,22,22]],"negativeZeroIndices":[0]}),
+                key(bone, 30., 60., 30., "linear"),
+                json!({"bone":bone,"channel":"rotate","frame":0,"values":[0,0],"curve":"bezier","controls":[[0,0,20,5],[0,0,0,0]],"negativeZeroIndices":[0,2,3]}),
+                json!({"bone":bone,"channel":"rotate","frame":30,"values":[11,0],"curve":"linear"}),
+            ],
+        );
+        let track_index = p.animations[0]
+            .tracks
+            .iter()
+            .position(|t| t.channel == "translate")
+            .unwrap();
+        let rotate_index = p.animations[0]
+            .tracks
+            .iter()
+            .position(|t| t.channel == "rotate")
+            .unwrap();
+        let original = state(&s);
+        let stale = sample(&s, animation, 15.);
+        let frozen = sample(&s, animation, 15.);
+        assert!((frozen.local_bones[0].x - 30.).abs() < 1e-6);
+        assert!((frozen.local_bones[0].y - 15.).abs() < 1e-6);
+
+        let set = |animation, keys| {
+            serde_json::from_value(
+                json!({"type":"setAnimationKeys","animation":animation,"keys":keys}),
+            )
+            .unwrap()
+        };
+        let current = |frame| {
+            if viewport {
+                key(bone, frame, 55., 27., "linear")
+            } else {
+                let mut input = key(bone, frame, 0., 777., "linear");
+                input["negativeZeroIndices"] = json!([0]);
+                input
+            }
+        };
+        let intent = |lanes| BoneAutoKey {
+            source: if viewport {
+                BoneAutoKeySource::ViewportPose
+            } else {
+                BoneAutoKeySource::NumericField
+            },
+            lanes,
+        };
+        let request = || set(animation, vec![current(15.)]);
+        let lanes = [true, viewport];
+        let epoch = viewport.then_some(frozen.pose_epoch);
+        let rejected = |result: Result<ProjectSummary, AppError>, code: &str| {
+            assert_eq!(result.unwrap_err().code, code);
+            assert_eq!(state(&s), original);
+        };
+        rejected(
+            s.edit_bone_auto_key(p.revision - 1, request(), epoch, intent(vec![lanes])),
+            "ProjectChanged",
+        );
+        rejected(
+            s.edit_bone_auto_key(
+                p.revision,
+                RigEdit::AutoAttachmentWeights { id: 0, scope: None },
+                epoch,
+                intent(vec![lanes]),
+            ),
+            "InvalidAnimation",
+        );
+        let wrong_source_epoch = (!viewport).then_some(frozen.pose_epoch);
+        rejected(
+            s.edit_bone_auto_key(
+                p.revision,
+                request(),
+                wrong_source_epoch,
+                intent(vec![lanes]),
+            ),
+            "InvalidPose",
+        );
+        if viewport {
+            rejected(
+                s.edit_bone_auto_key(
+                    p.revision,
+                    request(),
+                    Some(stale.pose_epoch),
+                    intent(vec![lanes]),
+                ),
+                "StalePose",
+            );
+            rejected(
+                s.edit_bone_auto_key(
+                    p.revision,
+                    set(animation, vec![current(14.)]),
+                    epoch,
+                    intent(vec![lanes]),
+                ),
+                "StalePose",
+            );
+            rejected(
+                s.edit_bone_auto_key(
+                    p.revision,
+                    set(other, vec![current(15.)]),
+                    epoch,
+                    intent(vec![lanes]),
+                ),
+                "StalePose",
+            );
+        }
+        for invalid in [vec![], vec![[false, false]]] {
+            rejected(
+                s.edit_bone_auto_key(p.revision, request(), epoch, intent(invalid)),
+                "InvalidAnimation",
+            );
+        }
+        let predecessor = || key(bone, 0., 3., 2., "linear");
+        rejected(
+            s.edit_in_pose(
+                p.revision,
+                frozen.pose_epoch,
+                set(animation, vec![predecessor(), current(15.)]),
+            ),
+            "StalePose",
+        );
+        rejected(
+            s.edit_bone_auto_key(
+                p.revision,
+                set(animation, vec![predecessor(), current(15.)]),
+                epoch,
+                intent(vec![lanes; 2]),
+            ),
+            if viewport {
+                "StalePose"
+            } else {
+                "InvalidAnimation"
+            },
+        );
+
+        let changed = s
+            .edit_bone_auto_key(p.revision, request(), epoch, intent(vec![lanes]))
+            .unwrap();
+        assert_eq!(changed.revision, p.revision + 1);
+        assert_eq!(
+            serde_json::to_value(&changed.bones).unwrap(),
+            original["bones"]
+        );
+        let translate = &changed.animations[0].tracks[track_index].keys;
+        let before = &p.animations[0].tracks[track_index].keys;
+        assert_eq!(
+            translate.iter().map(|k| k.frame).collect::<Vec<_>>(),
+            [0., 15., 30.]
+        );
+        assert_eq!(translate[0].id, before[0].id);
+        assert_eq!(translate[0].values[0].to_bits(), (-0.0f32).to_bits());
+        assert_eq!(
+            serde_json::to_value(&translate[2]).unwrap(),
+            serde_json::to_value(&before[1]).unwrap()
+        );
+        let inserted = &translate[1];
+        assert_eq!(inserted.curve, "bezier");
+        if viewport {
+            assert_eq!(inserted.values, [55., 27.]);
+            assert_eq!(
+                translate[0].controls.unwrap(),
+                [[5., 10., 10., 45.], [4., 4., 9.5, 21.5]]
+            );
+            assert_eq!(
+                inserted.controls.unwrap(),
+                [[20., 65., 25., 50.], [20.5, 32.5, 26., 26.]]
+            );
+        } else {
+            assert_eq!(
+                inserted.values.map(f32::to_bits),
+                [(-0.0f32).to_bits(), 15.0f32.to_bits()]
+            );
+            assert_eq!(
+                translate[0].controls.unwrap(),
+                [[5., 10., 10., -10.], [4., 4., 9.5, 9.5]]
+            );
+            assert_eq!(
+                inserted.controls.unwrap(),
+                [[20., 10., 25., 50.], [20.5, 20.5, 26., 26.]]
+            );
+        }
+        let rotate = &changed.animations[0].tracks[rotate_index];
+        assert_eq!(
+            rotate.keys[0].controls.unwrap()[0][1].to_bits(),
+            (-0.0f32).to_bits()
+        );
+        assert_eq!(
+            serde_json::to_value(rotate).unwrap(),
+            original["animations"][0]["tracks"][rotate_index]
+        );
+        let committed = serde_json::to_value(&changed.animations).unwrap();
+        let undone = s.edit(changed.revision, RigEdit::Undo).unwrap();
+        assert_eq!(
+            serde_json::to_value(&undone.animations).unwrap(),
+            original["animations"]
+        );
+        assert!(undone.can_redo);
+        let redone = s.edit(undone.revision, RigEdit::Redo).unwrap();
+        assert_eq!(serde_json::to_value(&redone.animations).unwrap(), committed);
+    }
+}
+
+#[test]
 fn animation_names_delete_and_signed_zero_key_history_are_persistent() {
     let s = new();
     let root = snapshot(&s).bones[0].id;
@@ -305,6 +661,70 @@ fn animation_names_delete_and_signed_zero_key_history_are_persistent() {
         undone.animations[0].tracks[0].keys[0].values[0].to_bits(),
         0
     );
+}
+#[test]
+fn desktop_animation_edits_restore_signed_zero_in_active_value_and_control_lanes() {
+    let s = new();
+    let initial = snapshot(&s);
+    let bone = initial.bones[0].id;
+    let animation = initial.animations[0].id;
+    let initial = batch(
+        &s,
+        animation,
+        vec![
+            key(bone, 0., 2., 3., "linear"),
+            key(bone, 10., 4., 5., "linear"),
+            json!({"bone":bone,"channel":"rotate","frame":0,"values":[2,0],"curve":"linear"}),
+            json!({"bone":bone,"channel":"rotate","frame":10,"values":[4,0],"curve":"linear"}),
+        ],
+    );
+    let translate = initial.animations[0].tracks[0].keys[0].id;
+    let rotate = initial.animations[0].tracks[1].keys[0].id;
+    let translated = edit(
+        &s,
+        json!({
+            "type":"setAnimationKey","animation":animation,"keyId":translate,"bone":bone,
+            "channel":"translate","frame":0,"values":[0,8],"curve":"bezier",
+            "controls":[[0,0,8,4],[2,8,6,0]],"negativeZeroIndices":[0,2,3,9],
+        }),
+    );
+    let key = &translated.animations[0].tracks[0].keys[0];
+    let negative_zero = (-0.0f32).to_bits();
+    let controls = key.controls.unwrap();
+    assert_eq!(key.id, translate);
+    assert_eq!(key.values.map(f32::to_bits), [negative_zero, 8.0f32.to_bits()]);
+    assert_eq!(controls[0][0].to_bits(), negative_zero);
+    assert_eq!(controls[0][1].to_bits(), negative_zero);
+    assert_eq!(controls[1][3].to_bits(), negative_zero);
+    let rotate_input = json!({
+        "bone":bone,"keyId":rotate,"channel":"rotate","frame":0,"values":[0,0],
+        "curve":"bezier","controls":[[0,0,8,4],[0,0,0,0]],"negativeZeroIndices":[0,3],
+    });
+    let rotated = edit(
+        &s,
+        json!({"type":"setAnimationKeyBatch","animation":animation,"boneKeys":[rotate_input.clone()],"slotKeys":[]}),
+    );
+    let key = &rotated.animations[0].tracks[1].keys[0];
+    let controls = key.controls.unwrap();
+    assert_eq!(key.id, rotate);
+    assert_eq!(key.values.map(f32::to_bits), [negative_zero, 0]);
+    assert_eq!(controls[0][1].to_bits(), negative_zero);
+    assert_eq!(controls[1].map(f32::to_bits), [0; 4]);
+    assert_eq!(rotated.revision, translated.revision + 1);
+
+    for invalid_indices in [json!([0, 0]), json!([1]), json!([4]), json!([6]), json!([10])] {
+        let mut invalid = rotate_input.clone();
+        invalid["negativeZeroIndices"] = invalid_indices;
+        let invalid_edit = json!({"type":"setAnimationKeys","animation":animation,"keys":[invalid]});
+        assert!(serde_json::from_value::<RigEdit>(invalid_edit).is_err());
+    }
+    let mut without_controls = rotate_input;
+    without_controls.as_object_mut().unwrap().remove("controls");
+    let invalid_edit = json!({"type":"setAnimationKeys","animation":animation,"keys":[without_controls]});
+    assert!(serde_json::from_value::<RigEdit>(invalid_edit).is_err());
+    let undone = edit(&s, json!({"type":"undo"}));
+    assert_eq!(undone.animations[0].tracks[1].keys[0].values, [2., 0.]);
+    assert_eq!(undone.animations[0].tracks[0].keys[0].values[0].to_bits(), negative_zero);
 }
 #[test]
 fn setup_reparent_remaps_animation_bone_references_without_rekeying() {

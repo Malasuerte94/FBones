@@ -1,4 +1,4 @@
-import type {ConstraintKeyInput,ConstraintPose} from './animationConstraints.ts';
+import type {ConstraintDraftPose,ConstraintKeyInput} from './animationConstraints.ts';
 import type {EventKeyInput,EventPatch} from './animationEvents.ts';
 
 const negativeZero=(values:readonly number[])=>values.some(value=>Object.is(value,-0));
@@ -21,7 +21,7 @@ export function preserveEventPatchBits<T extends EventPatch>(patch:T):T{
  for(const field of ['float','volume','balance'] as const){const value=patch[field],name=`${field}Bits` as const;if(value!==undefined&&Object.is(value,-0)&&patch[name]===undefined)extra[name]=bits([value])[0]!;}
  return Object.keys(extra).length?{...patch,...extra}:patch;
 }
-export function preserveTemporaryConstraintZeros<T extends ConstraintPose&{negativeZeroIndices?:number[]}>(pose:T):T{
+export function preserveTemporaryConstraintZeros<T extends ConstraintDraftPose&{negativeZeroIndices?:number[]}>(pose:T):T{
  if(pose.negativeZeroIndices!==undefined)return pose;
  const values=pose.type==='ik'?[pose.mix,pose.softness]:pose.type==='transform'?pose.mixes:[pose.inertia,pose.strength,pose.damping,pose.mass,pose.wind,pose.gravity,pose.mix];
  const indices=values.flatMap((value,index)=>Object.is(value,-0)?[index]:[]);

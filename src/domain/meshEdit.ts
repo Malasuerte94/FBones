@@ -29,8 +29,30 @@ function fitPlane(uvs:Point[],world:Point[]){
     for(let i=0;i<3;i++){if(i===col)continue;const factor=m[i]![col]!;for(let j=col;j<5;j++)m[i]![j]!-=factor*m[col]![j]!;}
   }
   const x:Point3=[m[0]![3]!,m[1]![3]!,m[2]![3]!],y:Point3=[m[0]![4]!,m[1]![4]!,m[2]![4]!];
-  return {point:(p:Point):Point=>[x[0]*p[0]+x[1]*p[1]+x[2],y[0]*p[0]+y[1]*p[1]+y[2]],
-    inverse:(p:Point):Point=>{const det=x[0]*y[1]-x[1]*y[0];if(!Number.isFinite(det)||Math.abs(det)<1e-12)throw Error('Collapsed image plane');const u=p[0]-x[2],v=p[1]-y[2];return[(u*y[1]-v*x[1])/det,(v*x[0]-u*y[0])/det];}};
+  const determinant=x[0]*y[1]-x[1]*y[0];
+  return {determinant,point:(p:Point):Point=>[x[0]*p[0]+x[1]*p[1]+x[2],y[0]*p[0]+y[1]*p[1]+y[2]],
+    inverse:(p:Point):Point=>{if(!Number.isFinite(determinant)||Math.abs(determinant)<1e-12)throw Error('Collapsed image plane');const u=p[0]-x[2],v=p[1]-y[2];return[(u*y[1]-v*x[1])/determinant,(v*x[0]-u*y[0])/determinant];}};
+}
+
+/** New Outline uses one affine image plane, including outside the old hull. */
+export function createMeshOutlinePlane(mesh:MeshView):MeshView {
+  const count=mesh.vertices.length;
+  if(mesh.weighted||mesh.bones.length!==1||count<3||mesh.uvs.length!==count*2||
+    mesh.uvs.some(value=>!Number.isFinite(value))||mesh.vertices.some(({positions})=>positions.length!==2||positions.some(value=>!Number.isFinite(value)))){
+    throw Error('Use an unweighted mesh with valid UV geometry.');
+  }
+  const uvs:Point[]=Array.from({length:count},(_,i)=>[mesh.uvs[i*2]!,mesh.uvs[i*2+1]!]);
+  const local:Point[]=mesh.vertices.map(({positions})=>[positions[0]!,positions[1]!]);
+  const plane=fitPlane(uvs,local);
+  const corners:Point[]=[[0,0],[1,0],[1,1],[0,1]];
+  const positions=corners.map(uv=>plane.point(uv).map(Math.fround) as Point);
+  if(!Number.isFinite(plane.determinant)||Math.abs(plane.determinant)<1e-12||
+    positions.some((point,i)=>point.some(value=>!Number.isFinite(value))||
+      cross(point,positions[(i+1)%4]!,positions[(i+2)%4]!)*Math.sign(plane.determinant)<=0)){
+    throw Error('The fitted image plane is collapsed.');
+  }
+  return {...mesh,uvs:corners.flat(),hull:4,edges:[0,1,1,2,2,3,3,0],triangles:[0,1,2,0,2,3],
+    vertices:positions.map(positions=>({weights:[1],positions}))};
 }
 function intersects(a:Point,b:Point,c:Point,d:Point){const u=cross(a,b,c),v=cross(a,b,d),s=cross(c,d,a),t=cross(c,d,b);return((u>EPS&&v< -EPS)||(u< -EPS&&v>EPS))&&((s>EPS&&t< -EPS)||(s< -EPS&&t>EPS));}
 function oriented(t:Triangle,points:Point[]):Triangle{return cross(vertex(points,t[0]),vertex(points,t[1]),vertex(points,t[2]))<0?[t[0],t[2],t[1]]:t;}

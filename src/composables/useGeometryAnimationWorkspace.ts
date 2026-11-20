@@ -1,13 +1,16 @@
 import {computed,shallowRef,watch,type Ref,type ShallowRef} from 'vue';
-import {sameAnimationFrame,type AnimationCurve,type AnimationView} from '../domain/animation.ts';
+import type {AnimationCurve,AnimationView} from '../domain/animation.ts';
 import {deformDimension,sampleDeformPoses,deformSlots,sampleDrawOrder,orderSlots,type DeformKeyInput,type DeformPose,type DrawOrderKeyInput} from '../domain/animationGeometry.ts';
 import {bindingPoints,previewBindingVertices} from '../domain/binding.ts';
-import type {BoneView,EvaluationSnapshot,ProjectSummary,RigEdit,SlotView} from '../domain/project.ts';
+import {linkedTimelineSourceId,type BoneView,type EvaluationSnapshot,type ProjectSummary,type RigEdit,type SlotView} from '../domain/project.ts';
+import {projectTimelineDeformTracks} from '../domain/animationTimeline.ts';
+import {planDeformKey} from '../domain/deformKey.ts';
+import {i18n} from '../i18n.ts';
 
 interface Options {
  project:ShallowRef<ProjectSummary|null>;active:Readonly<Ref<AnimationView|null>>;slots:Readonly<Ref<SlotView[]>>;
  frame:Ref<number>;mode:Ref<'setup'|'animate'>;autoKey:Ref<boolean>;version:Ref<number>;attachment:Ref<number|null>;
- edit:(edit:RigEdit)=>Promise<boolean>;pause:()=>void;notice:(message:string,error?:boolean)=>void;
+ edit:(edit:RigEdit,expectedRevision?:number,options?:{keepWorkingPose?:boolean})=>Promise<boolean>;pause:()=>void;notice:(message:string,error?:boolean)=>void;
 }
 export function shiftDeformKey(key:DeformKeyInput,delta:number,storedSource=false):DeformKeyInput{const frame=(value:number)=>storedSource?Math.fround(value):value;return {...key,frame:frame(key.frame)+delta,...(key.controls?{controls:[frame(key.controls[0])+delta,key.controls[1],frame(key.controls[2])+delta,key.controls[3]] as [number,number,number,number]}:{})};}
 export function useGeometryAnimationWorkspace(o:Options){
@@ -15,6 +18,9 @@ export function useGeometryAnimationWorkspace(o:Options){
  const geometrySnapshot=shallowRef<{snapshot:EvaluationSnapshot;version:number}|null>(null);
  watch([drawOrderDraft,deformDraft],()=>{o.version.value++;},{flush:'sync'});
  const setupSlots=computed(()=>o.project.value?.slots??[]);
+ const setupAttachments=computed(()=>new Map(setupSlots.value.flatMap(slot=>slot.attachments??[]).map(attachment=>[attachment.id,attachment])));
+ function inheritedDeformSource(attachment:number):number|undefined{return linkedTimelineSourceId(setupAttachments.value.get(attachment));}
+ function requireDirectDeform(attachment:number){if(inheritedDeformSource(attachment)!==undefined)throw new Error(i18n.global.t('linkedMeshDeformReadOnly'));}
  const localOrder=computed(()=>drawOrderDraft.value===undefined?sampleDrawOrder(setupSlots.value,o.active.value?.drawOrder??[],o.frame.value):drawOrderDraft.value??setupSlots.value.map(s=>s.id));
  const localDeform=computed(()=>sampleDeformPoses(setupSlots.value,o.active.value?.deformTracks??[],o.frame.value,deformDraft.value));
  const frozen=computed(()=>{
@@ -24,7 +30,7 @@ export function useGeometryAnimationWorkspace(o:Options){
  const animationDeformPose=computed(()=>{const poses=new Map(localDeform.value.map(pose=>[pose.attachment,pose]));for(const pose of frozen.value?.deformPose??[])poses.set(pose.attachment,pose);return [...poses.values()];});
  const animationDrawOrder=computed(()=>frozen.value?.drawOrder??localOrder.value);
  const drawOrderSlots=computed(()=>o.project.value?.sceneEditing?orderSlots(deformSlots(o.slots.value,animationDeformPose.value),animationDrawOrder.value):o.slots.value);
- const animationDeformTracks=computed(()=>o.active.value?.deformTracks?.map(track=>({id:`deform:${track.attachment}`,attachmentId:track.attachment,slotId:setupSlots.value.find(s=>s.attachments?.some(a=>a.id===track.attachment))?.id??-1,keys:track.keys.map(key=>({...key}))}))??[]);
+ const animationDeformTracks=computed(()=>projectTimelineDeformTracks(o.active.value,setupSlots.value));
  const animationDrawOrderKeys=computed(()=>o.active.value?.drawOrder??[]);
  function clearGeometryAnimationDraft(){if(drawOrderDraft.value!==undefined)drawOrderDraft.value=undefined;if(deformDraft.value.size)deformDraft.value=new Map();}
  function releaseAnimationGeometrySnapshot(){if(geometrySnapshot.value)geometrySnapshot.value=null;}
@@ -36,27 +42,32 @@ export function useGeometryAnimationWorkspace(o:Options){
   if(order===null)return null;orderSlots(setupSlots.value,order);
   return order.every((id,index)=>setupSlots.value[index]!.id===id)?null:[...order];
  }
+ function localDrawOrderKey():DrawOrderKeyInput{return {frame:o.frame.value,order:normalizedOrder(localOrder.value)};}
  async function setAnimationDrawOrder(order:number[]|null):Promise<boolean>{return perform(async()=>{
   o.pause();const clip=current(),value=normalizedOrder(order);
   if(!o.autoKey.value){drawOrderDraft.value=value;return true;}
   return o.edit({type:'setAnimationDrawOrderKeys',animation:clip.id,keys:[{frame:o.frame.value,order:value}]});
  });}
- async function insertDrawOrderKey():Promise<boolean>{return perform(async()=>{o.pause();const clip=current();return o.edit({type:'setAnimationDrawOrderKeys',animation:clip.id,keys:[{frame:o.frame.value,order:normalizedOrder(localOrder.value)}]});});}
- function deformInput(attachment:number):DeformKeyInput {
-  const clip=current(),target=setupSlots.value.flatMap(slot=>slot.attachments??[]).find(a=>a.id===attachment),pose=animationDeformPose.value.find(p=>p.attachment===attachment)??(target&&(target.mesh||target.clipping)?{attachment,offsets:Array(deformDimension(target)).fill(0)}:null);
-  if(!pose)throw new Error('Select a mesh or clipping attachment to key.');
-  const existing=clip.deformTracks?.find(t=>t.attachment===attachment)?.keys.slice().reverse().find(k=>sameAnimationFrame(k.frame,o.frame.value));
-  const hasData=pose.offsets.some(value=>value!==0);
-  return {attachment,frame:o.frame.value,offsets:[...pose.offsets],curve:existing?.curve??'linear',...(existing?{dataPresent:hasData?true:existing.dataPresent}:{}),...(existing?.controls?{controls:[...existing.controls]}:{})};
- }
- async function insertDeformKey(attachment:number):Promise<boolean>{return perform(async()=>{o.pause();const clip=current();return o.edit({type:'setAnimationDeformKeys',animation:clip.id,keys:[deformInput(attachment)]});});}
+ async function insertDrawOrderKey():Promise<boolean>{return perform(async()=>{o.pause();const clip=current();return o.edit({type:'setAnimationDrawOrderKeys',animation:clip.id,keys:[localDrawOrderKey()]});});}
+ async function insertDeformKey(attachment:number):Promise<boolean>{return perform(async()=>{
+  const clip=current(),model=o.project.value,frame=o.frame.value;
+  const target=setupAttachments.value.get(attachment);
+  if(!model||!target||(!target.mesh&&!target.clipping))throw new Error('Select a mesh or clipping attachment to key.');
+  requireDirectDeform(attachment);o.pause();
+  const track=clip.deformTracks?.find(item=>item.attachment===attachment)??{attachment,keys:[]};
+  // Explicit keys use authored offsets plus a real working draft. Frozen
+  // geometry only authorizes world-space vertex gestures.
+  const keys=planDeformKey(track,frame,deformDimension(target),deformDraft.value.get(attachment));
+  return !keys.length||await o.edit({type:'setAnimationDeformKeys',animation:clip.id,keys},model.revision);
+ });}
  function geometryKeysForIds(ids:readonly number[]):{drawOrderKeys:DrawOrderKeyInput[];deformKeys:DeformKeyInput[]}{
   return {drawOrderKeys:(o.active.value?.drawOrder??[]).filter(k=>ids.includes(k.id)).map(key=>({keyId:key.id,frame:key.frame,order:key.order===null?null:[...key.order]})),deformKeys:(o.active.value?.deformTracks??[]).flatMap(track=>track.keys.filter(k=>ids.includes(k.id)).map(key=>({keyId:key.id,attachment:track.attachment,frame:key.frame,offsets:[...key.offsets],dataPresent:key.dataPresent,curve:key.curve,...(key.controls?{controls:[...key.controls] as [number,number,number,number]}:{})})))};
  }
  async function updateDrawOrderKey(change:{id:number;order:number[]|null}){return perform(async()=>{const key=geometryKeysForIds([change.id]).drawOrderKeys[0];if(!key)return false;return o.edit({type:'setAnimationDrawOrderKeys',animation:current().id,keys:[{...key,order:normalizedOrder(change.order)}]});});}
  async function updateDeformCurve(change:{id:number;curve:AnimationCurve;controls?:[number,number,number,number]}){return perform(async()=>{
   const key=geometryKeysForIds([change.id]).deformKeys[0];if(!key)return false;
-  return o.edit({type:'setAnimationDeformKeys',animation:current().id,keys:[{...key,curve:change.curve,controls:change.curve==='bezier'?change.controls??key.controls:null}]});
+  return o.edit({type:'setAnimationDeformKeys',animation:current().id,keys:[{...key,curve:change.curve,controls:change.curve==='bezier'?change.controls??key.controls:null}]},
+   undefined,{keepWorkingPose:true});
  });}
  function geometryInterpolationKeys(ids:readonly number[],curve:AnimationCurve):DeformKeyInput[]{
   const result:DeformKeyInput[]=[];
@@ -75,6 +86,7 @@ export function useGeometryAnimationWorkspace(o:Options){
   if(body.type==='transformAttachments'&&body.ids.length!==1)throw new Error('Select one mesh or clipping attachment to deform.');
   const attachment=edit.type==='attachmentEdit'?edit.id:body.type==='moveClippingVertices'?body.id:body.type==='transformAttachments'?body.ids[0]!:o.attachment.value;
   if(attachment===null)throw new Error('Select a mesh or clipping attachment.');
+  requireDirectDeform(attachment);
   const owner=drawOrderSlots.value.find(slot=>slot.attachments?.some(a=>a.id===attachment)),target=owner?.attachments?.find(a=>a.id===attachment);
   const initial=animationDeformPose.value.find(p=>p.attachment===attachment)?.offsets??(target?Array(deformDimension(target)).fill(0):[]);
   const sampled=owner&&target&&!animationDeformPose.value.some(p=>p.attachment===attachment)?deformSlots([owner],[{attachment,offsets:initial}])[0]!.attachments!.find(a=>a.id===attachment):target,binding=sampled?.mesh??sampled?.clipping;
@@ -85,7 +97,7 @@ export function useGeometryAnimationWorkspace(o:Options){
   }):body.vertices;
   o.pause();const clip=current();
   if(o.autoKey.value)return {type:'setAnimationDeformVertices',animation:clip.id,attachment,frame:o.frame.value,vertices};
-  const preview=previewBindingVertices(bones,binding,vertices),base=setupSlots.value.flatMap(slot=>slot.attachments??[]).find(a=>a.id===attachment),original=base?.mesh??base?.clipping;
+  const preview=previewBindingVertices(bones,binding,vertices),base=setupAttachments.value.get(attachment),original=base?.mesh??base?.clipping;
   if(!original)throw new Error('The attachment binding no longer exists.');
   const offsets=[...initial],changed=new Set(vertices.map(vertex=>vertex.vertex));let cursor=0;
   for(const [index,row]of preview.vertices.entries()){if(changed.has(index))for(let column=0;column<row.weights.length;column++){if(!row.weights[column])continue;for(let axis=0;axis<2;axis++){const at=column*2+axis;offsets[cursor+at]!+=row.positions[at]!-binding.vertices[index]!.positions[at]!;}}cursor+=row.positions.length;}
@@ -93,5 +105,5 @@ export function useGeometryAnimationWorkspace(o:Options){
  }
  watch(()=>[o.project.value?.documentId,o.project.value?.animations,o.active.value?.id,o.frame.value,o.mode.value],()=>{releaseAnimationGeometrySnapshot();clearGeometryAnimationDraft();},{flush:'sync'});
  watch(o.version,releaseAnimationGeometrySnapshot,{flush:'sync'});
- return {drawOrderDraft,deformDraft,animationDeformPose,animationDrawOrder,drawOrderSlots,animationDeformTracks,animationDrawOrderKeys,clearGeometryAnimationDraft,releaseAnimationGeometrySnapshot,setAnimationGeometrySnapshot,animationGeometryOverrides,setAnimationDrawOrder,insertDrawOrderKey,insertDeformKey,geometryKeysForIds,updateDrawOrderKey,updateDeformCurve,geometryInterpolationKeys,deformAnimationEdit};
+ return {drawOrderDraft,deformDraft,animationDeformPose,animationDrawOrder,drawOrderSlots,animationDeformTracks,animationDrawOrderKeys,clearGeometryAnimationDraft,releaseAnimationGeometrySnapshot,setAnimationGeometrySnapshot,animationGeometryOverrides,setAnimationDrawOrder,insertDrawOrderKey,insertDeformKey,geometryKeysForIds,updateDrawOrderKey,updateDeformCurve,geometryInterpolationKeys,deformAnimationEdit,localDrawOrderKey,inheritedDeformSource};
 }

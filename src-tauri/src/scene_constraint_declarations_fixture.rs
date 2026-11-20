@@ -55,6 +55,7 @@ pub(crate) fn project() -> SceneProject {
     wire.constraint_declarations = Some(WireConstraintDeclarations {
         ik: vec![5, 2],
         transform: vec![3, 0],
+        path: vec![],
         physics: vec![4, 1],
     });
     normalize_wire_track_order(&mut p).unwrap();

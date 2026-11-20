@@ -1,4 +1,5 @@
-import {evaluate,PhysicsState,type Evaluation,type SolveScene} from './solve/index.ts';
+import {evaluate,prepareSampledEvaluation,PhysicsState,type Evaluation,type SolveScene,type StepMode} from './solve/index.ts';
+import {pathInputSignature} from './solve/path.ts';
 import type {BoneView,ReplayLocalPose,ReplayMotion} from './project.ts';
 const local=(b:BoneView):ReplayLocalPose=>({x:b.x,y:b.y,rotation:b.rotation,scaleX:b.scaleX??1,scaleY:b.scaleY??1,shearX:b.shearX??0,shearY:b.shearY??0});
 const MAX_WINDOW_TICKS=7200,MAX_MOTION_POSES=262144,CHECKPOINT_TICKS=600;
@@ -7,6 +8,8 @@ const MAX_WINDOW_TICKS=7200,MAX_MOTION_POSES=262144,CHECKPOINT_TICKS=600;
 export class ScenePreview {
   private physics=new PhysicsState();
   private scene:SolveScene={bones:[],constraints:[]};
+  private pathInputs='';
+  private pathEvaluation:ReturnType<typeof prepareSampledEvaluation>|null=null;
   private ticks=0;
   private windowStart=0;
   private draftBones:SolveScene['bones']|null=null;
@@ -22,8 +25,11 @@ export class ScenePreview {
    * Reserve a complete changed pose even if the current draft is unchanged. */
   get checkpointBlocked(){return this.ticks-this.windowStart>=MAX_WINDOW_TICKS||(this.changes.length+2)*this.initial.length>MAX_MOTION_POSES;}
   reset(scene:SolveScene=this.scene){
-    const state=new PhysicsState(),frame=scene.bones.length?evaluate(scene,null,state,{type:'reset',time:0}):{bones:[]};
+    const state=new PhysicsState(),mode={type:'reset',time:0} as const;
+    const pathInputs=pathInputSignature(scene),pathEvaluation=pathInputs&&scene.bones.length?prepareSampledEvaluation(scene):null;
+    const frame=pathEvaluation?pathEvaluation(null,state,mode,[]):scene.bones.length?evaluate(scene,null,state,mode):{bones:[]};
     this.scene=scene;this.physics=state;this.ticks=0;this.windowStart=0;this.draftBones=null;this.frame=frame;
+    this.pathInputs=pathInputs;this.pathEvaluation=pathEvaluation;
     this.initial=scene.bones.map(local);this.lastPose=JSON.stringify(this.initial);this.changes=[];return frame;
   }
   step(){
@@ -32,7 +38,7 @@ export class ScenePreview {
     const source=this.draftBones?{...this.scene,bones:this.draftBones}:this.scene;
     const poses=source.bones.map(local),key=JSON.stringify(poses);
     if(key!==this.lastPose&&(this.changes.length+2)*poses.length>MAX_MOTION_POSES)throw new Error('Physics preview is waiting for its motion checkpoint.');
-    const frame=evaluate(source,null,this.physics,{type:'update',time:(this.ticks+1)/60});
+    const frame=this.evaluateDraft(this.draftBones,this.physics,{type:'update',time:(this.ticks+1)/60});
     if(key!==this.lastPose){this.changes.push({tick:this.ticks+1,poses});this.lastPose=key;}
     this.ticks++;this.frame=frame;return frame;
   }
@@ -46,17 +52,29 @@ export class ScenePreview {
     this.initial=initial.map(p=>({...p}));this.changes=this.changes.slice(count);this.windowStart=tick;
     return true;
   }
+  private evaluateDraft(bones:SolveScene['bones']|null,state:PhysicsState,mode:StepMode){
+    if(this.pathEvaluation&&(!bones||bones.length===this.scene.bones.length&&bones.every((bone,index)=>{
+      const setup=this.scene.bones[index]!;
+      return bone.id===setup.id&&bone.parent===setup.parent&&bone.length===setup.length;
+    }))){
+      return this.pathEvaluation(bones?.map(local),state,mode,[]);
+    }
+    return evaluate(bones?{...this.scene,bones}:this.scene,null,state,mode);
+  }
   previewBones(bones:SolveScene['bones']){
-    const frame=evaluate({...this.scene,bones},null,this.physics.clone(),{type:'pose'});this.draftBones=bones;return frame;
+    const frame=this.evaluateDraft(bones,this.physics.clone(),{type:'pose'});this.draftBones=bones;return frame;
   }
   get hasDraft(){return this.draftBones!==null;}
   adopt(scene:SolveScene):boolean{
-    if(!scene.bones.length||JSON.stringify(scene.constraints??[])!==JSON.stringify(this.scene.constraints??[])||scene.bones.length!==this.scene.bones.length||scene.bones.some((b,i)=>b.id!==this.scene.bones[i]!.id||b.parent!==this.scene.bones[i]!.parent||b.length!==this.scene.bones[i]!.length))return false;
-    const frame=evaluate(scene,null,this.physics.clone(),{type:'pose'});this.scene=scene;this.draftBones=null;this.frame=frame;return true;
+    const pathInputs=pathInputSignature(scene);
+    if(!scene.bones.length||pathInputs!==this.pathInputs||JSON.stringify(scene.constraints??[])!==JSON.stringify(this.scene.constraints??[])||scene.bones.length!==this.scene.bones.length||scene.bones.some((b,i)=>b.id!==this.scene.bones[i]!.id||b.parent!==this.scene.bones[i]!.parent||b.length!==this.scene.bones[i]!.length))return false;
+    const pathEvaluation=pathInputs?prepareSampledEvaluation(scene):null,state=this.physics.clone(),mode={type:'pose'} as const;
+    const frame=pathEvaluation?pathEvaluation(null,state,mode,[]):evaluate(scene,null,state,mode);
+    this.scene=scene;this.pathEvaluation=pathEvaluation;this.draftBones=null;this.frame=frame;return true;
   }
   clearDraft(){
     if(!this.draftBones)return;
-    this.draftBones=null;this.frame=this.scene.bones.length?evaluate(this.scene,null,this.physics.clone(),{type:'pose'}):{bones:[]};
+    this.draftBones=null;this.frame=this.scene.bones.length?this.evaluateDraft(null,this.physics.clone(),{type:'pose'}):{bones:[]};
   }
   motion():ReplayMotion|undefined{
     if(!this.changes.length&&JSON.stringify(this.initial)===JSON.stringify(this.scene.bones.map(local)))return undefined;

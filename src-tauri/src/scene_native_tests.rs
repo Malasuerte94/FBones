@@ -1,4 +1,6 @@
 use super::*;
+#[path = "scene_bone_rename_tests.rs"]
+mod bone_rename_tests;
 #[path = "scene_constraint_range_tests.rs"]
 mod constraint_range_tests;
 #[path = "scene_image_path_tests.rs"]
@@ -7,6 +9,10 @@ mod image_path_tests;
 mod live_physics_tests;
 #[path = "scene_parenting_tests.rs"]
 mod parenting_tests;
+#[path = "scene_region_position_tests.rs"]
+mod region_position_tests;
+#[path = "scene_compensation_tests.rs"]
+mod compensation_tests;
 #[path = "scene_transform_match_tests.rs"]
 mod transform_match_tests;
 #[path = "scene_transform_range_tests.rs"]
@@ -2650,6 +2656,1318 @@ fn dense_rows(a: &SceneAttachment) -> &[fbones_format::minimal::meshes::Vertex] 
         &m.vertices
     } else {
         &a.clipping().unwrap().vertices
+    }
+}
+
+fn cropped_mesh_fixture(
+    folder: &str,
+    local_position: impl Fn(usize, [f32; 2]) -> [f32; 2],
+) -> (tempfile::TempDir, Session, ProjectSummary, PathBuf) {
+    use fbones_format::minimal::meshes::Vertex;
+
+    let (dir, session, initial) = setup();
+    let placed = session
+        .place_images(initial.revision, &["A".into()], 0, 0., 0.)
+        .unwrap();
+    let slot = placed.slots[0].id;
+    let target = placed.slots[0].attachments[0].id;
+    let placed = session
+        .place_attachments(placed.revision, &["B".into(), "nested/C".into()], slot)
+        .unwrap();
+    let model = scene_model(&session);
+    let source = &model.slots[0].attachments[0];
+    let mut mesh = crate::mesh::from_region(source.image().unwrap(), model.slots[0].bone);
+    let uvs = [
+        [0.125, 0.125],
+        [0.875, 0.125],
+        [0.875, 0.375],
+        [0.375, 0.375],
+        [0.375, 0.875],
+        [0.125, 0.875],
+        [0.25, 0.25],
+        [0.25, 0.625],
+    ];
+    mesh.hull = 6;
+    mesh.uvs = uvs.into_iter().flatten().collect();
+    mesh.vertices = uvs
+        .into_iter()
+        .enumerate()
+        .map(|(index, uv)| Vertex {
+            weights: vec![1.],
+            positions: local_position(index, uv).to_vec(),
+        })
+        .collect();
+    mesh.edges = vec![0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 0, 6, 7];
+    mesh.triangles =
+        crate::triangulation::triangulate_with_metric(&mesh.uvs, mesh.hull, &mesh.edges, [128.; 2])
+            .unwrap();
+    session
+        .edit(
+            placed.revision,
+            RigEdit::AttachmentEdit {
+                id: target,
+                edit: Box::new(RigEdit::ReplaceMesh {
+                    id: slot,
+                    mesh: Box::new(mesh),
+                }),
+            },
+        )
+        .unwrap();
+    let path = dir.path().join(folder).join("concave.fbones");
+    session
+        .save_snapshot(session.prepare_save(true).unwrap(), path.clone())
+        .unwrap();
+    session.close(false).unwrap();
+    let project = session
+        .replace(open_document(path.clone()).unwrap(), false)
+        .unwrap();
+    assert!(!project.inspection_only && !project.dirty && !project.can_undo);
+    (dir, session, project, path)
+}
+
+fn generate_mesh_fixture() -> (tempfile::TempDir, Session, ProjectSummary, PathBuf) {
+    cropped_mesh_fixture("generate-input", |index, [u, v]| {
+        let x = if index == 0 { -0. } else { (u - 0.125) * 128. };
+        let y = (0.875 - v) * 128. + if index == 6 { 5. } else { 0. };
+        [x, y]
+    })
+}
+
+#[test]
+fn generate_mesh_preserves_concave_surface_and_explicit_edges_through_portable_history() {
+    use fbones_format::minimal::meshes::Mesh;
+
+    let (dir, session, project, source_path) = generate_mesh_fixture();
+    let source_file = std::fs::read(&source_path).unwrap();
+    let before = scene_model(&session);
+    let original_attachment = &before.slots[0].attachments[0];
+    let original = original_attachment.mesh().unwrap();
+    let original_words = attachment_binding_bits(original_attachment);
+    assert_eq!(original_words[1], (-0.0_f32).to_bits());
+    let active = project.slots[0].active_attachment_id.unwrap();
+    let target = project.slots[0].attachments[0].id;
+    let inactive_sibling = project.slots[0].attachments[1].id;
+    assert_ne!(active, target);
+    assert_ne!(active, inactive_sibling);
+    let payload = || encode_scene_payload(&scene_model(&session)).unwrap();
+    let before_payload = payload();
+    let changed = command(
+        &session,
+        &project,
+        serde_json::json!({"type":"generateMeshVertices","id":target}),
+    );
+    assert_eq!(changed.revision, project.revision + 1);
+    assert_eq!(changed.edited_attachment, Some(target));
+    assert_eq!(changed.slots[0].active_attachment_id, Some(active));
+
+    let after = scene_model(&session);
+    let generated_attachment = &after.slots[0].attachments[0];
+    let generated = generated_attachment.mesh().unwrap();
+    assert_eq!(generated.hull, original.hull);
+    assert_eq!(generated.edges, original.edges);
+    assert_eq!(
+        generated.uvs[..original.uvs.len()]
+            .iter()
+            .map(|v| v.to_bits())
+            .collect::<Vec<_>>(),
+        original.uvs.iter().map(|v| v.to_bits()).collect::<Vec<_>>()
+    );
+    assert_eq!(
+        &attachment_binding_bits(generated_attachment)[..original_words.len()],
+        original_words.as_slice()
+    );
+    let mut with_original = after.clone();
+    with_original.slots[0].attachments[0] = original_attachment.clone();
+    assert_eq!(encode_scene_payload(&with_original).unwrap(), before_payload);
+
+    let faces = original.triangles.len() / 3;
+    assert_eq!(generated.vertices.len(), original.vertices.len() + faces);
+    assert_eq!(generated.triangles.len(), original.triangles.len() * 3);
+    assert_eq!(
+        generated
+            .triangles
+            .chunks_exact(3)
+            .filter(|t| t.contains(&6) && t.contains(&7))
+            .count(),
+        2
+    );
+    let uv = |mesh: &Mesh, index: usize| {
+        [f64::from(mesh.uvs[2 * index]), f64::from(mesh.uvs[2 * index + 1])]
+    };
+    let cross = |a: [f64; 2], b: [f64; 2], c: [f64; 2]| {
+        (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+    };
+    for (index, source_face) in original.triangles.chunks_exact(3).enumerate() {
+        let [a, b, c] = [
+            source_face[0] as usize,
+            source_face[1] as usize,
+            source_face[2] as usize,
+        ];
+        let inserted = original.vertices.len() + index;
+        let [p, q, r] = [uv(original, a), uv(original, b), uv(original, c)];
+        let center = uv(generated, inserted);
+        assert_eq!(
+            center,
+            [0, 1].map(|axis| f64::from(((p[axis] + q[axis] + r[axis]) / 3.) as f32))
+        );
+        assert!(
+            center[0] <= 0.375 || center[1] <= 0.375,
+            "Generated into the missing notch"
+        );
+        let area = cross(p, q, r);
+        let weights =
+            [cross(center, q, r), cross(p, center, r), cross(p, q, center)].map(|v| v / area);
+        assert!(weights.iter().all(|v| *v > 0.));
+        let row = &generated.vertices[inserted];
+        assert_eq!(row.weights, [1.]);
+        for axis in 0..2 {
+            let expected: f64 = [a, b, c]
+                .into_iter()
+                .zip(weights)
+                .map(|(vertex, factor)| f64::from(original.vertices[vertex].positions[axis]) * factor)
+                .sum();
+            assert!((f64::from(row.positions[axis]) - expected).abs() < 0.00001);
+        }
+        for [first, second] in [[a, b], [b, c], [c, a]] {
+            let child = generated
+                .triangles
+                .chunks_exact(3)
+                .find(|t| [first, second, inserted].iter().all(|v| t.contains(&(*v as u16))))
+                .unwrap();
+            assert_eq!(
+                cross(
+                    uv(generated, child[0] as usize),
+                    uv(generated, child[1] as usize),
+                    uv(generated, child[2] as usize)
+                )
+                .signum(),
+                area.signum()
+            );
+        }
+    }
+
+    let after_payload = payload();
+    let undone = session.edit(changed.revision, RigEdit::Undo).unwrap();
+    assert!(!undone.dirty && !undone.can_undo && undone.can_redo);
+    assert_eq!(payload(), before_payload);
+    session.edit(undone.revision, RigEdit::Redo).unwrap();
+    assert_eq!(payload(), after_payload);
+    let destination = dir.path().join("generate-portable/reopened.fbones");
+    session
+        .save_snapshot(session.prepare_save(true).unwrap(), destination.clone())
+        .unwrap();
+    let saved_payload = payload();
+    session.close(false).unwrap();
+    let reopened = session
+        .replace(open_document(destination).unwrap(), false)
+        .unwrap();
+    assert!(!reopened.inspection_only && !reopened.dirty);
+    assert_eq!(payload(), saved_payload);
+    assert_eq!(
+        attachment_binding_bits(&scene_model(&session).slots[0].attachments[0])[1],
+        (-0.0_f32).to_bits()
+    );
+    assert_eq!(std::fs::read(source_path).unwrap(), source_file);
+}
+
+#[test]
+fn new_mesh_outline_rebuilds_the_inspected_crop_on_its_local_image_plane() {
+    use crate::evaluation::EvaluationMode;
+    use serde_json::json;
+
+    let plane = |[u, v]: [f32; 2]| [19. + 96. * u + 32. * v, -11. + 16. * u - 64. * v];
+    let (dir, session, project, source_path) =
+        cropped_mesh_fixture("outline-input", |_, uv| plane(uv));
+    let source_bytes = std::fs::read(&source_path).unwrap();
+    let active = project.slots[0].active_attachment_id.unwrap();
+    let target = project.slots[0].attachments[0].id;
+    assert_ne!(active, target);
+    assert_ne!(active, project.slots[0].attachments[1].id);
+    let before = scene_model(&session);
+    let source_attachment = &before.slots[0].attachments[0];
+    let original = source_attachment.mesh().unwrap();
+    assert!(original.uvs.iter().all(|&uv| uv > 0. && uv < 1.));
+    let payload = || encode_scene_payload(&scene_model(&session)).unwrap();
+    let before_payload = payload();
+    let before_summary = serde_json::to_value(&project).unwrap();
+    let lease = evaluated(&session, &project, EvaluationMode::None, 0.);
+
+    for uvs in [
+        vec![[-0.125, 0.125], [0.75, 0.125], [0.375, 0.875]],
+        vec![[0., 0.], [1., 1.], [0., 1.], [1., 0.]],
+        vec![[0., 0.], [0.5, 0.5], [1., 1.]],
+        vec![[0., 0.], [1., 0.], [1., 1.], [0., 0.]],
+        vec![[0., 0.], [1., 0.], [0.5, 0.], [1., 1.], [0., 1.]],
+    ] {
+        assert_eq!(
+            session
+                .edit_in_pose(
+                    project.revision,
+                    lease.pose_epoch,
+                    RigEdit::ReplaceMeshOutline { id: target, uvs },
+                )
+                .unwrap_err()
+                .code,
+            "InvalidMesh"
+        );
+        assert_eq!(payload(), before_payload);
+        assert_eq!(
+            serde_json::to_value(session.summary().unwrap().unwrap()).unwrap(),
+            before_summary
+        );
+    }
+
+    // The clockwise concave ring grows beyond the old crop to the texture
+    // borders, which distinguishes affine source placement from a fresh quad.
+    let outline: [[f32; 2]; 6] = [
+        [0., 0.],
+        [0., 1.],
+        [0.5, 1.],
+        [0.5, 0.25],
+        [1., 0.25],
+        [1., 0.],
+    ];
+    let edited = session
+        .edit_in_pose(
+            project.revision,
+            lease.pose_epoch,
+            serde_json::from_value(json!({"type":"replaceMeshOutline","id":target,"uvs":outline}))
+                .unwrap(),
+        )
+        .unwrap();
+    assert_eq!(edited.revision, project.revision + 1);
+    assert_eq!(edited.edited_attachment, Some(target));
+    assert_eq!(edited.slots[0].active_attachment_id, Some(active));
+    assert!(edited.dirty && edited.can_undo && !edited.can_redo);
+    let after = scene_model(&session);
+    let outlined = after.slots[0].attachments[0].mesh().unwrap();
+    assert_eq!(outlined.image, original.image);
+    assert_eq!(outlined.bones, original.bones);
+    assert!(!outlined.weighted);
+    assert_eq!(outlined.hull, outline.len());
+    assert_eq!(
+        outlined.uvs,
+        outline.into_iter().flatten().collect::<Vec<_>>()
+    );
+    assert_eq!(outlined.edges, [0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 0]);
+    assert_eq!(outlined.vertices.len(), outline.len());
+    for (row, uv) in outlined.vertices.iter().zip(outline) {
+        assert_eq!(row.weights, [1.]);
+        assert_eq!(
+            row.positions
+                .iter()
+                .map(|v| v.to_bits())
+                .collect::<Vec<_>>(),
+            plane(uv).map(f32::to_bits)
+        );
+    }
+    assert_eq!(outlined.triangles.len(), (outline.len() - 2) * 3);
+    let mut covered_area = 0.;
+    for face in outlined.triangles.chunks_exact(3) {
+        let [a, b, c] = [face[0], face[1], face[2]].map(|i| outline[i as usize]);
+        let twice_area = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+        assert!(twice_area > 0.);
+        covered_area += twice_area / 2.;
+    }
+    assert_eq!(covered_area, 0.625);
+    for [a, b] in outlined
+        .edges
+        .chunks_exact(2)
+        .map(|edge| [edge[0] as u16, edge[1] as u16])
+    {
+        assert_eq!(
+            outlined
+                .triangles
+                .chunks_exact(3)
+                .filter(|face| face.contains(&a) && face.contains(&b))
+                .count(),
+            1
+        );
+    }
+    let mut with_source = after.clone();
+    with_source.slots[0].attachments[0] = source_attachment.clone();
+    assert_eq!(encode_scene_payload(&with_source).unwrap(), before_payload);
+
+    let after_payload = payload();
+    let undone = session.edit(edited.revision, RigEdit::Undo).unwrap();
+    assert!(!undone.dirty && !undone.can_undo && undone.can_redo);
+    assert_eq!(payload(), before_payload);
+    let redone = session.edit(undone.revision, RigEdit::Redo).unwrap();
+    assert!(redone.dirty && redone.can_undo && !redone.can_redo);
+    assert_eq!(payload(), after_payload);
+    let destination = dir.path().join("outline-portable/reopened.fbones");
+    session
+        .save_snapshot(session.prepare_save(true).unwrap(), destination.clone())
+        .unwrap();
+    let saved_payload = payload();
+    session.close(false).unwrap();
+    let reopened = session
+        .replace(open_document(destination).unwrap(), false)
+        .unwrap();
+    assert!(!reopened.inspection_only && !reopened.dirty);
+    assert_eq!(payload(), saved_payload);
+    assert_eq!(std::fs::read(source_path).unwrap(), source_bytes);
+}
+
+#[test]
+fn generate_mesh_rejects_stale_leases_weighted_meshes_and_live_or_stored_deform() {
+    assert_mesh_topology_authoring_guards(|id| RigEdit::GenerateMeshVertices { id });
+}
+
+#[test]
+fn new_mesh_outline_rejects_stale_leases_weighted_meshes_and_live_or_stored_deform() {
+    assert_mesh_topology_authoring_guards(|id| RigEdit::ReplaceMeshOutline {
+        id,
+        uvs: vec![[0., 0.], [1., 0.], [1., 1.], [0., 1.]],
+    });
+}
+
+fn assert_mesh_topology_authoring_guards(mesh_edit: impl Fn(u64) -> RigEdit) {
+    use crate::evaluation::{EvaluationMode, EvaluationRequest};
+    use serde_json::json;
+
+    let (_dir, session, project, _) = generate_mesh_fixture();
+    let target = project.slots[0].attachments[0].id;
+    let weighted = project.slots[0].attachments[1].id;
+    let active_region = project.slots[0].active_attachment_id.unwrap();
+    let payload = || encode_scene_payload(&scene_model(&session)).unwrap();
+    let reject =
+        |before: &ProjectSummary, error: &str, edit: &dyn Fn() -> Result<ProjectSummary, AppError>| {
+            let bytes = payload();
+            assert_eq!(edit().unwrap_err().code, error);
+            assert_eq!(
+                serde_json::to_value(session.summary().unwrap().unwrap()).unwrap(),
+                serde_json::to_value(before).unwrap()
+            );
+            assert_eq!(payload(), bytes);
+        };
+    let stale = evaluated(&session, &project, EvaluationMode::None, 0.);
+    evaluated(&session, &project, EvaluationMode::None, 0.);
+    reject(&project, "StalePose", &|| {
+        session.edit_in_pose(project.revision, stale.pose_epoch, mesh_edit(target))
+    });
+    reject(&project, "ProjectChanged", &|| {
+        session.edit(project.revision - 1, mesh_edit(target))
+    });
+    reject(&project, "InvalidMesh", &|| {
+        session.edit(project.revision, mesh_edit(active_region))
+    });
+    let slot = project.slots[0].id;
+    let owner = project.bones[0].id;
+    let project = command(
+        &session,
+        &project,
+        json!({"type":"attachmentEdit","id":weighted,"edit":{"type":"convertMesh","id":slot}}),
+    );
+    let project = command(
+        &session,
+        &project,
+        json!({"type":"bindAttachment","id":weighted,"bones":[owner]}),
+    );
+    assert!(project.slots[0].attachments[1].mesh.as_ref().unwrap().weighted);
+    reject(&project, "InvalidMesh", &|| {
+        session.edit(project.revision, mesh_edit(weighted))
+    });
+    let project = command(
+        &session,
+        &project,
+        json!({"type":"createAnimation","name":"Other clip owns Deform"}),
+    );
+    let animation = project.edited_animation.unwrap();
+    let animate_pose = session
+        .evaluate(
+            project.revision,
+            EvaluationRequest {
+                animation_id: Some(animation),
+                animation_pose: None,
+                constraint_pose: None,
+                draw_order_pose: None,
+                deform_targets: vec![],
+                deform_pose: None,
+                from_pose_epoch: None,
+                mode: EvaluationMode::Replay,
+                time: 0.,
+                motion: None,
+            },
+        )
+        .unwrap();
+    reject(&project, "InvalidPose", &|| {
+        session.edit_in_pose(project.revision, animate_pose.pose_epoch, mesh_edit(target))
+    });
+    let mut offsets = vec![0.; 16];
+    offsets[2] = 4.;
+    let project = command(
+        &session,
+        &project,
+        json!({"type":"setAnimationDeformKeys","animation":animation,"keys":[
+            {"attachment":target,"frame":0,"offsets":offsets,"dataPresent":true,"curve":"linear"}
+        ]}),
+    );
+    let key = project.animations.iter().find(|clip| clip.id == animation).unwrap()
+        .deform_tracks[0].keys[0].id;
+    let project = command(
+        &session,
+        &project,
+        json!({"type":"createAnimation","name":"Unrelated current clip"}),
+    );
+    assert_ne!(project.edited_animation, Some(animation));
+    reject(&project, "InvalidAnimation", &|| {
+        session.edit(project.revision, mesh_edit(target))
+    });
+
+    let project = command(
+        &session,
+        &project,
+        json!({"type":"storeAnimationKeys","animation":animation}),
+    );
+    let project = command(
+        &session,
+        &project,
+        json!({"type":"deleteAnimationKeys","animation":animation,"keys":[key]}),
+    );
+    assert!(project.animations.iter().all(|clip| clip.deform_tracks.is_empty()));
+    let stored = project.stored_animation.as_ref().unwrap();
+    assert_eq!(stored.deform_tracks[0].attachment, target);
+    assert_eq!(stored.deform_tracks[0].keys[0].id, key);
+    reject(&project, "InvalidAnimation", &|| {
+        session.edit(project.revision, mesh_edit(target))
+    });
+}
+
+#[test]
+fn paste_weights_maps_ordered_rows_and_exact_words_in_one_session_edit() {
+    use crate::{evaluation::EvaluationMode, rig::PasteWeightRow};
+    use fbones_format::minimal::{meshes::Vertex, scene::encode_scene};
+    use serde_json::json;
+
+    fn rows_mut(a: &mut SceneAttachment) -> &mut [Vertex] {
+        match a {
+            SceneAttachment::Mesh(m) => &mut m.vertices,
+            SceneAttachment::Clipping(c) => &mut c.vertices,
+            SceneAttachment::Region(_) | SceneAttachment::Path(_) => panic!("weighted fixture"),
+        }
+    }
+
+    for clip in [false, true] {
+        let (d, s, p, _, _) = scoped_auto_fixture(clip, false);
+        add_bone(&s, &p, 0);
+        let slot = if clip { 0 } else { 1 };
+        let mut fixture = scene_model(&s);
+        fixture.images_root = "./source".into();
+        let owner = fixture.slots[slot].bone;
+        let attachment = &mut fixture.slots[slot].attachments[0];
+        let bones = match &*attachment {
+            SceneAttachment::Mesh(m) => m.bones.clone(),
+            SceneAttachment::Clipping(c) => c.bones.clone(),
+            SceneAttachment::Region(_) | SceneAttachment::Path(_) => panic!("weighted fixture"),
+        };
+        assert_eq!(bones.len(), 3);
+        let world = crate::rig::poses(&fixture.rig.bones);
+        let points = geometry_points(attachment, owner, &world);
+        let rows = rows_mut(attachment);
+        for (row, [x, y]) in rows.iter_mut().zip(points) {
+            row.positions = bones
+                .iter()
+                .flat_map(|&bone| {
+                    let (x, y) = world[bone].inverse().unwrap().point(x, y);
+                    [x, y]
+                })
+                .collect();
+        }
+        rows[1].weights = vec![0.5, 0.5, -0.0];
+        rows[3].weights = vec![0., 0.75, 0.25];
+        rows[3].positions[0] += 1.;
+        let source = d.path().join("paste-input.spine");
+        let source_bytes = encode_scene(&fixture).unwrap();
+        std::fs::write(&source, &source_bytes).unwrap();
+        let p = s
+            .replace(open_document(source.clone()).unwrap(), true)
+            .unwrap();
+        assert!(!p.inspection_only);
+        let id = p.slots[slot].attachments[0].id;
+        let sibling = p.slots[slot].active_attachment_id.unwrap();
+        assert_ne!(id, sibling);
+        let [first, second, locked] = [bones[0], bones[1], bones[2]].map(|bone| p.bones[bone].id);
+        let unbound = p.bones.last().unwrap().id;
+        let p = if clip {
+            command(
+                &s,
+                &p,
+                json!({"type":"addConstraint","constraint":{"type":"physics","name":"Paste lease","bone":second,"x":1,"wind":10,"strength":20}}),
+            )
+        } else {
+            p
+        };
+        let columns = vec![locked, first, second];
+        let copied = vec![
+            PasteWeightRow {
+                vertex: 3,
+                weight_bits: [0.25, 0.5, 0.25].map(f32::to_bits).to_vec(),
+            },
+            PasteWeightRow {
+                vertex: 1,
+                weight_bits: [-0.0, -0.0, 1.].map(f32::to_bits).to_vec(),
+            },
+        ];
+        let paste = |bones, rows| RigEdit::PasteAttachmentWeights {
+            id,
+            bones,
+            rows,
+            locked_bones: Some(vec![locked]),
+        };
+        let edit = || paste(columns.clone(), copied.clone());
+        let before = scene_model(&s);
+        let payload = || encode_scene_payload(&scene_model(&s)).unwrap();
+        let initial = payload();
+        let dto = serde_json::to_value(&p).unwrap();
+        let reject = |result: Result<ProjectSummary, AppError>, error: &str| {
+            assert_eq!(result.unwrap_err().code, error);
+            assert_eq!(payload(), initial);
+            assert_eq!(
+                serde_json::to_value(s.summary().unwrap().unwrap()).unwrap(),
+                dto
+            );
+        };
+        reject(s.edit(p.revision - 1, edit()), "ProjectChanged");
+        let epoch = if clip {
+            reject(s.edit(p.revision, edit()), "PoseRequired");
+            let stale = evaluated(&s, &p, EvaluationMode::Replay, 0.).pose_epoch;
+            let current = evaluated(&s, &p, EvaluationMode::Replay, 0.).pose_epoch;
+            reject(s.edit_in_pose(p.revision, stale, edit()), "StalePose");
+            Some(current)
+        } else {
+            None
+        };
+        let apply = |edit| match epoch {
+            Some(epoch) => s.edit_in_pose(p.revision, epoch, edit),
+            None => s.edit(p.revision, edit),
+        };
+        reject(
+            apply(paste(vec![locked, first, unbound], copied.clone())),
+            "InvalidBinding",
+        );
+        reject(
+            apply(paste(vec![locked, first, u64::MAX], copied.clone())),
+            "InvalidSceneEdit",
+        );
+        for invalid in [
+            PasteWeightRow {
+                vertex: 3,
+                ..copied[1].clone()
+            },
+            PasteWeightRow {
+                vertex: 999,
+                ..copied[1].clone()
+            },
+            PasteWeightRow {
+                vertex: 1,
+                weight_bits: vec![0, 0],
+            },
+            PasteWeightRow {
+                vertex: 1,
+                weight_bits: [f32::NAN, -0.0, 1.].map(f32::to_bits).to_vec(),
+            },
+            PasteWeightRow {
+                vertex: 1,
+                weight_bits: [0.0, -0.0, 1.].map(f32::to_bits).to_vec(),
+            },
+        ] {
+            reject(
+                apply(paste(columns.clone(), vec![copied[0].clone(), invalid])),
+                "InvalidBinding",
+            );
+        }
+        let mut expected = before;
+        let rows = rows_mut(&mut expected.slots[slot].attachments[0]);
+        assert_eq!(rows[1].weights[2].to_bits(), (-0.0_f32).to_bits());
+        rows[3].weights = vec![0.5, 0.25, 0.25];
+        rows[1].weights = vec![-0.0, 1., -0.0];
+        let expected = encode_scene_payload(&expected).unwrap();
+        let changed = apply(edit()).unwrap();
+        assert_eq!(changed.revision, p.revision + 1);
+        assert_eq!(changed.slots[slot].active_attachment_id, Some(sibling));
+        assert_eq!(payload(), expected);
+        let noop = if clip {
+            let pose = evaluated(&s, &changed, EvaluationMode::Replay, 0.);
+            s.edit_in_pose(changed.revision, pose.pose_epoch, edit())
+                .unwrap()
+        } else {
+            s.edit(changed.revision, edit()).unwrap()
+        };
+        assert_eq!(noop.revision, changed.revision);
+        let undone = s.edit(noop.revision, RigEdit::Undo).unwrap();
+        assert_eq!(payload(), initial);
+        assert!(undone.can_redo);
+        s.edit(undone.revision, RigEdit::Redo).unwrap();
+        assert_eq!(payload(), expected);
+        let destination = d.path().join("portable/paste.fbones");
+        s.save_snapshot(s.prepare_save(true).unwrap(), destination.clone())
+            .unwrap();
+        let saved = payload();
+        s.close(false).unwrap();
+        let reopened = s
+            .replace(open_document(destination).unwrap(), false)
+            .unwrap();
+        assert!(!reopened.inspection_only && !reopened.dirty);
+        assert_eq!(payload(), saved);
+        assert_eq!(std::fs::read(source).unwrap(), source_bytes);
+    }
+}
+
+fn prune_fixture(crossing: bool) -> (tempfile::TempDir, Session, ProjectSummary, PathBuf, Vec<u8>) {
+    use fbones_format::minimal::scene::encode_scene;
+    use serde_json::json;
+
+    let (d, s, mut p) = inactive_weighted_clip_fixture();
+    p = s
+        .select_images_folder(p.revision, &d.path().join("source"))
+        .unwrap();
+    for _ in 0..4 {
+        p = add_bone(&s, &p, 0);
+    }
+    let slot = p.slots[1].id;
+    let mesh = p.slots[1].attachments[0].id;
+    let sibling = p.slots[1].attachments[1].id;
+    let p = command(
+        &s,
+        &p,
+        json!({"type":"setActiveAttachment","slot":slot,"attachment":sibling}),
+    );
+    command(
+        &s,
+        &p,
+        json!({"type":"attachmentEdit","id":mesh,"edit":{"type":"convertMesh","id":slot}}),
+    );
+    let mut model = scene_model(&s);
+    model.images_root = "./source".into();
+    // Binding order deliberately disagrees with project bone order at the tie.
+    let bones = [5, 3, 0, 1, 2, 4];
+    let world = crate::rig::poses(&model.rig.bones);
+    let local = |bone: usize, [x, y]: [f32; 2]| {
+        let (x, y) = world[bone].inverse().unwrap().point(x, y);
+        [x, y]
+    };
+    let positions = |point: [f32; 2]| {
+        let mut coordinates = bones
+            .iter()
+            .flat_map(|&bone| local(bone, point))
+            .collect::<Vec<_>>();
+        coordinates[11] = -0.;
+        coordinates
+    };
+    let mesh = model.slots[1].attachments[0].mesh_mut().unwrap();
+    let points = crate::mesh::world_vertices(mesh, &world);
+    mesh.weighted = true;
+    mesh.bones = bones.to_vec();
+    let mesh_weights = [
+        [0.5, 0.25, 0.125, 0.0625, 0.0625, -0.0],
+        [0.375, 0.25, 0.25, 0.0625, 0.0625, -0.0],
+        [0.1015625, 0.1015625, 0.09375, 0.078125, 0.625, -0.0],
+        [0.50004, 0.5, 0.0, 0.0, 0.0, -0.0],
+    ];
+    assert_eq!(mesh.vertices.len(), mesh_weights.len());
+    for ((row, point), weights) in mesh.vertices.iter_mut().zip(points).zip(mesh_weights) {
+        row.positions = positions(point);
+        row.weights = weights.to_vec();
+    }
+    let clip = model.slots[0].attachments[0].clipping_mut().unwrap();
+    clip.bones = bones.to_vec();
+    let square = [[0., 0.], [40., 0.], [40., 40.], [0., 40.]];
+    assert_eq!(clip.vertices.len(), square.len());
+    for (vertex, (row, point)) in clip.vertices.iter_mut().zip(square).enumerate() {
+        row.weights = if vertex == 0 && !crossing {
+            vec![0.375, 0.25, 0.25, 0.0625, 0.0625, -0.0]
+        } else {
+            vec![1., 0., 0., 0., 0., -0.0]
+        };
+        row.positions = positions(point);
+        if vertex == 0 && crossing {
+            // The original square is valid. Removing column 1 crosses its far edge.
+            row.weights[..2].copy_from_slice(&[0.875, 0.125]);
+            row.positions[..2].copy_from_slice(&local(bones[0], [80., 20.]));
+            row.positions[2..4].copy_from_slice(&local(bones[1], [-560., -140.]));
+        }
+    }
+    crate::clip_edit::validate_polygon(clip, &world).unwrap();
+    let source = d.path().join("prune-input.spine");
+    let source_bytes = encode_scene(&model).unwrap();
+    std::fs::write(&source, &source_bytes).unwrap();
+    let p = s
+        .replace(open_document(source.clone()).unwrap(), true)
+        .unwrap();
+    assert!(!p.inspection_only && !p.can_undo && !p.can_redo);
+    (d, s, p, source, source_bytes)
+}
+
+#[test]
+fn prune_preview_and_apply_share_sparse_weights_and_one_atomic_history_step() {
+    use crate::{
+        evaluation::EvaluationMode,
+        rig::{PruneWeightsRequest, PruneWeightsTarget},
+    };
+
+    let (d, s, p, source, source_bytes) = prune_fixture(false);
+    let mesh = &p.slots[1].attachments[0];
+    let clip = &p.slots[0].attachments[0];
+    let bones = &mesh.mesh.as_ref().unwrap().bones;
+    assert!(bones[1] > bones[2]);
+    let request = PruneWeightsRequest {
+        targets: vec![
+            PruneWeightsTarget {
+                id: mesh.id,
+                locked_bones: Some(vec![bones[4], bones[5]]),
+            },
+            PruneWeightsTarget {
+                id: clip.id,
+                locked_bones: Some(vec![bones[3], bones[5]]),
+            },
+        ],
+        max_influences: 3,
+        threshold: 0.125,
+    };
+    let before = scene_model(&s);
+    let payload = || encode_scene_payload(&scene_model(&s)).unwrap();
+    let initial = payload();
+    let dto = serde_json::to_value(&p).unwrap();
+    let first = evaluated(&s, &p, EvaluationMode::Replay, 0.0);
+    let frozen = evaluated(&s, &p, EvaluationMode::Replay, 0.0);
+    let epoch = Some(frozen.pose_epoch);
+    let edit = || RigEdit::PruneAttachmentWeights {
+        request: request.clone(),
+    };
+    assert_eq!(
+        s.preview_prune_weights(p.revision - 1, request.clone(), epoch)
+            .err()
+            .unwrap()
+            .code,
+        "ProjectChanged"
+    );
+    assert_eq!(
+        s.preview_prune_weights(p.revision, request.clone(), Some(first.pose_epoch))
+            .err()
+            .unwrap()
+            .code,
+        "StalePose"
+    );
+    assert_eq!(
+        s.edit_in_pose(p.revision, first.pose_epoch, edit())
+            .unwrap_err()
+            .code,
+        "StalePose"
+    );
+    let impossible = PruneWeightsRequest {
+        max_influences: 1,
+        ..request.clone()
+    };
+    assert_eq!(
+        s.preview_prune_weights(p.revision, impossible.clone(), epoch)
+            .err()
+            .unwrap()
+            .code,
+        "InvalidBinding"
+    );
+    assert_eq!(
+        s.edit_in_pose(
+            p.revision,
+            frozen.pose_epoch,
+            RigEdit::PruneAttachmentWeights {
+                request: impossible
+            }
+        )
+        .unwrap_err()
+        .code,
+        "InvalidBinding"
+    );
+    let threshold_only = PruneWeightsRequest {
+        max_influences: 6,
+        ..request.clone()
+    };
+    let preview = s
+        .preview_prune_weights(p.revision, threshold_only, epoch)
+        .unwrap();
+    let row = &preview.targets[0].rows[0];
+    assert_eq!(row.vertex, 0);
+    assert!(
+        row.weights[2] > request.threshold,
+        "A weight equal to the threshold survives."
+    );
+    assert_eq!(row.weights[3], 0.);
+    assert_eq!(payload(), initial);
+    assert_eq!(
+        serde_json::to_value(s.summary().unwrap().unwrap()).unwrap(),
+        dto
+    );
+
+    let preview = s
+        .preview_prune_weights(p.revision, request.clone(), epoch)
+        .unwrap();
+    assert_eq!(
+        (preview.document_id, preview.revision, preview.pose_epoch),
+        (p.document_id, p.revision, epoch)
+    );
+    assert_eq!(preview.removed, 9);
+    let mesh_weights: [[f32; 6]; 3] = [
+        [0.625, 0.3125, 0., 0., 0.0625, -0.0],
+        [0.5625, 0.375, 0., 0., 0.0625, -0.0],
+        [0.375, 0., 0., 0., 0.625, -0.0],
+    ];
+    let clip_weights: [[f32; 6]; 1] = [[0.5625, 0.375, 0., 0.0625, 0., -0.0]];
+    let expected = [(mesh.id, &mesh_weights[..]), (clip.id, &clip_weights[..])];
+    assert_eq!(preview.targets.len(), expected.len());
+    for (target, (id, rows)) in preview.targets.iter().zip(expected) {
+        assert_eq!(target.id, id);
+        assert_eq!(target.rows.len(), rows.len());
+        for (vertex, (actual, expected)) in target.rows.iter().zip(rows).enumerate() {
+            assert_eq!(actual.vertex, vertex);
+            assert_eq!(
+                actual
+                    .weights
+                    .iter()
+                    .map(|w| w.to_bits())
+                    .collect::<Vec<_>>(),
+                expected.map(f32::to_bits)
+            );
+        }
+    }
+    assert_eq!(payload(), initial);
+    assert_eq!(
+        serde_json::to_value(s.summary().unwrap().unwrap()).unwrap(),
+        dto
+    );
+    let mut expected = before;
+    for (row, weights) in expected.slots[1].attachments[0]
+        .mesh_mut()
+        .unwrap()
+        .vertices
+        .iter_mut()
+        .zip(mesh_weights)
+    {
+        row.weights.copy_from_slice(&weights);
+    }
+    expected.slots[0].attachments[0]
+        .clipping_mut()
+        .unwrap()
+        .vertices[0]
+        .weights
+        .copy_from_slice(&clip_weights[0]);
+    let expected = encode_scene_payload(&expected).unwrap();
+    let changed = s
+        .edit_in_pose(p.revision, frozen.pose_epoch, edit())
+        .unwrap();
+    assert_eq!(changed.revision, p.revision + 1);
+    assert_eq!(payload(), expected);
+    let undone = s.edit(changed.revision, RigEdit::Undo).unwrap();
+    assert_eq!(payload(), initial);
+    assert!(!undone.dirty && !undone.can_undo && undone.can_redo);
+    let neutral = PruneWeightsRequest {
+        max_influences: 128,
+        threshold: 0.,
+        ..request
+    };
+    let preview = s
+        .preview_prune_weights(undone.revision, neutral.clone(), None)
+        .unwrap();
+    assert_eq!(preview.removed, 0);
+    assert!(preview.targets.is_empty());
+    let noop = s
+        .edit(
+            undone.revision,
+            RigEdit::PruneAttachmentWeights { request: neutral },
+        )
+        .unwrap();
+    assert_eq!(noop.revision, undone.revision);
+    assert!(noop.can_redo);
+    s.edit(noop.revision, RigEdit::Redo).unwrap();
+    assert_eq!(payload(), expected);
+
+    let destination = d.path().join("portable/prune.fbones");
+    s.save_snapshot(s.prepare_save(true).unwrap(), destination.clone())
+        .unwrap();
+    let saved = payload();
+    s.close(false).unwrap();
+    let p = s
+        .replace(open_document(destination).unwrap(), false)
+        .unwrap();
+    assert!(!p.inspection_only && !p.dirty);
+    assert_eq!(payload(), saved);
+    assert_eq!(std::fs::read(source).unwrap(), source_bytes);
+}
+
+#[test]
+fn prune_crossing_clip_rejects_the_whole_mesh_and_clipping_batch() {
+    use crate::rig::{PruneWeightsRequest, PruneWeightsTarget};
+
+    let (_d, s, p, _, _) = prune_fixture(true);
+    let payload = || encode_scene_payload(&scene_model(&s)).unwrap();
+    let initial = payload();
+    let dto = serde_json::to_value(&p).unwrap();
+    let mut request = PruneWeightsRequest {
+        targets: vec![PruneWeightsTarget {
+            id: p.slots[1].attachments[0].id,
+            locked_bones: None,
+        }],
+        max_influences: 1,
+        threshold: 0.,
+    };
+    assert!(
+        s.preview_prune_weights(p.revision, request.clone(), None)
+            .unwrap()
+            .removed
+            > 0
+    );
+    request.targets.push(PruneWeightsTarget {
+        id: p.slots[0].attachments[0].id,
+        locked_bones: None,
+    });
+    assert_eq!(
+        s.preview_prune_weights(p.revision, request.clone(), None)
+            .err()
+            .unwrap()
+            .code,
+        "InvalidClipping"
+    );
+    assert_eq!(payload(), initial);
+    assert_eq!(
+        s.edit(p.revision, RigEdit::PruneAttachmentWeights { request })
+            .unwrap_err()
+            .code,
+        "InvalidClipping"
+    );
+    assert_eq!(payload(), initial);
+    assert_eq!(
+        serde_json::to_value(s.summary().unwrap().unwrap()).unwrap(),
+        dto
+    );
+}
+
+#[test]
+fn update_attachment_bindings_recaptures_the_frozen_shape_and_keeps_weight_words() {
+    use crate::{evaluation::EvaluationMode, rig::Pose};
+    use fbones_format::minimal::{meshes::Vertex, scene::encode_scene};
+    use serde_json::json;
+
+    fn rows_mut(a: &mut SceneAttachment) -> &mut [Vertex] {
+        match a {
+            SceneAttachment::Mesh(m) => &mut m.vertices,
+            SceneAttachment::Clipping(c) => &mut c.vertices,
+            SceneAttachment::Region(_) | SceneAttachment::Path(_) => panic!("weighted fixture"),
+        }
+    }
+
+    fn project(pose: Pose, local: &[f32]) -> [f64; 2] {
+        let (x, y) = (f64::from(local[0]), f64::from(local[1]));
+        [
+            f64::from(pose.x) + f64::from(pose.a) * x + f64::from(pose.c) * y,
+            f64::from(pose.y) + f64::from(pose.b) * x + f64::from(pose.d) * y,
+        ]
+    }
+
+    for clip in [false, true] {
+        let (d, s, _, _, _) = scoped_auto_fixture(clip, false);
+        let slot = if clip { 0 } else { 1 };
+        let mut fixture = scene_model(&s);
+        fixture.images_root = "./source".into();
+        let attachment = &mut fixture.slots[slot].attachments[0];
+        let bones = if let Some(mesh) = attachment.mesh() {
+            mesh.bones.clone()
+        } else {
+            attachment.clipping().unwrap().bones.clone()
+        };
+        let row = &mut rows_mut(attachment)[0];
+        assert_eq!(row.weights[0], 0.);
+        row.weights = vec![-0., 0.75, 0.25005];
+        row.positions[..2].copy_from_slice(&[-33.25, -0.]);
+        let source = d.path().join("binding-input.spine");
+        let source_bytes = encode_scene(&fixture).unwrap();
+        std::fs::write(&source, &source_bytes).unwrap();
+        let p = s
+            .replace(open_document(source.clone()).unwrap(), true)
+            .unwrap();
+        assert!(!p.inspection_only);
+
+        let id = p.slots[slot].attachments[0].id;
+        let active = p.slots[slot].active_attachment_id.unwrap();
+        assert_ne!(id, active);
+        let child = p.bones[bones[1]].id;
+        let p = s
+            .edit(p.revision, RigEdit::Move { id: child, x: 19., y: 10. })
+            .unwrap();
+        let p = command(
+            &s,
+            &p,
+            json!({"type":"create","parent":0,"x":69,"y":10,"rotation":0,"length":0}),
+        );
+        let target = p.edited_bone.unwrap();
+        let p = command(
+            &s,
+            &p,
+            json!({"type":"addConstraint","constraint":{"type":"ik","name":"Binding pose goal","bones":[child],"target":target}}),
+        );
+        let p = command(
+            &s,
+            &p,
+            json!({"type":"createAnimation","name":"Distinct pose context"}),
+        );
+        let animation = p.edited_animation.unwrap();
+        let p = s
+            .save_snapshot(s.prepare_save(true).unwrap(), d.path().join("baseline/setup.fbones"))
+            .unwrap();
+
+        let before = scene_model(&s);
+        let initial = encode_scene_payload(&before).unwrap();
+        let payload = || encode_scene_payload(&scene_model(&s)).unwrap();
+        let edit = || RigEdit::UpdateAttachmentBindings { id };
+        let first = evaluated(&s, &p, EvaluationMode::Replay, 0.0);
+        let animated = s
+            .evaluate(
+                p.revision,
+                serde_json::from_value(json!({"mode":"replay","time":0,"animationId":animation}))
+                    .unwrap(),
+            )
+            .unwrap();
+        assert_eq!(animated.animation_id, Some(animation));
+        let dto = serde_json::to_value(&p).unwrap();
+        let rejected = |result: Result<ProjectSummary, AppError>, code: &str| {
+            assert_eq!(result.unwrap_err().code, code);
+            assert_eq!(payload(), initial);
+            assert_eq!(
+                serde_json::to_value(s.summary().unwrap().unwrap()).unwrap(),
+                dto
+            );
+        };
+        rejected(s.edit(p.revision - 1, edit()), "ProjectChanged");
+        rejected(s.edit(p.revision, edit()), "PoseRequired");
+        rejected(s.edit_in_pose(p.revision, first.pose_epoch, edit()), "StalePose");
+        rejected(s.edit_in_pose(p.revision, animated.pose_epoch, edit()), "InvalidPose");
+
+        let frozen = evaluated(&s, &p, EvaluationMode::Replay, 0.0);
+        let world = snapshot_poses(&frozen);
+        let authored = crate::rig::poses(&before.rig.bones);
+        let axis = bones[1];
+        assert!((world[axis].b - authored[axis].b).abs() > 0.05);
+        let changed = s
+            .edit_in_pose(p.revision, frozen.pose_epoch, edit())
+            .unwrap();
+        assert_eq!(changed.revision, p.revision + 1);
+        assert_eq!(changed.edited_attachment, Some(id));
+        assert_eq!(changed.slots[slot].active_attachment_id, Some(active));
+        let mut after = scene_model(&s);
+        let captured = payload();
+        assert_ne!(captured, initial);
+        let original = dense_rows(&before.slots[slot].attachments[0]);
+        assert_eq!(original[0].weights[0].to_bits(), (-0.0_f32).to_bits());
+        assert!(original.iter().all(|row| row.weights[0] == 0.));
+        let updated = rows_mut(&mut after.slots[slot].attachments[0]);
+        assert_eq!(original.len(), updated.len());
+        for (index, (old, new)) in original.iter().zip(updated).enumerate() {
+            let mut visible = [0.0, 0.0];
+            let mass = old.weights.iter().map(|&weight| f64::from(weight)).sum::<f64>();
+            let weights = old.weights.iter().map(|&weight| f64::from(weight));
+            for (column, (&bone, weight)) in bones.iter().zip(weights).enumerate() {
+                let point = project(world[bone], &old.positions[column * 2..]);
+                for axis in 0..2 {
+                    visible[axis] += point[axis] * weight;
+                }
+            }
+            let anchor = visible.map(|axis| axis / mass);
+            if index == 0 {
+                assert!((mass - 1.).abs() > 4e-5);
+                assert!((anchor[0] - visible[0]).hypot(anchor[1] - visible[1]) > 2e-4);
+                assert_ne!(new.positions[..2], old.positions[..2]);
+            }
+            let mut rendered = [0.0, 0.0];
+            for (column, &bone) in bones.iter().enumerate() {
+                let point = project(world[bone], &new.positions[column * 2..]);
+                for axis in 0..2 {
+                    assert!((point[axis] - anchor[axis]).abs() < 7e-5);
+                    rendered[axis] += point[axis] * f64::from(new.weights[column]);
+                }
+            }
+            for axis in 0..2 {
+                assert!((rendered[axis] - visible[axis]).abs() < 7e-5);
+            }
+            new.positions.clone_from(&old.positions);
+        }
+        assert_eq!(encode_scene_payload(&after).unwrap(), initial);
+
+        let repeated_pose = evaluated(&s, &changed, EvaluationMode::Replay, 0.0);
+        let repeated = s
+            .edit_in_pose(changed.revision, repeated_pose.pose_epoch, edit())
+            .unwrap();
+        assert_eq!(repeated.revision, changed.revision);
+        assert_eq!(payload(), captured);
+        let undone = s.edit(changed.revision, RigEdit::Undo).unwrap();
+        assert_eq!(payload(), initial);
+        assert!(!undone.dirty && undone.can_redo);
+        let _redone = s.edit(undone.revision, RigEdit::Redo).unwrap();
+        assert_eq!(payload(), captured);
+        let destination = d.path().join("portable/bindings.fbones");
+        s.save_snapshot(s.prepare_save(true).unwrap(), destination.clone())
+            .unwrap();
+        let saved = payload();
+        s.close(false).unwrap();
+        let p = s.replace(open_document(destination).unwrap(), false).unwrap();
+        assert!(!p.inspection_only && !p.dirty);
+        assert_eq!(payload(), saved);
+        assert_eq!(std::fs::read(source).unwrap(), source_bytes);
+
+        let dormant = &p.bones[bones[0]];
+        let p = command(
+            &s,
+            &p,
+            json!({"type":"update","id":dormant.id,"name":dormant.name,"x":dormant.x,"y":dormant.y,"length":dormant.length,"rotation":dormant.rotation,"scaleX":0,"scaleY":1}),
+        );
+        let pose = evaluated(&s, &p, EvaluationMode::Replay, 0.0);
+        let id = p.slots[slot].attachments[0].id;
+        let singular = payload();
+        assert_eq!(
+            s.edit_in_pose(p.revision, pose.pose_epoch, RigEdit::UpdateAttachmentBindings { id })
+                .unwrap_err()
+                .code,
+            "InvalidBone"
+        );
+        assert_eq!(payload(), singular);
+        assert_eq!(
+            serde_json::to_value(s.summary().unwrap().unwrap()).unwrap(),
+            serde_json::to_value(&p).unwrap()
+        );
+    }
+}
+#[test]
+fn scene_swap_attachment_weights_preserves_bits_history_and_portable_roundtrip() {
+    use fbones_format::minimal::{meshes::Vertex, scene::encode_scene};
+    use serde_json::json;
+
+    fn binding(a: &mut SceneAttachment) -> (&mut Vec<usize>, &mut [Vertex]) {
+        match a {
+            SceneAttachment::Mesh(m) => (&mut m.bones, &mut m.vertices),
+            SceneAttachment::Clipping(c) => (&mut c.bones, &mut c.vertices),
+            SceneAttachment::Region(_) | SceneAttachment::Path(_) => panic!("weighted fixture"),
+        }
+    }
+
+    for clip in [false, true] {
+        let (d, s, p, _, _) = scoped_auto_fixture(clip, false);
+        let p = add_bone(&s, &p, 0);
+        let fourth = p.bones.len() - 1;
+        let _p = add_bone(&s, &p, 0);
+        let slot = if clip { 0 } else { 1 };
+        let mut fixture = scene_model(&s);
+        fixture.images_root = "./source".into();
+        let poses = crate::rig::poses(&fixture.rig.bones);
+        let owner = fixture.slots[slot].bone;
+        let target = &mut fixture.slots[slot].attachments[0];
+        let points = geometry_points(target, owner, &poses);
+        let (bones, rows) = binding(target);
+        bones.push(fourth);
+        let columns = [bones[0], bones[1], bones[2], bones[3]];
+        assert!(rows.len() > 2);
+        for (index, (row, [x, y])) in rows.iter_mut().zip(points).enumerate() {
+            // The first and third columns agree bit for bit in every row.
+            row.weights = match index {
+                0 => vec![0., -0., 0., 1.],
+                1 => vec![0.125, 0.375, 0.125, 0.375],
+                _ => vec![0.25, 0.25, 0.25, 0.25],
+            };
+            row.positions = columns
+                .iter()
+                .flat_map(|&bone| {
+                    let (local_x, local_y) = poses[bone].inverse().unwrap().point(x, y);
+                    [local_x, local_y]
+                })
+                .collect();
+        }
+        rows[0].positions[0] = -0.;
+
+        let source = d.path().join("swap-input.spine");
+        let source_bytes = encode_scene(&fixture).unwrap();
+        std::fs::write(&source, &source_bytes).unwrap();
+        let p = s
+            .replace(open_document(source.clone()).unwrap(), true)
+            .unwrap();
+        assert!(!p.inspection_only && !p.dirty && !p.can_undo && !p.can_redo);
+        let attachment = p.slots[slot].attachments[0].id;
+        let sibling = p.slots[slot].active_attachment_id.unwrap();
+        assert_ne!(attachment, sibling);
+        let [first, second, equal, protected] = columns.map(|bone| p.bones[bone].id);
+        let unbound = p.bones.last().unwrap().id;
+        let swap = |id, bones: [u64; 2], locks: &[u64]| -> RigEdit {
+            serde_json::from_value(json!({
+                "type":"swapAttachmentWeights", "id":id, "bones":bones, "lockedBones":locks,
+            }))
+            .unwrap()
+        };
+        let before = scene_model(&s);
+        let payload = || encode_scene_payload(&scene_model(&s)).unwrap();
+        let initial = payload();
+        let dto = serde_json::to_value(&p).unwrap();
+        let mut expected = before.clone();
+        let (_, rows) = binding(&mut expected.slots[slot].attachments[0]);
+        assert_eq!(rows[0].weights[1].to_bits(), (-0.0_f32).to_bits());
+        for row in rows {
+            row.weights.swap(0, 1);
+        }
+        let expected = encode_scene_payload(&expected).unwrap();
+        assert_ne!(expected, initial);
+
+        let rejected = |revision, edit, error: &str| {
+            assert_eq!(s.edit(revision, edit).unwrap_err().code, error);
+            assert_eq!(payload(), initial);
+            assert_eq!(
+                serde_json::to_value(s.summary().unwrap().unwrap()).unwrap(),
+                dto
+            );
+        };
+        rejected(
+            p.revision - 1,
+            swap(attachment, [first, second], &[]),
+            "ProjectChanged",
+        );
+        for edit in [
+            swap(attachment, [first, first], &[]),
+            swap(attachment, [first, unbound], &[]),
+            swap(attachment, [first, second], &[second]),
+        ] {
+            rejected(p.revision, edit, "InvalidBinding");
+        }
+        rejected(
+            p.revision,
+            swap(sibling, [first, second], &[]),
+            "InvalidSceneEdit",
+        );
+        let changed = s
+            .edit(p.revision, swap(attachment, [first, second], &[protected]))
+            .unwrap();
+        assert_eq!(changed.revision, p.revision + 1);
+        assert_eq!(changed.edited_attachment, Some(attachment));
+        assert_eq!(changed.slots[slot].active_attachment_id, Some(sibling));
+        assert_eq!(payload(), expected);
+        let undone = s.edit(changed.revision, RigEdit::Undo).unwrap();
+        assert_eq!(payload(), initial);
+        assert!(!undone.dirty && !undone.can_undo && undone.can_redo);
+        let unchanged = s
+            .edit(undone.revision, swap(attachment, [first, equal], &[]))
+            .unwrap();
+        assert_eq!(
+            serde_json::to_value(&unchanged).unwrap(),
+            serde_json::to_value(&undone).unwrap()
+        );
+        assert_eq!(payload(), initial);
+        s.edit(unchanged.revision, RigEdit::Redo).unwrap();
+        assert_eq!(payload(), expected);
+
+        let saved = d.path().join("portable/swap.fbones");
+        s.save_snapshot(s.prepare_save(true).unwrap(), saved.clone())
+            .unwrap();
+        let saved_payload = payload();
+        let bits = attachment_binding_bits(&scene_model(&s).slots[slot].attachments[0]);
+        assert_eq!(bits[0], (-0.0_f32).to_bits());
+        assert_eq!(bits[1], 0.0_f32.to_bits());
+        s.close(false).unwrap();
+        let reopened = s.replace(open_document(saved).unwrap(), false).unwrap();
+        assert!(!reopened.inspection_only && !reopened.dirty);
+        assert_eq!(payload(), saved_payload);
+        assert_eq!(std::fs::read(source).unwrap(), source_bytes);
     }
 }
 #[test]

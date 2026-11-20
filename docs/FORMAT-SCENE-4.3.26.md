@@ -22,9 +22,9 @@ bridge must map stable session IDs at its boundary.
   attachment order independently of both slot order and active attachments.
   It must contain every inventory member exactly once. Reordering/removing a
   slot or attachment must remap these addresses, not regenerate them blindly.
-- `SceneAttachment` has distinct `Region`, `Mesh(Box<Mesh>)` and `Clipping`
-  variants. `image()` returns `Option<&Region>`; clipping has no PNG, UVs or
-  region transform. There is no image `Deref` or synthetic region for clipping.
+- `SceneAttachment` has distinct `Region`, `Mesh(Box<Mesh>)`, `Clipping` and
+  `Path` variants. `image()` returns `Option<&Region>`. Clipping and Path have
+  no PNG, UVs or region transform.
 - `Clipping` contains a name, endpoint slot index, independent `convex` and
   `inverse` booleans, RGBA editor color, weighted flag, binding bone indices,
   dense binding `Vertex` values and edge pairs. Ownership by its slot is the
@@ -33,7 +33,7 @@ bridge must map stable session IDs at its boundary.
   require `Some(valid_slot)`**. Original 4.3.26 rejects a raw null endpoint during
   deserialization. Runtime JSON's omitted endpoint is materialized as the last
   slot by the observed original import; it is not a null editor reference.
-- `Constraint` is an ordered enum of `Ik`, `Transform` and `Physics`. This vector
+- `Constraint` is an ordered enum of `Ik`, `Transform`, `Path` and `Physics`. This vector
   is evaluation order; the proven wire Group108 children are written in reverse.
   Reordering or deleting bones must remap every constraint reference atomically.
 - IK carries one or two bones, target, mix, softness, bend direction, compress
@@ -83,6 +83,56 @@ remain independent in the model. Those whole GUI saves also contain additional
 unmodeled editor metadata; this codec does not accept them by stripping it.
 Field tables, controlled recipe commands and evidence classification are in
 `research/FEATURE-DATA-4.3.26.md` and `research/FEATURE-UI-4.3.26.md`.
+
+### Static Path attachments
+
+Exact Spine Professional 4.3.26 on Linux produced six editable controls covering
+open and closed paths, Constant Speed on and off, omitted defaults and one
+weighted binding, plus a Path and Region project. All seven passed independent
+full-payload re-encoding. REA
+`ev_a8890b52f8bdff7ac7877051917f0c5126f0d20ebe6dc5fcc1e6c91c3f2927ba`
+identified Path69 tags 12 and 13 for Closed and Constant Speed, tag 15 for
+stored lengths, tag 28 for the self-owned Binding53, tag 30 for the weighted
+flag and tag 31 for editor color. Tag 7 holds four times the point count. Tag 8
+uses the wire-doubled integer-list encoding for successive cubic endpoints.
+The codec preserves the stored lengths and dense bindings in the project.
+The mixed project also establishes an alternate Region43 tag order retained
+per Region across edits. An independently encoded rename and slot reorder pass
+original Spine 4.3.26 CLI acceptance.
+The measured stock skeleton JSON uses cumulative distances evaluated in Setup
+world coordinates. Four equal-parameter chord steps per cubic reproduce the
+observed values within 0.00003 on the mixed fixture, including the wrapping
+cubic in the length table of an open path. The data does not establish the
+editor's internal arithmetic or behavior under unmeasured constraints.
+Path Deform and geometry authoring remain outside this slice.
+
+### Static Path constraints
+
+PathConstraint72 stores ordered constrained bones as Bone12 references in tag
+2 and a target Slot13 reference in tag 3. Skeleton11 tag 23 holds the per-family
+declaration array. Constraint tag 32 and Skeleton11 tag 44 reference the
+shared Group108, whose tag 5 lists runtime execution in reverse. Position,
+spacing and rotate modes are one-based enum values. The record stores separate
+rotation and X/Y translation mixes, position, spacing and rotation offset.
+The observed static records retain their complete typed form.
+
+The editor resolves the Path currently active in that target slot. This
+profile covers static constraints alongside existing supported clips and
+allows Setup activation changes. Path Deform and animation of the target
+slot's attachment remain outside editable admission.
+The format equality gate stays in effect for each source. Exact wire evidence
+and numeric scope are recorded in [the current project checkpoint](STATE.md).
+
+### Path constraint timelines
+
+Track132 kinds 9, 10 and 11 store Position, Spacing and combined Rotate/X/Y
+Mix. Position and Spacing each use one value and up to one Bézier control
+row. Mix uses three values and independent control rows. Frame coordinates
+in the editor payload are absolute. The runtime export writes seconds and
+preserves each axis's handle pair. All three track kinds target the typed
+PathConstraint72 reference and group under the target slot's bone. The stock
+control independently round-trips all 1,912 decoded bytes through the format
+crate and the desktop Session.
 
 Current bounds are our implementation limits: 128 bones, 128 slots,
 128 constraints, 512 attachments, 256 vertices per mesh/clip, 4096 combined
@@ -464,6 +514,130 @@ See `analysis/animation-geometry-ui-original-check.json` and
 `analysis/animation-draw-deform-format-check.json`. Native interaction and Windows
 delivery have separate gates; original GPU/gesture/Physics-clock parity is not
 implied. The following0.9.3 section extends this checkpoint with constraint/Event records.
+
+### Linked mesh deformation
+
+The paired weighted cross-slot projects produced by Spine Professional 4.3.26
+retain the same Mesh46/tag26 source reference and shared geometry when turning
+timeline inheritance on or off. Aside from project identity, the source-only
+pair differs at one byte, Mesh46/tag27. The source's kind-6 Deform record and
+keys are identical. With inheritance off, a child-owned deform adds a distinct
+kind-6 record targeting the child in its own slot bone's track group. Stock
+JSON omits `timelines` for inheritance on and emits `timelines: false` for off.
+The REA captures for the paired bytes and the record ownership are
+`ev_f3831f007d4a40a659c3a62eda2b7cbf31bd1ad4c81059dd8abe1f3eb20568ed` and
+`ev_4a17ca4d9445916a016c1efebef453c2c332b47657d29ebfdfc49babae4c64be`.
+
+The three stock CLI imports use an alternate order for Project, Skeleton,
+Bone, Slot, Animation, Track Group, Mesh, Binding and Group record tags.
+The codec recognizes the exact Project tag sequence and retains this known
+ordering for matching tagged records. All three projects independently
+re-encode to the original payloads of 1,364, 1,364 and 1,472 bytes. REA
+`ev_9c5fdb447ee7243e67d18cf016c50053bb4d9fffee7e773cdf541ebd188efe9a`
+captures the comparison and the typed Deform ownership on each fixture.
+
+The codec keeps both timeline identities, validates the direct source link and
+reuses the existing dense deformation record. An inheriting child uses its
+source's track. An independent child can own a separate track. The 4.3 runtime
+uses the timeline identity for both Deform and Sequence.
+[Spine 4.3 runtime attachment loader and timeline classes](https://github.com/EsotericSoftware/spine-runtimes/tree/4.3/spine-ts/spine-core/src)
+
+Exact Linux 4.3.26 stock controls use separate Mesh46/tag36 Sequence123
+settings for source and child, including different starts, padding, counts
+and Setup indices. The static child stores a null settings reference.
+REA `ev_bdf2f120e26be05842fed4f5604353c5734c8e2e12b2927749ed089186d89501`
+verified Kind22 attachment and slot identity within the owner's bone group.
+REA `ev_52d89ff5424e1fd3a428730eb4fe5d80f37b6b9122e58f75a4339476cf7ec473`
+verified stock export for inherited, independent and static children. Stock
+accepts and re-exports stored child Sequence keys even when inheritance is
+enabled, keeping the source and child tracks separate. REA
+`ev_142e6374ac0d87d0082d699fd2f489c32ba0af39bf4c7b5f57ee9480b2281dfd`
+captures that case. The installed Dice Drop 4.3.13 CPU runtime samples the
+owner's keys with the receiving attachment's own count and frame images,
+even when the source is hidden. It leaves the inherited child's own track
+dormant and a child without Sequence static. REA
+`ev_2174428fae43e8d46ec07636f768a8aa5709ee4647525add4151088877c70f84`
+records the consumer check.
+
+### Image Sequence direction modes
+
+Exact Spine Professional 4.3.26 Linux imported and exported a sample with
+four source-owned Sequence tracks on a direct linked pair. Kind22 stores the
+mode as exact f32: 3 maps to `pingpong`, 4 to `onceReverse`, 5 to
+`loopReverse`, and 6 to `pingpongReverse`. The two keys in each track
+kept frames 3.75/26.25, indices 1/2 and delays 0.125/0.25 seconds. The
+owner Slot13 and Mesh46 references match the existing Sequence record
+layout. REA
+`ev_2ede93bd169dae2097e20101cd0f40471b4abbea9791f125352144afa1891b25`
+captures the exact editor IO and
+`ev_12bfe37cddd43d3dd6ce6e24554d78a32f12e9c607f15399f2de87c705e875b6`
+captures the raw kind and enum fields. Mode values outside 0 through 6
+remain unsupported.
+
+The installed Dice Drop 4.3.13 CPU runtime probe verified 502 receiving
+frame selections at counts 1 through 4 and nonzero authored starts.
+Ping-pong cycles include each turnaround once and have period
+`2 × (count − 1)`. Reverse ping-pong shifts the phase by `count − 1`.
+A count of one always selects index zero. Linked receivers project the
+same raw phase with their own counts. REA
+`ev_9a5850be0915abbe66b8787fbd31fcae68be2daae54937ec60cbbef534753a8c`
+records the runtime witness. These observations do not establish the
+stock editor's key insertion gesture.
+
+Exact stock CLI JSON import rejected a mesh whose source was another linked
+mesh for all four combinations of the two inheritance flags. Matched inputs
+with both links targeting the root mesh imported and exported successfully.
+REA `ev_101cc9b32bffeb98f2e7eb31c666e697454d2758924797f17b76b86e4da36b7e`
+records the contrasting outputs. An owned binary variant changed only the
+leaf Mesh46/tag26 reference from the root mesh to the middle linked mesh.
+Spine loaded it with a repair warning and exported the leaf pointing directly
+to the root, keeping its inheritance flag and the middle mesh's independent
+Deform keys. The export was identical to the flat control. REA
+`ev_0c70f0143bc8b73a656b300e3a3e504c6fee14491334afdc2a90a9ba34a0fd55`
+establishes this read-time repair for the measured binary. FBones keeps these
+noncanonical source relationships guarded by the exact re-encode check.
+
+The Setup controls cover same-slot weighted, same-slot unweighted, and
+different-slot unweighted links. Together with the weighted different-slot
+control above, they match the direct-source record profile. REA
+`ev_e75e57fab655dc84d1546cf73919de4b2f48138ee8773adfc688e1652f415c1d`
+confirms stock import/export and
+`ev_e298ea4fcdde3c0a6b0af937a361296e73c085c69fd648281b87831d04ffeee3`
+confirms regular Mesh46/tag26 source, omitted-JSON `timelines` mapping
+to tag27 true, and independent Binding71 ownership with aliased geometry
+and bindings. Source and child store the same measured 8 × 12 mesh size
+in binary. A distinct child PNG of 10 × 14 exported with its own dimensions
+and image path. In the different-slot unweighted control the owner bone
+differs and the child still references the source's shared binding array.
+These files establish persistence and export, while dialog defaults require
+separate evidence.
+
+### Named animation folders
+
+The exact 4.3.26 mascot artifact has a `control` Group108 before `anticipation`
+in the editor tree. The flat Skeleton11/tag7 list places the two `control`
+clips after the fourteen root clips, in the same order as the companion stock
+JSON. The two groups use value 7 in tag2. The child uses the root's existing
+Group108 reference in tag3 and a nullable typed String in tag1. Each clip's
+Animation18/tag7 references its owning group. The REA process captures bound
+these observations to owned copies with the exact known artifact hashes.
+REA evidence `ev_b0d42e373cbbecf41b11df4f5be1d351d7e26b5dcc15f5832da823aeca4aa56b`,
+`ev_f1309f010ab693be79e1bd482fc8372d989dc3a2f1e66982c12beca4e72bd62c` and
+`ev_2eab956db680087539b1189314cfd9a7f2fc362c803db8a80108228c189abdfc`
+records the structure and ordering.
+
+The codec represents one level of named folders and keeps the flat animation
+indices, tree order and shared ownership. Each Animation18 name retains its
+leaf. The export name is derived from folder and leaf, such as
+`control/lumina_teal`. The full payload equality check still gates editing.
+On a copy of the exact mascot, the combined codec parsed 6,036 domain and
+4,200 generic records, decoded all sixteen clips and re-encoded the same
+308,755-byte payload. The preservation includes mode 7 for the four known
+non-animation groups and Project0/tag32's finite `0x4084f4a4` bits. REA
+`ev_e13223c9a9eed7379805779c0dbfe25d3af20b8870a4d8948067f1a2a8034dcc`
+captures the exact payload comparison and the prior four-byte mismatch.
+Stock acceptance of a newly encoded folder fixture is a separate check.
+Deeper folder trees are outside this profile.
 
 ## Constraint, Event and audio profile (0.9.3)
 

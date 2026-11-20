@@ -1,4 +1,4 @@
-export const dockPanels=['weights','mesh','tree','properties','ik','transform','physics'] as const;
+export const dockPanels=['weights','mesh','tree','properties','ik','transform','physics','curves','preview'] as const;
 export type DockPanelId=typeof dockPanels[number];
 export interface DockPanel {id:DockPanelId;visible:boolean;height:number}
 export interface DockColumn {id:string;width:number;panels:DockPanel[]}
@@ -6,14 +6,22 @@ export interface DockLayout {version:1;columns:DockColumn[]}
 export type DockTarget={column:string;before?:DockPanelId}|{column:string;split:'left'|'right'};
 export const dockStorageKey='fbones.dock-layout.v1';
 const clamp=(v:number,min:number,max:number)=>Math.min(max,Math.max(min,v));
-export function defaultDockLayout(compact=false):DockLayout{return{version:1,columns:[
- {id:'weights',width:240,panels:[{id:'weights',visible:!compact,height:1}]},
- {id:'mesh',width:220,panels:[{id:'mesh',visible:!compact,height:1}]},
- {id:'scene',width:290,panels:[{id:'tree',visible:true,height:.58},{id:'properties',visible:true,height:.42}]},
- ...(['ik','transform','physics'] as const).map(id=>({id,width:280,panels:[{id,visible:false,height:1}]})),
-]};}
+function closedCurvesPanel():DockPanel{return {id:'curves',visible:false,height:.40};}
+function closedPreviewPanel():DockPanel{return {id:'preview',visible:false,height:.40};}
+export function defaultDockLayout(compact=false,mode:'setup'|'animate'='setup'):DockLayout{
+ const animate=mode==='animate';
+ const scene:DockPanel[]=[{id:'tree',visible:true,height:.58},closedPreviewPanel(),{id:'properties',visible:true,height:.42}];
+ if(animate)scene.splice(1,0,closedCurvesPanel());
+ return {version:1,columns:[
+  {id:'weights',width:240,panels:[{id:'weights',visible:!compact,height:1}]},
+  {id:'mesh',width:220,panels:[{id:'mesh',visible:!compact&&!animate,height:1}]},
+  {id:'scene',width:290,panels:scene},
+  ...(['ik','transform','physics'] as const).map(id=>({id,width:280,panels:[{id,visible:false,height:1}]})),
+  ...(animate?[]:[{id:'curves',width:280,panels:[closedCurvesPanel()]}]),
+ ]};
+}
 /** Treat stored browser layout as untrusted UI input; never touches a project. */
-export function readDockLayout(raw:string|null,compact=false):DockLayout{
+export function readDockLayout(raw:string|null,compact=false,mode:'setup'|'animate'='setup'):DockLayout{
  try{
   const value=JSON.parse(raw??'null') as DockLayout;
   if(value?.version!==1||!Array.isArray(value.columns)||!value.columns.length||value.columns.length>dockPanels.length)throw Error();
@@ -23,8 +31,19 @@ export function readDockLayout(raw:string|null,compact=false):DockLayout{
    columns.add(column.id);column.width=clamp(column.width,180,520);
    for(const panel of column.panels){if(!dockPanels.includes(panel.id)||ids.has(panel.id)||typeof panel.visible!=='boolean'||!Number.isFinite(panel.height))throw Error();ids.add(panel.id);panel.height=clamp(panel.height,.15,2);}
   }
-  if(ids.size!==dockPanels.length)throw Error();return value;
- }catch{return defaultDockLayout(compact);}
+  if(dockPanels.some(id=>id!=='curves'&&id!=='preview'&&!ids.has(id)))throw Error();
+  if(!ids.has('curves')){
+   // Keep Curves next to the existing Properties/Animate Preview panel.
+   const panels=value.columns.find(column=>column.panels.some(panel=>panel.id==='properties'))!.panels;
+   panels.splice(panels.findIndex(panel=>panel.id==='properties'),0,closedCurvesPanel());
+  }
+  if(!ids.has('preview')){
+   const panels=value.columns.find(column=>column.panels.some(panel=>panel.id==='tree'))!.panels;
+   panels.splice(panels.findIndex(panel=>panel.id==='tree')+1,0,closedPreviewPanel());
+  }
+  dockPanel(value,mode==='setup'?'curves':'preview').visible=false;
+  return value;
+ }catch{return defaultDockLayout(compact,mode);}
 }
 export function dockPanel(layout:DockLayout,id:DockPanelId){return layout.columns.flatMap(c=>c.panels).find(p=>p.id===id)!;}
 export function cloneDockLayout(layout:DockLayout):DockLayout{return{version:1,columns:layout.columns.map(c=>({...c,panels:c.panels.map(p=>({...p}))}))};}

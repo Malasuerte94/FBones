@@ -5,7 +5,7 @@ use fbones_format::minimal::scene::{
     animation_layout, canonical_constraint_declarations, materialize_wire, normalize_wire_strings,
     AttachmentAddress, Constraint, ConstraintTimeline, SceneAttachment, SlotTimeline,
     WireAnimationGroup, WireAnimationLayout, WireAnimationOwner, WireConstraintChannel,
-    WireConstraintDeclarations, WireSlotChannel, WireStringOwner, WireTrack,
+    WireConstraintDeclarations, WireStringOwner, WireTrack,
 };
 use std::collections::HashSet;
 
@@ -75,12 +75,13 @@ impl Remap<'_> {
                     {
                         SceneAttachment::Region(_) => 13,
                         SceneAttachment::Mesh(_) => 14,
-                        SceneAttachment::Clipping(_) => return None,
+                        SceneAttachment::Clipping(_) | SceneAttachment::Path(_) => return None,
                     };
                 }
                 WireStringOwner::Attachment(address)
             }
             WireStringOwner::Animation(i) => WireStringOwner::Animation(self.animation(*i)?),
+            WireStringOwner::AnimationFolder(i) => WireStringOwner::AnimationFolder(*i),
             WireStringOwner::Constraint(i) => WireStringOwner::Constraint(self.constraint(*i)?),
             WireStringOwner::Event(i) => WireStringOwner::Event(self.event(*i)?),
         };
@@ -122,6 +123,67 @@ impl Remap<'_> {
         })
     }
 }
+
+/// Preserve the authored relationship when either attachment changes its wire
+/// address. The child's mesh is a derived view with its own image identity.
+pub(super) fn reconcile_linked_meshes(
+    before: &SceneFrame,
+    next: &mut SceneFrame,
+) -> Result<(), AppError> {
+    if next.project.linked_meshes.is_empty() {
+        return Ok(());
+    }
+    let remap = Remap { before, next };
+    let mut reconciled = Vec::with_capacity(next.project.linked_meshes.len());
+    // The pending relationships retain their previous addresses until this pass.
+    for original in &next.project.linked_meshes {
+        let Some(attachment) = remap.attachment(original.attachment) else {
+            continue;
+        };
+        let invalid_source = || {
+            AppError::new(
+                "InvalidSceneEdit",
+                "Remove linked children before deleting or replacing their source mesh.",
+            )
+        };
+        let source = remap
+            .attachment(original.source)
+            .ok_or_else(invalid_source)?;
+        let source_mesh = next.project.slots[source.slot].attachments[source.attachment]
+            .mesh()
+            .ok_or_else(invalid_source)?;
+        let previous_owner = before.project.slots[original.attachment.slot].bone;
+        let owner = next.project.slots[attachment.slot].bone;
+        if !source_mesh.weighted && next.bone_ids[owner] != before.bone_ids[previous_owner] {
+            return Err(AppError::new(
+                "InvalidSceneEdit",
+                "Changing the owner of an unweighted linked mesh would move its shared geometry.",
+            ));
+        }
+        let child = next.project.slots[attachment.slot].attachments[attachment.attachment]
+            .mesh()
+            .ok_or_else(|| {
+                AppError::new(
+                    "InvalidSceneEdit",
+                    "A linked attachment must remain a mesh.",
+                )
+            })?;
+        let mut mesh = source_mesh.clone();
+        mesh.image = child.image.clone();
+        let mut link = original.clone();
+        link.attachment = attachment;
+        link.source = source;
+        reconciled.push((link, mesh));
+    }
+    next.project.linked_meshes.clear();
+    for (link, mesh) in reconciled {
+        next.project.slots[link.attachment.slot].attachments[link.attachment.attachment] =
+            SceneAttachment::Mesh(Box::new(mesh));
+        next.project.linked_meshes.push(link);
+    }
+    Ok(())
+}
+
 fn append(groups: &mut Vec<WireAnimationGroup>, owner: WireAnimationOwner, track: WireTrack) {
     if let Some(group) = groups.iter_mut().find(|group| group.owner == owner) {
         group.tracks.push(track);
@@ -173,10 +235,7 @@ fn reorder<T: Clone>(
 fn slot_selector(track: &SlotTimeline) -> WireTrack {
     WireTrack::Slot {
         slot: track.slot(),
-        channel: match track {
-            SlotTimeline::Attachment { .. } => WireSlotChannel::Attachment,
-            SlotTimeline::Rgba { .. } => WireSlotChannel::Rgba,
-        },
+        channel: crate::animation_slots::channel(track),
     }
 }
 fn constraint_selector(track: &ConstraintTimeline) -> WireTrack {
@@ -185,6 +244,9 @@ fn constraint_selector(track: &ConstraintTimeline) -> WireTrack {
         channel: match track {
             ConstraintTimeline::Ik { .. } => WireConstraintChannel::Ik,
             ConstraintTimeline::TransformMix { .. } => WireConstraintChannel::TransformMix,
+            ConstraintTimeline::PathPosition { .. } => WireConstraintChannel::PathPosition,
+            ConstraintTimeline::PathSpacing { .. } => WireConstraintChannel::PathSpacing,
+            ConstraintTimeline::PathMix { .. } => WireConstraintChannel::PathMix,
             ConstraintTimeline::Physics { property, .. } => {
                 WireConstraintChannel::Physics(*property)
             }
@@ -228,6 +290,20 @@ pub(crate) fn reconcile(before: &SceneFrame, next: &mut SceneFrame) -> Result<()
             .filter_map(|index| remap.animation(*index))
             .collect();
         state.animation_3.sort_unstable();
+        state.region_43_order = std::mem::take(&mut state.region_43_order)
+            .into_iter()
+            .filter_map(|address| {
+                let address = remap.attachment(address)?;
+                matches!(
+                    next.project.slots[address.slot].attachments[address.attachment],
+                    SceneAttachment::Region(_)
+                )
+                .then_some(address)
+            })
+            .collect();
+        state
+            .region_43_order
+            .sort_by_key(|address| (address.slot, address.attachment));
         state.mesh_19 = std::mem::take(&mut state.mesh_19)
             .into_iter()
             .filter_map(|(address, value)| {
@@ -242,6 +318,13 @@ pub(crate) fn reconcile(before: &SceneFrame, next: &mut SceneFrame) -> Result<()
         state
             .mesh_19
             .sort_by_key(|(address, _)| (address.slot, address.attachment));
+        state.ik_56_order = state
+            .ik_56_order
+            .iter()
+            .filter_map(|index| remap.constraint(*index))
+            .filter(|index| matches!(next.project.constraints[*index], Constraint::Ik(_)))
+            .collect();
+        state.ik_56_order.sort_unstable();
         state.ik = std::mem::take(&mut state.ik)
             .into_iter()
             .filter_map(|mut value| {
@@ -459,6 +542,7 @@ fn reconcile_declarations(
     let mapped = WireConstraintDeclarations {
         ik: family(&previous.ik, &canonical.ik),
         transform: family(&previous.transform, &canonical.transform),
+        path: family(&previous.path, &canonical.path),
         physics: family(&previous.physics, &canonical.physics),
     };
     (mapped != canonical).then_some(mapped)

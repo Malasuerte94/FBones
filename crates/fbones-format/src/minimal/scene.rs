@@ -10,6 +10,8 @@ use super::{
 };
 use crate::FormatError;
 mod animation;
+pub(super) mod animation_folders;
+pub use animation_folders::{AnimationFolder, AnimationFolderEntry, AnimationFolderLayout};
 mod bezier_time;
 pub use bezier_time::bezier_time_monotone;
 mod constraints_events;
@@ -23,11 +25,13 @@ mod attachment_color;
 mod slot_dark;
 pub use slot_dark::*;
 mod ranges;
+pub(super) mod record_order;
 pub use attachment_color::*;
 mod sequence;
 pub use animation::{
     Animation, BoneChannel, BoneKeyframe, BoneSplitConfig, BoneSplitMode, BoneTimeline, KeyCurve,
-    SlotAttachmentKey, SlotRgbaCurve, SlotRgbaKey, SlotTimeline,
+    SlotAttachmentKey, SlotColorCurve, SlotColorKey, SlotRgbaCurve, SlotRgbaKey, SlotSplitConfig,
+    SlotSplitMode, SlotTimeline, SplitModeConfig,
 };
 pub use sequence::*;
 mod validate;
@@ -60,6 +64,13 @@ pub struct AttachmentAddress {
     pub slot: usize,
     pub attachment: usize,
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LinkedMesh {
+    pub attachment: AttachmentAddress,
+    pub source: AttachmentAddress,
+    /// Whether the instance uses the source attachment's timeline identity.
+    pub inherit_timelines: bool,
+}
 #[derive(Clone, Debug, PartialEq)]
 pub struct SceneProject {
     pub wire: Option<SceneWire>,
@@ -75,9 +86,12 @@ pub struct SceneProject {
     pub attachment_order: Vec<AttachmentAddress>,
     pub attachment_sequences: Vec<AttachmentSequence>,
     pub attachment_colors: Vec<AttachmentColor>,
+    /// Mesh instances sharing their source's vertices and topology.
+    pub linked_meshes: Vec<LinkedMesh>,
     pub slot_dark_colors: Vec<SlotDarkColor>,
     /// Evaluation order. The observed wire constraint group's children reverse it.
     pub constraints: Vec<Constraint>,
+    pub animation_folders: Option<AnimationFolderLayout>,
     pub animations: Vec<Animation>,
     pub fps: f32,
 }
@@ -101,6 +115,7 @@ pub enum SceneAttachment {
     Region(Region),
     Mesh(Box<Mesh>),
     Clipping(Clipping),
+    Path(PathAttachment),
 }
 impl SceneAttachment {
     pub fn name(&self) -> &str {
@@ -108,20 +123,21 @@ impl SceneAttachment {
             Self::Region(r) => &r.name,
             Self::Mesh(m) => &m.image.name,
             Self::Clipping(c) => &c.name,
+            Self::Path(path) => &path.name,
         }
     }
     pub fn image(&self) -> Option<&Region> {
         match self {
             Self::Region(r) => Some(r),
             Self::Mesh(m) => Some(&m.image),
-            Self::Clipping(_) => None,
+            Self::Clipping(_) | Self::Path(_) => None,
         }
     }
     pub fn image_mut(&mut self) -> Option<&mut Region> {
         match self {
             Self::Region(r) => Some(r),
             Self::Mesh(m) => Some(&mut m.image),
-            Self::Clipping(_) => None,
+            Self::Clipping(_) | Self::Path(_) => None,
         }
     }
     pub fn mesh(&self) -> Option<&Mesh> {
@@ -148,11 +164,24 @@ impl SceneAttachment {
             _ => None,
         }
     }
+    pub fn path(&self) -> Option<&PathAttachment> {
+        match self {
+            Self::Path(path) => Some(path),
+            _ => None,
+        }
+    }
+    pub fn path_mut(&mut self) -> Option<&mut PathAttachment> {
+        match self {
+            Self::Path(path) => Some(path),
+            _ => None,
+        }
+    }
     pub(super) fn class(&self) -> u32 {
         match self {
             Self::Region(_) => 43,
             Self::Mesh(_) => 46,
             Self::Clipping(_) => 84,
+            Self::Path(_) => 69,
         }
     }
 }
@@ -171,6 +200,21 @@ pub struct Clipping {
     pub vertices: Vec<Vertex>,
     pub edges: Vec<u32>,
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct PathAttachment {
+    pub name: String,
+    pub closed: bool,
+    pub constant_speed: bool,
+    pub color: [u8; 4],
+    pub weighted: bool,
+    pub bones: Vec<usize>,
+    pub vertices: Vec<Vertex>,
+    /// Ordered pairs of logical vertex indices joining the knots.
+    pub edges: Vec<u32>,
+    /// The editor's authored length data, retained without recomputation.
+    pub lengths: Vec<FiniteF32>,
+}
 #[derive(Clone, Debug, PartialEq)]
 // Keep the six fixed editor rows inline with their typed Transform model.
 // This bounded authored graph is cloned for history, not transferred per frame.
@@ -178,6 +222,7 @@ pub struct Clipping {
 pub enum Constraint {
     Ik(IkConstraint),
     Transform(TransformConstraint),
+    Path(PathConstraint),
     Physics(PhysicsConstraint),
 }
 impl Constraint {
@@ -185,6 +230,7 @@ impl Constraint {
         match self {
             Self::Ik(c) => &c.name,
             Self::Transform(c) => &c.name,
+            Self::Path(c) => &c.name,
             Self::Physics(c) => &c.name,
         }
     }
@@ -192,7 +238,99 @@ impl Constraint {
         match self {
             Self::Ik(_) => 56,
             Self::Transform(_) => 65,
+            Self::Path(_) => 72,
             Self::Physics(_) => 121,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct PathConstraint {
+    pub name: String,
+    pub bones: Vec<usize>,
+    pub slot: usize,
+    pub position_mode: PathPositionMode,
+    pub spacing_mode: PathSpacingMode,
+    pub rotate_mode: PathRotateMode,
+    pub rotation: f32,
+    pub position: f32,
+    pub spacing: f32,
+    pub mix_rotate: f32,
+    pub mix_x: f32,
+    pub mix_y: f32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u32)]
+pub enum PathPositionMode {
+    Fixed = 1,
+    Percent = 2,
+}
+impl PathPositionMode {
+    pub fn from_wire(value: u32) -> Result<Self, FormatError> {
+        match value {
+            1 => Ok(Self::Fixed),
+            2 => Ok(Self::Percent),
+            _ => Err(FormatError::UnsupportedProfile),
+        }
+    }
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Fixed => "fixed",
+            Self::Percent => "percent",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u32)]
+pub enum PathSpacingMode {
+    Length = 1,
+    Fixed = 2,
+    Percent = 3,
+    Proportional = 4,
+}
+impl PathSpacingMode {
+    pub fn from_wire(value: u32) -> Result<Self, FormatError> {
+        match value {
+            1 => Ok(Self::Length),
+            2 => Ok(Self::Fixed),
+            3 => Ok(Self::Percent),
+            4 => Ok(Self::Proportional),
+            _ => Err(FormatError::UnsupportedProfile),
+        }
+    }
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Length => "length",
+            Self::Fixed => "fixed",
+            Self::Percent => "percent",
+            Self::Proportional => "proportional",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u32)]
+pub enum PathRotateMode {
+    Tangent = 1,
+    Chain = 2,
+    ChainScale = 3,
+}
+impl PathRotateMode {
+    pub fn from_wire(value: u32) -> Result<Self, FormatError> {
+        match value {
+            1 => Ok(Self::Tangent),
+            2 => Ok(Self::Chain),
+            3 => Ok(Self::ChainScale),
+            _ => Err(FormatError::UnsupportedProfile),
+        }
+    }
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Tangent => "tangent",
+            Self::Chain => "chain",
+            Self::ChainScale => "chainScale",
         }
     }
 }
@@ -441,6 +579,7 @@ impl From<&RegionProject> for SceneProject {
             wire: None,
             attachment_sequences: vec![],
             attachment_colors: vec![],
+            linked_meshes: vec![],
             slot_dark_colors: vec![],
             rig: project.rig.clone(),
             images_root: project.images_root.clone(),
@@ -448,6 +587,7 @@ impl From<&RegionProject> for SceneProject {
             events: Vec::new(),
             editor_flag_53: false,
             constraints: vec![],
+            animation_folders: None,
             animations: vec![Animation::new("animation".into())],
             fps: 30.0,
             slots: project
@@ -481,6 +621,12 @@ impl From<&RegionProject> for SceneProject {
     }
 }
 impl SceneProject {
+    pub fn linked_mesh(&self, address: AttachmentAddress) -> Option<&LinkedMesh> {
+        self.linked_meshes
+            .iter()
+            .find(|link| link.attachment == address)
+    }
+
     /// Conversion succeeds only when every scene value is representable by the
     /// older profile. It never drops constraints or inactive alternatives.
     pub fn to_regions(&self) -> Result<RegionProject, FormatError> {
@@ -489,11 +635,13 @@ impl SceneProject {
             || !self.slot_dark_colors.is_empty()
             || !self.attachment_colors.is_empty()
             || !self.attachment_sequences.is_empty()
+            || !self.linked_meshes.is_empty()
             || self.wire.is_some()
             || self.editor_flag_53
             || !self.events.is_empty()
             || self.audio_root != "./audio"
             || !self.constraints.is_empty()
+            || self.animation_folders.is_some()
             || self.slots.iter().any(|s| s.attachments.len() > 1)
             || self.animations != vec![Animation::new("animation".into())]
             || self.fps != 30.0
@@ -525,7 +673,7 @@ impl SceneProject {
                                     super::meshes::validate_mesh(m, s.bone, self.rig.bones.len())?;
                                     Ok(regions::Attachment::Mesh(m.clone()))
                                 }
-                                SceneAttachment::Clipping(_) => {
+                                SceneAttachment::Clipping(_) | SceneAttachment::Path(_) => {
                                     Err(FormatError::UnsupportedProfile)
                                 }
                             })
@@ -553,6 +701,20 @@ pub fn encode_scene(project: &SceneProject) -> Result<Vec<u8>, FormatError> {
 }
 pub fn decode_scene(payload: &[u8]) -> Result<SceneProject, FormatError> {
     super::reader::decode_scene_profile(payload)
+}
+
+pub fn decode_scene_with_diagnostics(
+    payload: &[u8],
+) -> Result<SceneProject, crate::ProfileDecodeError> {
+    super::reader::decode_scene_profile_with_diagnostics(payload)
+}
+
+/// First profile of explicit chain repair: one leaf can be redirected through
+/// one linked source to an ordinary mesh. The result is independently encoded
+/// and differs only at that one proven source reference. Ordinary decoding
+/// still rejects the original chain. A supported nonchain yields `None`.
+pub fn recover_direct_linked_mesh_chain(payload: &[u8]) -> Result<Option<Vec<u8>>, FormatError> {
+    super::reader::recover_direct_linked_mesh_chain(payload)
 }
 pub(super) fn schema_record() -> super::Record {
     write::schema_record()
@@ -588,8 +750,10 @@ mod tests {
         rig.bones.push(b);
         SceneProject {
             wire: None,
+            animation_folders: None,
             attachment_sequences: vec![],
             attachment_colors: vec![],
+            linked_meshes: vec![],
             slot_dark_colors: vec![],
             rig,
             images_root: "./images/".into(),
@@ -621,6 +785,105 @@ mod tests {
             animations: vec![Animation::new("animation".into())],
             fps: 30.0,
         }
+    }
+    #[test]
+    fn path_attachment_roundtrips_stored_lengths_activation_and_binding() {
+        let address = AttachmentAddress {
+            slot: 0,
+            attachment: 2,
+        };
+        for (weighted, closed) in [(false, false), (true, true)] {
+            let mut p = sample();
+            let path = PathAttachment {
+                name: "trajectory".into(),
+                closed,
+                constant_speed: !closed,
+                color: [35, 75, 140, 240],
+                weighted,
+                bones: if weighted { vec![0, 1] } else { vec![0] },
+                vertices: (0..6)
+                    .map(|i| Vertex {
+                        weights: if weighted { vec![0.75, 0.25] } else { vec![1.] },
+                        positions: if weighted {
+                            vec![i as f32, 13., i as f32 - 5., 9.]
+                        } else {
+                            vec![i as f32, 13.]
+                        },
+                    })
+                    .collect(),
+                edges: if closed { vec![1, 4, 4, 1] } else { vec![1, 4] },
+                lengths: vec![
+                    FiniteF32::new(42.125).unwrap(),
+                    FiniteF32::new(87.25).unwrap(),
+                ],
+            };
+            p.slots[0]
+                .attachments
+                .push(SceneAttachment::Path(path.clone()));
+            p.slots[0].active_attachment = Some(address.attachment);
+            p.attachment_order.push(address);
+            let payload = encode_scene_payload(&p).unwrap();
+            let decoded = decode_scene(&payload).unwrap();
+            assert_eq!(decoded, p);
+            assert_eq!(
+                decoded.slots[0].active().and_then(SceneAttachment::path),
+                Some(&path)
+            );
+            assert_eq!(encode_scene_payload(&decoded).unwrap(), payload);
+            assert!(deform_coordinate_count(decoded.slots[0].active().unwrap()).is_err());
+            assert!(regions::decode_regions(&payload).is_err());
+            p.slots[0].attachments[address.attachment]
+                .path_mut()
+                .unwrap()
+                .edges[0] = 0;
+            assert!(encode_scene_payload(&p).is_err());
+        }
+    }
+    #[test]
+    fn static_path_constraints_preserve_modes_slot_and_independent_declaration_order() {
+        let mut p = sample();
+        let path = PathConstraint {
+            name: "follow path".into(),
+            bones: vec![1],
+            slot: 0,
+            position_mode: PathPositionMode::Percent,
+            spacing_mode: PathSpacingMode::Proportional,
+            rotate_mode: PathRotateMode::ChainScale,
+            rotation: -7.25,
+            position: -0.,
+            spacing: -12.5,
+            mix_rotate: 0.9,
+            mix_x: 0.4,
+            mix_y: 0.75,
+        };
+        p.constraints = vec![
+            Constraint::Path(path.clone()),
+            Constraint::Ik(IkConstraint::new("aim".into(), vec![1], 0)),
+            Constraint::Path(PathConstraint {
+                name: "follow later".into(),
+                rotate_mode: PathRotateMode::Chain,
+                ..path
+            }),
+        ];
+        let mut wire = materialize_wire(&p).unwrap();
+        let mut declarations = canonical_constraint_declarations(&p);
+        declarations.path.reverse();
+        wire.constraint_declarations = Some(declarations);
+        p.wire = Some(wire);
+        normalize_wire_strings(&mut p).unwrap();
+        let payload = encode_scene_payload(&p).unwrap();
+        let decoded = decode_scene(&payload).unwrap();
+        assert_eq!(decoded, p);
+        assert_eq!(encode_scene_payload(&decoded).unwrap(), payload);
+        let Constraint::Path(first) = &decoded.constraints[0] else {
+            unreachable!()
+        };
+        assert_eq!(first.position.to_bits(), (-0.0f32).to_bits());
+        let Constraint::Path(first) = &mut p.constraints[0] else {
+            unreachable!()
+        };
+        first.slot = 1;
+        assert!(encode_scene_payload(&p).is_err());
     }
     #[test]
     fn ik_targets_must_be_outside_every_constrained_subtree_even_at_zero_mix() {

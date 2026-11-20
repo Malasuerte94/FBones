@@ -3,7 +3,7 @@
   "private": true,
   "description": "Free, open-source offline 2D skeletal animation editor",
   "license": "MIT",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "type": "module",
   "packageManager": "pnpm@11.1.0",
   "engines": {
@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "tauri dev",
     "dev:web": "vite --host 127.0.0.1",
+    "board": "node scripts/project-board/server.mjs",
     "build": "tauri build",
     "build:web": "vue-tsc --noEmit && vite build",
     "build:runtime": "node packages/runtime/build.mjs",

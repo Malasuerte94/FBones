@@ -32,6 +32,8 @@ pub struct DeformKeyInput {
     #[serde(default)]
     pub controls: Option<[f32; 4]>,
     #[serde(default)]
+    pub controls_bits: Option<[u32; 4]>,
+    #[serde(default)]
     pub data_present: Option<bool>,
     #[serde(default)]
     pub key_id: Option<u64>,
@@ -103,7 +105,7 @@ fn binding(attachment: &SceneAttachment) -> Result<(bool, &[usize], &[Vertex]), 
     match attachment {
         SceneAttachment::Mesh(m) => Ok((m.weighted, &m.bones, &m.vertices)),
         SceneAttachment::Clipping(c) => Ok((c.weighted, &c.bones, &c.vertices)),
-        SceneAttachment::Region(_) => Err(invalid(
+        SceneAttachment::Region(_) | SceneAttachment::Path(_) => Err(invalid(
             "Choose a mesh or clipping attachment for deformation.",
         )),
     }
@@ -114,6 +116,19 @@ fn target(frame: &SceneFrame, id: u64) -> Result<(AttachmentAddress, &SceneAttac
         address,
         &frame.project.slots[address.slot].attachments[address.attachment],
     ))
+}
+
+fn require_editable(frame: &SceneFrame, address: AttachmentAddress) -> Result<(), AppError> {
+    if frame
+        .project
+        .linked_mesh(address)
+        .is_some_and(|link| link.inherit_timelines)
+    {
+        return Err(invalid(
+            "Key deformation on the source mesh when a linked mesh inherits its timelines.",
+        ));
+    }
+    Ok(())
 }
 pub(crate) fn allocate_ids(clip: &Animation, next: &mut u64) -> Result<Vec<Vec<u64>>, AppError> {
     clip.deform_tracks
@@ -251,7 +266,24 @@ pub(crate) fn set_keys(
             }
             input.offsets = bits.into_iter().map(f32::from_bits).collect();
         }
+        if let Some(bits) = input.controls_bits.take() {
+            let controls = input
+                .controls
+                .ok_or_else(|| invalid("Control bits require numeric controls."))?;
+            let decoded = bits.map(f32::from_bits);
+            if decoded
+                .iter()
+                .zip(controls)
+                .any(|(word, value)| !word.is_finite() || *word != value)
+            {
+                return Err(invalid(
+                    "Control bits must match the complete finite numeric controls.",
+                ));
+            }
+            input.controls = Some(decoded);
+        }
         let (address, attachment) = target(frame, input.attachment)?;
+        require_editable(frame, address)?;
         let count = deform_coordinate_count(attachment)?;
         let (weighted, _, _) = binding(attachment)?;
         let position = animation::checked_frame(input.frame)?;
@@ -396,6 +428,9 @@ pub(crate) fn move_keys(
     for t in 0..frame.project.animations[a].deform_tracks.len() {
         let keys = &mut frame.project.animations[a].deform_tracks[t].keys;
         let ids = &mut frame.animation_deform_key_ids[a][t];
+        if !ids.iter().any(|id| wanted.contains(id)) {
+            continue;
+        }
         let old = keys.clone();
         let mut moved = old
             .iter()
@@ -403,7 +438,7 @@ pub(crate) fn move_keys(
             .zip(ids.iter().copied())
             .map(|(mut key, id)| {
                 if wanted.contains(&id) {
-                    key.frame = animation::checked_frame(key.frame + delta)?;
+                    key.frame = animation::moved_frame(key.frame, delta)?;
                 }
                 Ok((key, id))
             })
@@ -424,8 +459,11 @@ pub(crate) fn move_keys(
                     "Move complete deform Bezier segments without changing their neighbors.",
                 ));
             }
-            controls[0] += moved[at].0.frame - key.frame;
-            controls[2] += moved[at + 1].0.frame - old[i + 1].frame;
+            animation::move_control_times(
+                &mut controls,
+                moved[at].0.frame - key.frame,
+                moved[at + 1].0.frame - old[i + 1].frame,
+            );
             moved[at].0.curve = DeformCurve::Bezier { controls };
         }
         *keys = moved.iter().map(|(key, _)| key.clone()).collect();
@@ -433,9 +471,22 @@ pub(crate) fn move_keys(
     }
     validate(frame)
 }
-fn cubic(a: f64, b: f64, c: f64, d: f64, t: f64) -> f64 {
-    let u = 1. - t;
-    u * u * u * a + 3. * u * u * t * b + 3. * u * t * t * c + t * t * t * d
+fn progress_parameter(times: [f64; 4], position: f64, prefer_exact: bool) -> f64 {
+    let [first, x1, x2, last] = times;
+    let (mut low, mut high) = (0., 1.);
+    for _ in 0..48 {
+        let t = (low + high) * 0.5;
+        if animation::cubic(first, x1, x2, last, t) < position {
+            low = t;
+        } else {
+            high = t;
+        }
+    }
+    if prefer_exact && animation::cubic(first, x1, x2, last, high) == position {
+        high
+    } else {
+        (low + high) * 0.5
+    }
 }
 fn progress(left: &DeformKey, right: &DeformKey, position: f64) -> f64 {
     match left.curve {
@@ -445,16 +496,12 @@ fn progress(left: &DeformKey, right: &DeformKey, position: f64) -> f64 {
         }
         DeformCurve::Bezier { controls } => {
             let [x1, y1, x2, y2] = controls.map(f64::from);
-            let (mut low, mut high) = (0., 1.);
-            for _ in 0..48 {
-                let t = (low + high) * 0.5;
-                if cubic(f64::from(left.frame), x1, x2, f64::from(right.frame), t) < position {
-                    low = t
-                } else {
-                    high = t
-                }
-            }
-            cubic(0., y1, y2, 1., (low + high) * 0.5)
+            let t = progress_parameter(
+                [f64::from(left.frame), x1, x2, f64::from(right.frame)],
+                position,
+                false,
+            );
+            animation::cubic(0., y1, y2, 1., t)
         }
     }
 }
@@ -481,9 +528,11 @@ fn world_vertices(
     attachment: &SceneAttachment,
     offsets: &[f64],
     worlds: &[Affine],
+    unweighted_owner: Option<usize>,
 ) -> Result<Vec<[f64; 2]>, AppError> {
     let (weighted, bones, rows) = binding(attachment)?;
     let columns = if weighted { bones.len() } else { 1 };
+    let unweighted_owner = unweighted_owner.filter(|_| !weighted);
     if offsets.len() != rows.len() * columns * 2 {
         return Err(invalid("The frozen deformation layout changed."));
     }
@@ -497,7 +546,7 @@ fn world_vertices(
                     continue;
                 }
                 let world = *worlds
-                    .get(*bone)
+                    .get(unweighted_owner.unwrap_or(*bone))
                     .ok_or_else(|| invalid("A deformation influence bone is missing."))?;
                 let p = world.point(
                     f64::from(row.positions[c * 2]) + offsets[(r * columns + c) * 2],
@@ -524,7 +573,8 @@ pub(crate) fn sample(
     let mut temporary = HashMap::new();
     if let Some(overrides) = overrides {
         for pose in overrides {
-            let (_, attachment) = target(frame, pose.attachment)?;
+            let (address, attachment) = target(frame, pose.attachment)?;
+            require_editable(frame, address)?;
             if pose.offsets.len() != deform_coordinate_count(attachment)?
                 || pose
                     .offsets
@@ -541,17 +591,25 @@ pub(crate) fn sample(
     let mut poses = vec![];
     for (id, address) in targets.iter().copied() {
         let attachment = &frame.project.slots[address.slot].attachments[address.attachment];
+        let link = frame.project.linked_mesh(address);
+        let deform_address = link
+            .filter(|link| link.inherit_timelines)
+            .map_or(address, |link| link.source);
+        let deform_id = frame.attachment_ids[deform_address.slot][deform_address.attachment];
         let count = deform_coordinate_count(attachment)?;
-        let offsets = if let Some(offsets) = temporary.get(&id) {
+        let offsets = if let Some(offsets) = temporary.get(&deform_id) {
             (*offsets).clone()
-        } else if let Some(track) =
-            clip.and_then(|clip| clip.deform_tracks.iter().find(|t| t.attachment == address))
-        {
+        } else if let Some(track) = clip.and_then(|clip| {
+            clip.deform_tracks
+                .iter()
+                .find(|t| t.attachment == deform_address)
+        }) {
             offsets_at(&track.keys, count, position)
         } else {
             vec![0.; count]
         };
-        let world_vertices = world_vertices(attachment, &offsets, worlds)?;
+        let owner = link.map(|_| frame.project.slots[address.slot].bone);
+        let world_vertices = world_vertices(attachment, &offsets, worlds, owner)?;
         poses.push(DeformPoseView {
             attachment: id,
             offsets,
@@ -587,6 +645,13 @@ pub(crate) fn requested_targets(
             let (_, attachment) = target(frame, pose.attachment)?;
             deform_coordinate_count(attachment)?;
             wanted.insert(pose.attachment);
+        }
+    }
+    for link in &frame.project.linked_meshes {
+        if link.inherit_timelines
+            && wanted.contains(&frame.attachment_ids[link.source.slot][link.source.attachment])
+        {
+            wanted.insert(frame.attachment_ids[link.attachment.slot][link.attachment.attachment]);
         }
     }
     let mut targets = vec![];
@@ -637,11 +702,11 @@ fn large_mesh_world_targets_accept_512_but_clipping_requests_remain_256() {
         })
         .collect();
     let worlds = vec![Affine::IDENTITY; 3];
-    let offsets = world_target_offsets(&attachment, &moves, &sampled, &worlds).unwrap();
+    let offsets = world_target_offsets(&attachment, &moves, &sampled, &worlds, None).unwrap();
     assert!(offsets.chunks_exact(4).all(|v| v == [2., -3., 2., -3.]));
     let mut excessive = moves.clone();
     excessive.push(moves[511].clone());
-    assert!(world_target_offsets(&attachment, &excessive, &sampled, &worlds).is_err());
+    assert!(world_target_offsets(&attachment, &excessive, &sampled, &worlds, None).is_err());
     let clipping = SceneAttachment::Clipping(fbones_format::minimal::scene::Clipping {
         name: "Own polygon".into(),
         end_slot: Some(0),
@@ -654,21 +719,23 @@ fn large_mesh_world_targets_accept_512_but_clipping_requests_remain_256() {
         edges: mesh.edges,
     });
     assert_eq!(vertex_move_limit(&clipping), 256);
-    assert!(world_target_offsets(&clipping, &moves[..257], &sampled, &worlds).is_err());
+    assert!(world_target_offsets(&clipping, &moves[..257], &sampled, &worlds, None).is_err());
     let duplicate = [moves[511].clone(), moves[511].clone()];
-    assert!(world_target_offsets(&attachment, &duplicate, &sampled, &worlds).is_err());
+    assert!(world_target_offsets(&attachment, &duplicate, &sampled, &worlds, None).is_err());
 }
 fn world_target_offsets(
     attachment: &SceneAttachment,
     moves: &[WorldVertexMove],
     sampled: &DeformPoseView,
     worlds: &[Affine],
+    unweighted_owner: Option<usize>,
 ) -> Result<Vec<f64>, AppError> {
     if moves.is_empty() || moves.len() > vertex_move_limit(attachment) {
         return Err(invalid("Choose bounded existing deform vertices."));
     }
     let (weighted, bones, rows) = binding(attachment)?;
     let columns = if weighted { bones.len() } else { 1 };
+    let unweighted_owner = unweighted_owner.filter(|_| !weighted);
     if sampled.offsets.len() != deform_coordinate_count(attachment)?
         || sampled.world_vertices.len() != rows.len()
     {
@@ -706,7 +773,7 @@ fn world_target_offsets(
                 continue;
             }
             let inverse = worlds
-                .get(*bone)
+                .get(unweighted_owner.unwrap_or(*bone))
                 .copied()
                 .ok_or_else(|| invalid("A deformation influence bone is missing."))?
                 .inverse()
@@ -719,13 +786,170 @@ fn world_target_offsets(
     }
     Ok(offsets)
 }
+
+fn subdivide_progress([a, b, c, d]: [f64; 4], t: f64) -> [f64; 5] {
+    let lerp = |first: f64, last: f64| {
+        if first == last {
+            first
+        } else {
+            first + (last - first) * t
+        }
+    };
+    let ab = lerp(a, b);
+    let bc = lerp(b, c);
+    let cd = lerp(c, d);
+    let abc = lerp(ab, bc);
+    let bcd = lerp(bc, cd);
+    [ab, abc, lerp(abc, bcd), bcd, cd]
+}
+
+type ProgressFields = (CurveInput, Option<[f32; 4]>);
+
+fn auto_progress_child(
+    raw: [f64; 4],
+    first: f32,
+    last: f32,
+    constant_clean: bool,
+) -> Result<ProgressFields, AppError> {
+    let controls = raw.map(|value| value as f32);
+    if controls
+        .iter()
+        .all(|value| value.is_finite() && value.abs() <= 1_000_000.)
+        && (first..=last).contains(&controls[0])
+        && (first..=last).contains(&controls[2])
+    {
+        Ok((CurveInput::Bezier, Some(controls)))
+    } else if constant_clean {
+        Ok((CurveInput::Linear, None))
+    } else {
+        Err(invalid(
+            "The deformation Bézier split exceeds the native progress control bounds.",
+        ))
+    }
+}
+
+fn auto_deform_interval(
+    mut key: DeformKeyInput,
+    track: &DeformTimeline,
+    previous: usize,
+    previous_id: u64,
+    sampled_frame: f64,
+) -> Result<Vec<DeformKeyInput>, AppError> {
+    let left = &track.keys[previous];
+    let right = &track.keys[previous + 1];
+    if matches!(left.curve, DeformCurve::Linear) {
+        return Ok(vec![key]);
+    }
+    if !sampled_frame.is_finite() || sampled_frame as f32 != key.frame {
+        return Err(invalid("The frozen deformation frame changed."));
+    }
+    let count = key.offsets.len();
+    let authored = offsets_at(&track.keys, count, sampled_frame);
+    if left.offsets.len() != count || right.offsets.len() != count || authored.len() != count {
+        return Err(invalid("The frozen deformation layout changed."));
+    }
+    // The cached draft and the world gesture contribute one net edit. Compare
+    // at the frozen raw frame before deriving clean coordinates at f32 Current.
+    let edited = |axis: usize, solved: f32| solved != authored[axis] as f32;
+
+    let DeformCurve::Bezier { controls } = left.curve else {
+        key.curve = CurveInput::Stepped;
+        for (axis, offset) in key.offsets.iter_mut().enumerate() {
+            if !edited(axis, *offset) {
+                *offset = left.offsets[axis];
+            }
+        }
+        if key
+            .offsets
+            .iter()
+            .zip(&left.offsets)
+            .all(|(a, b)| a.to_bits() == b.to_bits())
+        {
+            key.data_present = Some(left.data_present);
+        }
+        return Ok(vec![key]);
+    };
+
+    let [x1, y1, x2, y2] = controls.map(f64::from);
+    let times = [f64::from(left.frame), x1, x2, f64::from(right.frame)];
+    let t = progress_parameter(times, f64::from(key.frame), true);
+    let [ax, bx, cut, cx, dx] = subdivide_progress(times, t);
+    let [ay, by, progress, cy, dy] = subdivide_progress([0., y1, y2, 1.], t);
+    let mut constant_clean = true;
+    for (axis, offset) in key.offsets.iter_mut().enumerate() {
+        if edited(axis, *offset) {
+            continue;
+        }
+        let before = left.offsets[axis];
+        let after = right.offsets[axis];
+        let center = if before.to_bits() == after.to_bits() {
+            before
+        } else {
+            (f64::from(before) + (f64::from(after) - f64::from(before)) * progress) as f32
+        };
+        if before != after {
+            constant_clean = false;
+            if center == before || center == after {
+                return Err(invalid(
+                    "The deformation split cannot represent a varying coordinate on both sides of Current.",
+                ));
+            }
+        }
+        *offset = center;
+    }
+
+    let (before_curve, after_curve) = if cut as f32 == key.frame {
+        // Keep the child progress ratios in f64 until their final storage.
+        let before = auto_progress_child(
+            [ax, ay / progress, bx, by / progress],
+            left.frame,
+            key.frame,
+            constant_clean,
+        )?;
+        let after = auto_progress_child(
+            [
+                cx,
+                (cy - progress) / (1. - progress),
+                dx,
+                (dy - progress) / (1. - progress),
+            ],
+            key.frame,
+            right.frame,
+            constant_clean,
+        )?;
+        (before, after)
+    } else if constant_clean {
+        ((CurveInput::Linear, None), (CurveInput::Linear, None))
+    } else {
+        return Err(invalid(
+            "The deformation Bézier split exceeds the native time precision.",
+        ));
+    };
+    (key.curve, key.controls) = after_curve;
+    Ok(vec![
+        DeformKeyInput {
+            attachment: key.attachment,
+            frame: left.frame,
+            offsets: left.offsets.clone(),
+            offset_bits: None,
+            curve: before_curve.0,
+            controls: before_curve.1,
+            controls_bits: None,
+            data_present: Some(left.data_present),
+            key_id: Some(previous_id),
+        },
+        key,
+    ])
+}
+
 pub(crate) fn from_world_targets(
     frame: &SceneFrame,
-    clip: &Animation,
+    animation_index: usize,
     sampled: &DeformPoseView,
     worlds: &[Affine],
     edit: &crate::rig::RigEdit,
-) -> Result<DeformKeyInput, AppError> {
+    sampled_frame: f64,
+) -> Result<Vec<DeformKeyInput>, AppError> {
     let (attachment_id, position, moves, requested_curve, requested_controls) = match edit {
         crate::rig::RigEdit::SetAnimationDeformVertices {
             attachment,
@@ -738,18 +962,35 @@ pub(crate) fn from_world_targets(
         _ => return Err(invalid("Choose a deform world-target operation.")),
     };
     let (address, attachment) = target(frame, attachment_id)?;
+    require_editable(frame, address)?;
+    let position = animation::checked_frame(position)?;
     if sampled.attachment != attachment_id
         || moves.is_empty()
         || moves.len() > vertex_move_limit(attachment)
     {
         return Err(invalid("Choose bounded existing deform vertices."));
     }
-    let offsets = world_target_offsets(attachment, moves, sampled, worlds)?;
-    let existing = clip
+    let owner = frame
+        .project
+        .linked_mesh(address)
+        .map(|_| frame.project.slots[address.slot].bone);
+    let offsets = world_target_offsets(attachment, moves, sampled, worlds, owner)?;
+    let clip = frame
+        .project
+        .animations
+        .get(animation_index)
+        .ok_or_else(|| invalid("Choose an existing animation."))?;
+    let track = clip
         .deform_tracks
         .iter()
-        .find(|t| t.attachment == address)
-        .and_then(|t| t.keys.iter().rev().find(|key| key.frame == position));
+        .enumerate()
+        .find(|(_, track)| track.attachment == address);
+    let end = track.map_or(0, |(_, track)| {
+        track.keys.partition_point(|key| key.frame <= position)
+    });
+    let previous = end.checked_sub(1);
+    let left = track.and_then(|(_, track)| previous.and_then(|index| track.keys.get(index)));
+    let existing = left.filter(|key| key.frame == position);
     let inherited = existing.map_or(CurveInput::Linear, |key| match key.curve {
         DeformCurve::Linear => CurveInput::Linear,
         DeformCurve::Stepped => CurveInput::Stepped,
@@ -780,29 +1021,47 @@ pub(crate) fn from_world_targets(
             "The authored deformation exceeds supported bounds.",
         ));
     }
-    Ok(DeformKeyInput {
+    let key = DeformKeyInput {
         attachment: attachment_id,
         frame: position,
         offsets: offsets.into_iter().map(|v| v as f32).collect(),
         offset_bits: None,
         curve: kind,
         controls,
+        controls_bits: None,
         data_present: None,
         key_id: None,
-    })
+    };
+    if requested_curve.is_none() && requested_controls.is_none() && existing.is_none() {
+        if let (Some((index, track)), Some(previous)) = (track, previous) {
+            if end < track.keys.len() {
+                let id = frame.animation_deform_key_ids[animation_index][index][previous];
+                return auto_deform_interval(key, track, previous, id, sampled_frame);
+            }
+        }
+    }
+    Ok(vec![key])
 }
-#[derive(PartialEq)]
-struct BindingLayout {
+#[derive(Debug, PartialEq)]
+pub(crate) struct BindingLayout {
     weighted: bool,
     bones: Vec<u64>,
     rows: Vec<Vec<u32>>,
 }
-fn layout(frame: &SceneFrame, address: AttachmentAddress) -> Result<BindingLayout, AppError> {
+pub(crate) fn layout(
+    frame: &SceneFrame,
+    address: AttachmentAddress,
+) -> Result<BindingLayout, AppError> {
     let attachment = &frame.project.slots[address.slot].attachments[address.attachment];
     let (weighted, bones, rows) = binding(attachment)?;
+    let unweighted_owner = (!weighted && frame.project.linked_mesh(address).is_some())
+        .then_some(frame.project.slots[address.slot].bone);
     Ok(BindingLayout {
         weighted,
-        bones: bones.iter().map(|i| frame.bone_ids[*i]).collect(),
+        bones: bones
+            .iter()
+            .map(|i| frame.bone_ids[unweighted_owner.unwrap_or(*i)])
+            .collect(),
         rows: rows
             .iter()
             .map(|row| {

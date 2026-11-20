@@ -7,11 +7,15 @@ mod animation_deform;
 #[cfg(feature = "scene-editing")]
 mod animation_events;
 #[cfg(feature = "scene-editing")]
+mod animation_offset;
+#[cfg(feature = "scene-editing")]
 mod animation_order;
 #[cfg(feature = "scene-editing")]
 mod animation_sequence;
 #[cfg(feature = "scene-editing")]
 mod animation_slots;
+#[cfg(feature = "scene-editing")]
+mod animation_snapshot;
 #[cfg(feature = "scene-editing")]
 mod attachment_color;
 #[cfg(feature = "scene-editing")]
@@ -25,6 +29,8 @@ mod dialogs;
 pub mod e2e_host;
 #[cfg(feature = "scene-editing")]
 mod evaluation;
+#[cfg(feature = "scene-editing")]
+mod gif_export;
 pub mod images;
 mod library;
 #[cfg(feature = "scene-editing")]
@@ -69,6 +75,10 @@ mod scene_wire_fixture;
 mod slot_dark_color;
 #[cfg(feature = "scene-editing")]
 pub mod solve;
+#[cfg(feature = "scene-editing")]
+mod spine_bundle_export;
+#[cfg(feature = "scene-editing")]
+mod spine_json_export;
 mod trace;
 #[cfg(feature = "scene-editing")]
 mod transform_match;
@@ -77,7 +87,7 @@ mod transform_ranges;
 mod triangulation;
 mod updater;
 
-use project::{AppError, ProjectSummary, Session};
+use project::{AppError, BoneAutoKey, ProjectSummary, Session};
 use tauri::{Emitter, Manager};
 
 #[tauri::command]
@@ -155,6 +165,36 @@ async fn save_project(
     Ok(Some(summary))
 }
 
+#[cfg(feature = "scene-editing")]
+#[tauri::command]
+async fn repair_linked_mesh_copy(
+    app: tauri::AppHandle,
+    expected_revision: u64,
+) -> Result<Option<ProjectSummary>, AppError> {
+    let snapshot = app
+        .state::<Session>()
+        .prepare_linked_mesh_repair(expected_revision)?;
+    let Some(path) = dialogs::pick_repaired_project(
+        app.clone(),
+        snapshot.suggested_name.clone(),
+        snapshot.source_directory.clone(),
+    )
+    .await?
+    else {
+        return Ok(None);
+    };
+    let handle = app.clone();
+    let summary = tauri::async_runtime::spawn_blocking(move || {
+        handle
+            .state::<Session>()
+            .open_repaired_linked_mesh_copy(snapshot, path)
+    })
+    .await
+    .map_err(|_| AppError::new("Internal", "The repaired copy could not be opened."))??;
+    update_menu(&app, Some(&summary));
+    Ok(Some(summary))
+}
+
 #[tauri::command]
 async fn export_runtime(
     app: tauri::AppHandle,
@@ -191,6 +231,78 @@ async fn export_runtime(
     }
 }
 
+#[tauri::command]
+async fn export_spine_bundle(
+    app: tauri::AppHandle,
+    expected_revision: u64,
+) -> Result<Option<serde_json::Value>, AppError> {
+    #[cfg(feature = "scene-editing")]
+    {
+        let session = app.clone();
+        let snapshot = tauri::async_runtime::spawn_blocking(move || {
+            session
+                .state::<Session>()
+                .prepare_spine_bundle(expected_revision)
+        })
+        .await
+        .map_err(|_| AppError::new("Internal", "Could not prepare the Spine export."))??;
+        let Some(parent) = dialogs::pick_folder_titled(
+            app.clone(),
+            "Spine game bundle: choose destination folder",
+        )
+        .await?
+        else {
+            return Ok(None);
+        };
+        let result = tauri::async_runtime::spawn_blocking(move || {
+            app.state::<Session>().write_spine_bundle(snapshot, &parent)
+        })
+        .await
+        .map_err(|_| AppError::new("Internal", "Spine export failed."))??;
+        serde_json::to_value(result)
+            .map(Some)
+            .map_err(|_| AppError::new("Internal", "Could not encode the Spine export result."))
+    }
+    #[cfg(not(feature = "scene-editing"))]
+    {
+        let _ = (app, expected_revision);
+        Err(AppError::new(
+            "UnsupportedProfile",
+            "Spine export requires Scene editing.",
+        ))
+    }
+}
+
+#[cfg(feature = "scene-editing")]
+#[tauri::command]
+async fn save_gif_export(
+    app: tauri::AppHandle,
+    expected_revision: u64,
+    document_id: u64,
+    bytes_base64: String,
+    suggested_name: String,
+) -> Result<Option<gif_export::ExportResult>, AppError> {
+    let request = gif_export::Request {
+        expected_revision,
+        document_id,
+        bytes_base64,
+        suggested_name,
+    };
+    let prepare_app = app.clone();
+    let pending = tauri::async_runtime::spawn_blocking(move || {
+        request.prepare(&prepare_app.state::<Session>())
+    })
+    .await
+    .map_err(|_| AppError::new("Internal", "The GIF could not be prepared."))??;
+    let Some(path) = dialogs::pick_gif(app.clone(), pending.suggested_name.clone()).await? else {
+        return Ok(None);
+    };
+    tauri::async_runtime::spawn_blocking(move || pending.write(&app.state::<Session>(), &path))
+        .await
+        .map_err(|_| AppError::new("Internal", "The GIF could not be saved."))?
+        .map(Some)
+}
+
 #[cfg(feature = "scene-editing")]
 #[tauri::command]
 fn evaluate_project(
@@ -201,26 +313,71 @@ fn evaluate_project(
     session.evaluate(expected_revision, request)
 }
 #[tauri::command]
-fn edit_rig(
+async fn edit_rig(
     app: tauri::AppHandle,
     expected_revision: u64,
     edit: rig::RigEdit,
     pose_epoch: Option<u64>,
+    bone_auto_key: Option<BoneAutoKey>,
 ) -> Result<ProjectSummary, AppError> {
+    if bone_auto_key.is_none() && Session::is_background_auto_edit(&edit) {
+        let worker = app.clone();
+        let summary = tauri::async_runtime::spawn_blocking(move || {
+            apply_rig_edit(
+                &worker.state::<Session>(),
+                expected_revision,
+                edit,
+                pose_epoch,
+                None,
+            )
+        })
+        .await
+        .map_err(|_| AppError::new("Internal", "Auto Weights could not finish."))??;
+        update_menu(&app, Some(&summary));
+        return Ok(summary);
+    }
+
+    // Tauri chooses an execution context per command. Keep ordinary edits
+    // on the native main thread even though this command can await Auto.
+    let (reply, mut result) = tauri::async_runtime::channel(1);
+    let main = app.clone();
+    app.run_on_main_thread(move || {
+        let summary = apply_rig_edit(
+            &main.state::<Session>(),
+            expected_revision,
+            edit,
+            pose_epoch,
+            bone_auto_key,
+        );
+        if let Ok(summary) = &summary {
+            update_menu(&main, Some(summary));
+        }
+        let _ = reply.try_send(summary);
+    })
+    .map_err(|_| AppError::new("Internal", "The rig edit could not be dispatched."))?;
+    result
+        .recv()
+        .await
+        .ok_or_else(|| AppError::new("Internal", "The rig edit did not finish."))?
+}
+
+fn apply_rig_edit(
+    session: &Session,
+    expected_revision: u64,
+    edit: rig::RigEdit,
+    pose_epoch: Option<u64>,
+    bone_auto_key: Option<BoneAutoKey>,
+) -> Result<ProjectSummary, AppError> {
+    if let Some(intent) = bone_auto_key {
+        return session.edit_bone_auto_key(expected_revision, edit, pose_epoch, intent);
+    }
     #[cfg(feature = "scene-editing")]
-    let summary = if let Some(epoch) = pose_epoch {
-        app.state::<Session>()
-            .edit_in_pose(expected_revision, epoch, edit)?
-    } else {
-        app.state::<Session>().edit(expected_revision, edit)?
-    };
+    if let Some(epoch) = pose_epoch {
+        return session.edit_in_pose(expected_revision, epoch, edit);
+    }
     #[cfg(not(feature = "scene-editing"))]
-    let summary = {
-        let _ = pose_epoch;
-        app.state::<Session>().edit(expected_revision, edit)?
-    };
-    update_menu(&app, Some(&summary));
-    Ok(summary)
+    let _ = pose_epoch;
+    session.edit(expected_revision, edit)
 }
 
 #[tauri::command]
@@ -395,6 +552,31 @@ fn place_attachments(
         ))
     }
 }
+#[cfg(feature = "scene-editing")]
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct PrunePreviewArgs {
+    expected_revision: u64,
+    request: rig::PruneWeightsRequest,
+    pose_epoch: Option<u64>,
+}
+
+#[cfg(feature = "scene-editing")]
+#[tauri::command]
+async fn preview_prune_weights(
+    app: tauri::AppHandle,
+    expected_revision: u64,
+    request: rig::PruneWeightsRequest,
+    pose_epoch: Option<u64>,
+) -> Result<project::PruneWeightsPreview, AppError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        app.state::<Session>()
+            .preview_prune_weights(expected_revision, request, pose_epoch)
+    })
+    .await
+    .map_err(|_| AppError::new("Internal", "Prune preview could not be generated."))?
+}
+
 #[tauri::command]
 async fn preview_trace_attachment(
     app: tauri::AppHandle,
@@ -528,6 +710,10 @@ fn update_menu(app: &tauri::AppHandle, project: Option<&ProjectSummary>) {
                 "export-runtime",
                 cfg!(feature = "scene-editing") && project.is_some_and(|p| !p.inspection_only),
             ),
+            (
+                "export-spine-bundle",
+                cfg!(feature = "scene-editing") && project.is_some_and(|p| !p.inspection_only),
+            ),
             ("close", project.is_some()),
             ("import", project.is_some_and(|p| !p.inspection_only)),
             (
@@ -572,12 +758,31 @@ fn frontend_ready(renderer: String, app: tauri::AppHandle) {
 }
 
 pub fn run() {
+    let mut context = tauri::generate_context!();
+    if let Some(window) = context
+        .config_mut()
+        .app
+        .windows
+        .iter_mut()
+        .find(|window| window.label == "main")
+    {
+        #[cfg(any(target_os = "windows", target_os = "linux"))]
+        {
+            window.decorations = false;
+        }
+        #[cfg(target_os = "macos")]
+        {
+            window.decorations = true;
+            window.title_bar_style = tauri::TitleBarStyle::Overlay;
+            window.hidden_title = true;
+        }
+    }
     let builder = tauri::Builder::default().manage(Session::default());
     #[cfg(feature = "scene-editing")]
     let builder = builder
         .manage(mcp::McpState::default())
         .manage(mcp_capture::CaptureState::default());
-    builder
+    let builder = builder
         .plugin(updater::plugin())
         .manage(updater::UpdateState::default())
         .invoke_handler(tauri::generate_handler![
@@ -602,7 +807,12 @@ pub fn run() {
             open_project,
             close_project,
             save_project,
+            #[cfg(feature = "scene-editing")]
+            repair_linked_mesh_copy,
             export_runtime,
+            export_spine_bundle,
+            #[cfg(feature = "scene-editing")]
+            save_gif_export,
             edit_rig,
             #[cfg(feature = "scene-editing")]
             evaluate_project,
@@ -613,6 +823,8 @@ pub fn run() {
             place_image,
             place_images,
             place_attachments,
+            #[cfg(feature = "scene-editing")]
+            preview_prune_weights,
             preview_trace_attachment,
             apply_trace_attachment,
             preview_trace,
@@ -621,82 +833,92 @@ pub fn run() {
             choose_audio_folder,
             get_audio_data,
             frontend_ready
-        ])
-        .setup(|app| {
-            use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
-            let new = MenuItemBuilder::with_id("new", "New Project…")
-                .accelerator("CmdOrCtrl+N")
-                .build(app)?;
-            let open = MenuItemBuilder::with_id("open", "Open Project…")
-                .accelerator("CmdOrCtrl+O")
-                .build(app)?;
-            let save = MenuItemBuilder::with_id("save", "Save Project")
-                .accelerator("CmdOrCtrl+S")
+        ]);
+    #[cfg(not(target_os = "linux"))]
+    let builder = builder.setup(|app| {
+        use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
+        let new = MenuItemBuilder::with_id("new", "New Project…")
+            .accelerator("CmdOrCtrl+N")
+            .build(app)?;
+        let open = MenuItemBuilder::with_id("open", "Open Project…")
+            .accelerator("CmdOrCtrl+O")
+            .build(app)?;
+        let save = MenuItemBuilder::with_id("save", "Save Project")
+            .accelerator("CmdOrCtrl+S")
+            .enabled(false)
+            .build(app)?;
+        let copy = MenuItemBuilder::with_id("copy", "Save As…")
+            .accelerator("CmdOrCtrl+Shift+S")
+            .enabled(false)
+            .build(app)?;
+        let close = MenuItemBuilder::with_id("close", "Close Project")
+            .accelerator("CmdOrCtrl+W")
+            .enabled(false)
+            .build(app)?;
+        let runtime = MenuItemBuilder::with_id("export-runtime", "Export runtime…")
+            .enabled(false)
+            .build(app)?;
+        let spine_bundle =
+            MenuItemBuilder::with_id("export-spine-bundle", "Export Spine game bundle…")
                 .enabled(false)
                 .build(app)?;
-            let copy = MenuItemBuilder::with_id("copy", "Save As…")
-                .accelerator("CmdOrCtrl+Shift+S")
-                .enabled(false)
-                .build(app)?;
-            let close = MenuItemBuilder::with_id("close", "Close Project")
-                .accelerator("CmdOrCtrl+W")
-                .enabled(false)
-                .build(app)?;
-            let runtime = MenuItemBuilder::with_id("export-runtime", "Export runtime…")
-                .enabled(false)
-                .build(app)?;
-            let import = MenuItemBuilder::with_id("import", "Choose Images Folder…")
-                .accelerator("CmdOrCtrl+I")
-                .enabled(false)
-                .build(app)?;
-            let import_psd = MenuItemBuilder::with_id("import-psd", "Import PSD…")
-                .enabled(false)
-                .build(app)?;
-            let file = SubmenuBuilder::new(app, "File")
-                .items(&[&new, &open])
+        let import = MenuItemBuilder::with_id("import", "Choose Images Folder…")
+            .accelerator("CmdOrCtrl+I")
+            .enabled(false)
+            .build(app)?;
+        let import_psd = MenuItemBuilder::with_id("import-psd", "Import PSD…")
+            .enabled(false)
+            .build(app)?;
+        let file = SubmenuBuilder::new(app, "File")
+            .items(&[&new, &open])
+            .separator()
+            .items(&[&import, &import_psd])
+            .separator()
+            .items(&[&save, &copy])
+            .items(&[&runtime, &spine_bundle])
+            .separator()
+            .item(&close)
+            .build()?;
+        let menu = MenuBuilder::new(app);
+        let undo = MenuItemBuilder::with_id("undo", "Undo")
+            .enabled(false)
+            .build(app)?;
+        let redo = MenuItemBuilder::with_id("redo", "Redo")
+            .enabled(false)
+            .build(app)?;
+        let edit = SubmenuBuilder::new(app, "Edit")
+            .items(&[&undo, &redo])
+            .build()?;
+        let updates = MenuItemBuilder::with_id("check-updates", "Check for Updates…").build(app)?;
+        let help = SubmenuBuilder::new(app, "Help").item(&updates).build()?;
+        let mcp = MenuItemBuilder::with_id("mcp", "MCP / AI…").build(app)?;
+        #[cfg(target_os = "macos")]
+        let menu = menu.item(
+            &SubmenuBuilder::new(app, "FBones")
+                .about(None)
                 .separator()
-                .items(&[&import, &import_psd])
-                .separator()
-                .items(&[&save, &copy])
-                .item(&runtime)
-                .separator()
-                .item(&close)
-                .build()?;
-            let menu = MenuBuilder::new(app);
-            let undo = MenuItemBuilder::with_id("undo", "Undo")
-                .enabled(false)
-                .build(app)?;
-            let redo = MenuItemBuilder::with_id("redo", "Redo")
-                .enabled(false)
-                .build(app)?;
-            let edit = SubmenuBuilder::new(app, "Edit")
-                .items(&[&undo, &redo])
-                .build()?;
-            let updates =
-                MenuItemBuilder::with_id("check-updates", "Check for Updates…").build(app)?;
-            let help = SubmenuBuilder::new(app, "Help").item(&updates).build()?;
-            let mcp = MenuItemBuilder::with_id("mcp", "MCP / AI…").build(app)?;
-            #[cfg(target_os = "macos")]
-            let menu = menu.item(
-                &SubmenuBuilder::new(app, "FBones")
-                    .about(None)
-                    .separator()
-                    .quit()
-                    .build()?,
-            );
-            app.set_menu(
-                menu.item(&file)
-                    .item(&mcp)
-                    .item(&edit)
-                    .item(&help)
-                    .build()?,
-            )?;
-            app.on_menu_event(|app, event| {
-                let _ = app.emit("editor-command", event.id().as_ref());
-            });
-            Ok(())
-        })
-        .build(tauri::generate_context!())
+                .quit()
+                .build()?,
+        );
+        app.set_menu(
+            menu.item(&file)
+                .item(&mcp)
+                .item(&edit)
+                .item(&help)
+                .build()?,
+        )?;
+        #[cfg(target_os = "windows")]
+        if let Some(window) = app.get_webview_window("main") {
+            // Leave the attached menu and its accelerator bindings in place.
+            window.hide_menu()?;
+        }
+        app.on_menu_event(|app, event| {
+            let _ = app.emit("editor-command", event.id().as_ref());
+        });
+        Ok(())
+    });
+    builder
+        .build(context)
         .expect("FBones could not start")
         .run(|app, event| {
             if let tauri::RunEvent::ExitRequested { api, .. } = event {

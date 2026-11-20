@@ -170,6 +170,83 @@ fn all_constraint_curves_reset_and_materialized_event_defaults_audio_and_bits_ro
     assert_ne!(encode_scene_payload(&reset).unwrap(), payload);
 }
 #[test]
+fn path_constraint_keys_preserve_separate_curves_and_target_slot_bone() {
+    use crate::minimal::regions::BlendMode;
+
+    let mut p = scene();
+    p.slots.push(SceneSlot {
+        name: "curve slot".into(),
+        bone: 2,
+        color: [255; 4],
+        blend: BlendMode::Normal,
+        active_attachment: None,
+        attachments: vec![],
+    });
+    let constraint = p.constraints.len();
+    p.constraints.push(Constraint::Path(PathConstraint {
+        name: "follow".into(),
+        bones: vec![1, 3],
+        slot: 0,
+        position_mode: PathPositionMode::Fixed,
+        spacing_mode: PathSpacingMode::Length,
+        rotate_mode: PathRotateMode::ChainScale,
+        rotation: 0.,
+        position: 0.,
+        spacing: 0.,
+        mix_rotate: 1.,
+        mix_x: 1.,
+        mix_y: 1.,
+    }));
+    let scalar_keys = vec![PathKeyframe {
+        frame: 3.,
+        values: [-0.],
+        curve: PathKeyCurve::Stepped,
+    }];
+    let mut animation = Animation::new("path".into());
+    animation.constraint_tracks = vec![
+        ConstraintTimeline::PathPosition {
+            constraint,
+            keys: scalar_keys.clone(),
+        },
+        ConstraintTimeline::PathSpacing {
+            constraint,
+            keys: scalar_keys,
+        },
+        ConstraintTimeline::PathMix {
+            constraint,
+            keys: vec![
+                PathKeyframe {
+                    frame: 9.,
+                    values: [0.6, 0.3, 0.5],
+                    curve: PathKeyCurve::Bezier {
+                        controls: [
+                            [10., 0.4, 14., 0.3],
+                            [11., 0.2, 14., 0.5],
+                            [12., 0.3, 13., 0.6],
+                        ],
+                    },
+                },
+                PathKeyframe {
+                    frame: 15.,
+                    values: [0.1, 0.8, 0.7],
+                    curve: PathKeyCurve::Linear,
+                },
+            ],
+        },
+    ];
+    p.animations = vec![animation];
+    let layout = animation_layout(&p, 0).unwrap();
+    assert_eq!(layout.groups.len(), 1);
+    assert_eq!(layout.groups[0].owner, WireAnimationOwner::Bone(2));
+    assert_eq!(layout.groups[0].tracks.len(), 3);
+    let payload = encode_scene_payload(&p).unwrap();
+    let decoded = decode_scene(&payload).unwrap();
+    assert_eq!(decoded, p);
+    assert_eq!(encode_scene_payload(&decoded).unwrap(), payload);
+    p.animations[0].constraint_tracks[2].set_constraint(0);
+    assert!(encode_scene_payload(&p).is_err());
+}
+#[test]
 fn new_tracks_reject_bad_targets_duplicate_families_nonfinite_controls_and_invalid_audio() {
     let p = scene();
     let invalid = |m: SceneProject| assert!(encode_scene_payload(&m).is_err());

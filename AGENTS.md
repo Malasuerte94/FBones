@@ -3,9 +3,10 @@
 ## Goal and fixed decisions
 
 Build FBones, an offline Windows/macOS/Linux 2D animation editor for our team.
-The only reference is **Spine 4.3.26 Professional**; never infer behavior from
-older editors. Full compatibility is progressive, not a claim. `.fbones` must
-retain the `.spine` 4.3.26 binary structure, never JSON, a custom container or an
+Use **Spine 4.3.26 Professional on Linux** for all new reference work. This
+covers REA MCP inspection, CLI exports, format acceptance and GUI observations.
+Never infer behavior from older editors. Full compatibility is progressive, not a
+claim. `.fbones` must retain the `.spine` 4.3.26 binary structure, never JSON, a custom container or an
 opaque renamed template. Verify independently encoded copies in original Spine
 before declaring compatibility for a supported profile.
 
@@ -13,7 +14,27 @@ before declaring compatibility for a supported profile.
 
 Read this file, current `docs/STATE.md`, `docs/TASKS.md`, then only relevant
 format/task notes. Continue the active task or one with satisfied dependencies.
+The [task dashboard](http://127.0.0.1:4180/) is the source of truth for task
+status and priority. It uses `docs/TASKS.md` as its backing file. At startup
+or resume, read the current board or its backing file and follow its priority
+order. Update the affected task rows when work starts, changes status, or is
+handed over. Record the evidence and remaining work at each checkpoint so the
+board shows the current state. Re-read affected rows and priorities before
+writing and preserve changes made by the user on the board. Run `pnpm board`
+to start the local dashboard.
+When adding a subtask, record its parent under the appropriate group in
+`docs/TASK-HIERARCHY.json`. Keep prerequisites in the Dependencies column of
+`docs/TASKS.md`.
 The latest user pause/resume wins; historical notices are not current status.
+The current delivery rule is **basic production workflow first**. Prioritize
+usable gravity, runtime export, and compatibility needed to edit real projects.
+The first production gate is an editable real Spine project through basic
+Setup and Animate, save/reopen, and export to a working game runtime. The
+export bundle comprises Spine-compatible skeleton JSON, an atlas and its PNG
+pages. Track GIF separately as a preview export. Start compatibility review
+with the Linked Mesh blocker in the current mascot. Defer fine UI matching,
+additional controls and optional tools until the core workflow passes. Fix UI
+and performance issues that block the core workflow within that gate.
 Before ending, update the single current STATE checkpoint and affected task
 rows with results, evidence limits and the next reproducible action. Do not
 prepend delivery history to all three files. Historical instructions are saved
@@ -58,10 +79,38 @@ buttons belong to Animate. Preserve this user-requested shared layout.
 
 ## Parallel work and reference first
 
-The user requests parallel work on substantial tasks: ideally five implementers,
-two reference auditors and the coordinator. Obey actual capacity: **four agents
-total currently permits three subagents**. Assign distinct ownership; the
-coordinator integrates and owns shared test runs. No global agent settings edits.
+**Priority 1: use REA MCP to reverse engineer Spine Professional 4.3.26 on
+Linux. This is the source of truth for reference behavior.** Keep one dedicated
+agent on this work. Use targeted static or runtime analysis of the exact
+editor, or structural analysis of its authentic artifacts. Record the tool,
+target, evidence ID and what the result establishes. File hashes establish
+identity. Retained screenshots establish visible controls. Neither establishes
+the underlying behavior by itself. Manual and scripted GUI input in Spine are
+outside the current reference workflow. Keep unresolved behavior open when
+REA cannot recover it.
+
+Use all available subagent slots for substantial work with independent work
+ready to assign. The current configuration permits **11 active agents total,
+including the coordinator and up to 10 subagents**. Follow the runtime limit
+when it changes. Allocate up to three agents to complementary REA investigations,
+two to verification, and the available remaining slots to implementation. With
+all three REA lanes occupied this leaves five implementers. Reassign agents as
+their work finishes, using the board order and distinct file, fixture or tool
+ownership. The coordinator prioritizes, integrates, resolves blockers and fixes
+when needed. Keep shared servers, builds and reports under one owner's control.
+No global agent settings edits.
+
+**Keep one agent dedicated to REA MCP throughout each reference-led work slice.**
+Reserve that slot from the start and carry its findings into the next slice.
+The agent uses REA MCP on the exact Spine Professional 4.3.26 editor or artifacts
+produced by that editor, with dedicated owned instances and copies. Direct
+observations from that source are authoritative for reference behavior. The agent
+records the target identity, tool, observable result and limits before dependent
+decisions. Reuse accepted observations for unchanged behavior and investigate the
+next unresolved question when a route is unsupported. Keep the gap explicit.
+Retained original runs and official documentation can guide work where direct
+REA observation is unavailable. Identify their provenance separately. REA
+inspection of FBones verifies FBones only.
 
 **Before every feature implementation or fix, assign two reference agents**:
 DATA for behavior/model/persistence; UI for appearance/controls/interactions.
@@ -82,34 +131,24 @@ evidence before asking the user for information.
 
 - Start with one unanswered question and the decision it changes. Reuse accepted
   evidence and the installed-package inventory before collecting new material.
-- Choose the cheapest discriminating direct evidence: targeted inspection of
-  actual editor/loader/resources, existing fixtures, a small original CLI case,
-  then original GUI for unanswered interactions. Static inspection never proves
-  an unseen gesture. Do not decompile/rescan everything for every feature.
+- Choose the narrowest discriminating REA MCP operation on the actual editor,
+  loader, resources or existing owned artifacts. Retain any unsupported
+  providers or opaque inputs as limitations. Do not decompile or rescan
+  everything for every feature.
 - Use small own fixtures and independent semantic/binary or pixel comparisons.
   State hypotheses and bounds before observation. Distinguish controls present,
   functional behavior, persistence and numeric fidelity. A screenshot/submitted
   click alone is not proof of a mutation or successful persistence.
-- Prefer one reusable original-session driver with scenario configuration.
-  Review ownership/isolation and the sequence once per new scenario or meaningful
-  driver change. Do not create per-click root approval JSONs for Tree navigation,
-  expansion or screenshots. Validate current controls and semantic before/after
-  results rather than exact one-pixel coordinate equality. Internal scenario
-  review does not require user permission for already authorized own-instance work.
 - Keep one source/tool manifest and one concise result per experiment, retaining
   raw files and failures. Reuse unchanged helpers; create new run/ownership records
   without overwriting consumed receipts. Do not add redundant approval layers.
-- A reviewed driver may restore **its own** minimized window without activation
-  once, recapture and recheck identity/visibility. Stop on ownership/source changes
-  or unexpected modals. Never recover user windows or fall back to global input.
-- Batch compatible read-only observations in an owned session. State-dependent
-  mutations run once per intended sample; independent hypotheses use fresh fixture
-  copies. Never blindly repeat Match or chain independent branches.
+- Batch compatible read-only observations in an owned session. Stop on
+  ownership or source changes. Never interact with a protected user window.
 - Start new tool routes with a 10–15 minute feasibility pass. Continue longer only
   with an identified capability and expected useful datum. Keep negative results;
   retry for materially new evidence or a diagnosed fix, not unchanged speculation.
-- Do not recollect accepted original oracle batches on unchanged inputs. Rerun
-  relevant regressions when product code changes and required checks at integration.
+- Do not recollect accepted original oracle batches on unchanged inputs. Queue
+  relevant FBones regressions for the next 15-point implementation checkpoint.
   Unknown details block dependent claims/code, not independent improvements already
   supported by evidence. Keep unresolved fidelity gaps and the full goal open.
 - REA orchestrates inspection providers; it does not automatically reconstruct an
@@ -162,16 +201,20 @@ closed processes and one-shot gates are historical, not reusable identities.
 Original launches must not forward tests into personal instances; recheck actual
 absence/isolation rather than treating an old blocked/closed receipt as current.
 
-Original materials: `spin_windows/`, `Spine.tar.gz`, `updates/`; active editor
-package: `updates/updates/4.3.26`. Backups are personal source data, not cleanup.
-No original binaries, extracted code, personal projects or local absolute paths
-in Git, distributables, published screenshots or fixtures. Raw research stays
-ignored; only our tools/specifications/aggregate findings may be committed.
-Never distribute extracted code/assets. No activation bypass or patched original
-is needed. Demonstrate tool capability on the target platform before claiming an
-original observation. Launcher decompilation is not editor-method recovery.
-Windows JVMTI and exported VMStruct probes have negative results already; retain
-these, avoid unchanged retries or guessed object offsets. STATE links evidence.
+Use the activated Linux installation and pin the editor with
+`Spine.sh --update 4.3.26`. Run GUI work on a private authenticated Xvfb display
+with an explicit owned project copy. Confirm the exact Professional version,
+launcher and editor identities, display, project and owned window before input.
+See [Linux reference evidence](docs/research/SPINE-LINUX-4.3.26-2026-11-18.md)
+for the accepted CLI and GUI routes. Keep earlier reference artifacts as historical
+evidence. Backups are personal source data.
+
+Keep original binaries, extracted code, personal projects and local absolute paths
+out of Git, distributables, published screenshots and fixtures. Raw research stays
+ignored. Commit our tools, specifications and aggregate findings. Preserve stock
+activation. Demonstrate tool capability on the target platform before claiming an
+observation. Reuse the retained negative runtime and launcher inspection results
+linked from STATE.
 
 ## Stack, authoring and format guards
 
@@ -216,6 +259,23 @@ these, avoid unchanged retries or guessed object offsets. STATE links evidence.
 
 ## Verification, delivery and launch
 
+### Test cadence
+
+Group FBones implementation into substantial batches. Run a single verification
+round at each checkpoint after at least 15 percentage points of implementation
+progress since the last round. Estimate progress against the same tracked scope
+using completed workflows and task acceptance criteria. Record the baseline,
+completed work and queued checks in `docs/STATE.md`. Keep the baseline across
+sessions and small changes.
+
+During the batch, verification agents prepare regression cases and REA agents
+continue observations in original Spine. Defer FBones tests, type checks and
+verification builds to the checkpoint. At the checkpoint, the coordinator
+assigns the applicable checks on the combined changes to the verification agents,
+coordinates shared resources and records results for each affected feature.
+Investigate failures and rerun affected checks within the same verification
+round. Keep implementation awaiting verification marked as such.
+
 ### Editor UI and interaction standards
 
 The user requires a compact, intuitive animation-editor interface with useful
@@ -242,8 +302,8 @@ See `docs/DEVELOPMENT.md` for platform/offline toolchains.
 
 Routine UI: **Ubuntu + Playwright**, production CSP, isolated real Rust Session
 via opt-in `e2e-host`; reuse native geometry/history/encoding, not a second JS
-engine. Normal builds exclude the host. Focus tests during iteration; full
-required checks at integration. Rebuild changed product sources before
+engine. Normal builds exclude the host. Run the required checks at the
+implementation checkpoint. Rebuild changed product sources before
 `--no-build`. Use locators/mouse/keyboard and failure traces; one coordinator owns
 shared server/report output. See `docs/TESTING.md`.
 Do not run a frontend rebuild concurrently with UI tests serving `dist/`;
@@ -257,17 +317,17 @@ not application builds or original launches.
 
 Windows deliveries belong in shared `WINDOWS_TEST/`; Desktop shortcuts already
 point there. No manual copying, Desktop writes or Linux executable as `.exe`.
-Use mapped W: for app and original CLI; Spine rejects UNC inputs. Preserve
+Use the mapped W: drive for native FBones deliveries. Preserve
 immutable `WINDOWS_TEST/builds/<sha256>/FBones.exe`, build-info.json selection,
 current-build.txt and stable root bootstrap. Never overwrite a mapped image.
 No anonymous GUI stream pipes or shell share prompts. Launch with
 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File <mapped-path>`; never
 change global policy/run the Desktop shortcut installer. Import results with
 `scripts/import-windows-results.py`; host paths stay in `.local/windows-host.json`.
-`fbones-research` is separate from runtime; do not rerun completed reference
-batches through `WINDOWS_TEST/FORMAT_TEST/Ruleaza-Testele.bat`.
+`fbones-research` is separate from runtime. Run new reference comparisons on Linux.
 
-At each **implementation** session end, attempt to open current FBones and leave
-it available. Report real launch failures, not build-only success. Existing user
-windows remain protected; documentation/research-only sessions need no duplicate
-normal launch. Use local caches if global cache writes are unavailable.
+Open FBones only when the user asks or when the task requires the native
+window for a specific verification. Completing a build or verification round
+does not trigger a launch. When a launch is needed, record the observed result
+and keep existing user windows protected. Use local caches if global cache
+writes are unavailable.

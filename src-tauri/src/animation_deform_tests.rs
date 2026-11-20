@@ -240,7 +240,7 @@ fn precise_world_target_math_corrects_near_unit_f32_mass_and_never_inverts_dorma
     let mut offsets = vec![0.; 32];
     offsets[6] = 17.;
     offsets[7] = -0.;
-    let points = world_vertices(attachment, &offsets, &worlds).unwrap();
+    let points = world_vertices(attachment, &offsets, &worlds, None).unwrap();
     let pose = DeformPoseView {
         attachment: w,
         offsets: offsets.clone(),
@@ -255,8 +255,8 @@ fn precise_world_target_math_corrects_near_unit_f32_mass_and_never_inverts_dorma
         x: requested[0],
         y: requested[1],
     }];
-    let changed = world_target_offsets(attachment, &moves, &pose, &worlds).unwrap();
-    let actual = world_vertices(attachment, &changed, &worlds).unwrap();
+    let changed = world_target_offsets(attachment, &moves, &pose, &worlds, None).unwrap();
+    let actual = world_vertices(attachment, &changed, &worlds, None).unwrap();
     for axis in 0..2 {
         assert!((actual[0][axis] - requested[axis]).abs() < 1e-12);
     }
@@ -270,7 +270,7 @@ fn precise_world_target_math_corrects_near_unit_f32_mass_and_never_inverts_dorma
     let mut singular = worlds.clone();
     singular[1].d = 0.;
     singular[1].b = 0.;
-    assert!(world_target_offsets(attachment, &moves, &pose, &singular).is_err());
+    assert!(world_target_offsets(attachment, &moves, &pose, &singular, None).is_err());
     assert_eq!(pose.offsets, offsets);
 }
 #[test]
@@ -497,6 +497,154 @@ fn frozen_world_vertices_require_epoch_preserve_dormant_offsets_and_author_one_t
 }
 
 #[test]
+fn frozen_world_deform_subdivides_at_certified_current_and_preserves_clean_words() {
+    let (s, baseline) = fixture();
+    let p = summary(&s);
+    let animation = p.animations[0].id;
+    let id = p.slots[2].attachments[0].id;
+    let other_mesh = p.slots[1].attachments[0].id;
+    let mut left = vec![0.0f32; 32];
+    left[0] = 2.;
+    left[6] = -0.;
+    left[7] = 17.125;
+    // This untouched lane is nonzero at the raw sample and exactly zero at authored f12.
+    left[8] = 1.;
+    let mut right = left.clone();
+    right[0] = 10.;
+    right[8] = -1.;
+    let before = set_deform(
+        &s,
+        vec![
+            json!({"attachment":id,"frame":0,"offsets":left,"curve":"bezier","controls":[8,0.25,16,0.75]}),
+            deform_key(id, 24., right, "linear"),
+        ],
+    );
+    let stable = state(&s);
+    let stale = sample(&s, 12.);
+    let raw_frame = 12. + 3. * 2.0f64.powi(-23);
+    let mut evaluation = request(&s, raw_frame);
+    evaluation.deform_targets = vec![id];
+    let frozen = s.evaluate(before.revision, evaluation).unwrap();
+    let certified_frame = frozen.time * before.animation_fps;
+    assert_ne!(certified_frame, 12.);
+    assert_eq!((certified_frame as f32).to_bits(), 12.0f32.to_bits());
+    assert_ne!(frozen.pose_epoch, stale.pose_epoch);
+    let sampled = &frozen.deform_pose[0];
+    assert_eq!(sampled.attachment, id);
+    assert_ne!(sampled.offsets[8], 0.);
+    let [x, y] = sampled.world_vertices[0];
+    let operation = |attachment, frame| {
+        json!({
+            "type": "setAnimationDeformVertices",
+            "animation": animation,
+            "attachment": attachment,
+            "frame": frame,
+            "vertices": [{"vertex": 0, "x": x + 8., "y": y}]
+        })
+    };
+    let current = operation(id, certified_frame);
+    assert_eq!(
+        s.edit(
+            before.revision,
+            serde_json::from_value(current.clone()).unwrap()
+        )
+        .unwrap_err()
+        .code,
+        "PoseRequired"
+    );
+    assert_eq!(state(&s), stable);
+    for (epoch, invalid_edit) in [
+        (stale.pose_epoch, current.clone()),
+        (frozen.pose_epoch, operation(other_mesh, 12.)),
+        (frozen.pose_epoch, operation(id, 11.)),
+        (
+            frozen.pose_epoch,
+            json!({"type":"setAnimationDeformKeys","animation":animation,"keys":[deform_key(id,0.,left.clone(),"linear")]}),
+        ),
+    ] {
+        assert_eq!(
+            s.edit_in_pose(
+                before.revision,
+                epoch,
+                serde_json::from_value(invalid_edit).unwrap()
+            )
+            .unwrap_err()
+            .code,
+            "StalePose"
+        );
+        assert_eq!(state(&s), stable);
+    }
+
+    let changed = s
+        .edit_in_pose(
+            before.revision,
+            frozen.pose_epoch,
+            serde_json::from_value(current).unwrap(),
+        )
+        .unwrap();
+    let endpoints = &before.animations[0].deform_tracks[0].keys;
+    let keys = &changed.animations[0].deform_tracks[0].keys;
+    assert_eq!(changed.revision, before.revision + 1);
+    assert_eq!(keys.len(), 3);
+    assert_eq!([keys[0].id, keys[2].id], [endpoints[0].id, endpoints[1].id]);
+    assert_eq!(
+        [keys[0].frame, keys[1].frame, keys[2].frame],
+        [0., 12., 24.]
+    );
+    let bits = |values: &[f32]| {
+        values
+            .iter()
+            .map(|value| value.to_bits())
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(bits(&keys[0].offsets), bits(&endpoints[0].offsets));
+    assert_eq!(bits(&keys[2].offsets), bits(&endpoints[1].offsets));
+    assert_eq!(keys[0].controls, Some([4., 0.25, 8., 0.625]));
+    assert_eq!(keys[1].controls, Some([16., 0.375, 20., 0.75]));
+    assert_eq!(bits(&keys[1].offsets[6..9]), bits(&[-0., 17.125, 0.]));
+    let landed = sample(&s, 12.).deform_pose[0].world_vertices[0];
+    assert!((landed[0] - x - 8.).abs() < 1e-6);
+    assert!((landed[1] - y).abs() < 1e-6);
+
+    let undone = edit(&s, json!({"type":"undo"}));
+    assert_eq!(
+        serde_json::to_value(&undone.animations).unwrap(),
+        stable["animations"]
+    );
+    let redone = edit(&s, json!({"type":"redo"}));
+    assert_eq!(
+        serde_json::to_value(&redone.animations).unwrap(),
+        serde_json::to_value(&changed.animations).unwrap()
+    );
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("vertex-autokey.fbones");
+    s.save_snapshot(s.prepare_save(true).unwrap(), path.clone())
+        .unwrap();
+    let portable = decode(&path);
+    let stored = &portable.animations[0].deform_tracks[0].keys;
+    assert_eq!(stored.len(), keys.len());
+    for (stored, expected) in stored.iter().zip(keys) {
+        assert_eq!(stored.frame.to_bits(), expected.frame.to_bits());
+        assert_eq!(stored.data_present, expected.data_present);
+        assert_eq!(bits(&stored.offsets), bits(&expected.offsets));
+    }
+    assert_eq!(
+        stored[0].curve,
+        DeformCurve::Bezier {
+            controls: keys[0].controls.unwrap()
+        }
+    );
+    assert_eq!(
+        stored[1].curve,
+        DeformCurve::Bezier {
+            controls: keys[1].controls.unwrap()
+        }
+    );
+    assert_eq!(stored[2].curve, DeformCurve::Linear);
+    assert_eq!(setup_bytes(portable), setup_bytes(baseline));
+}
+
+#[test]
 fn temporary_order_and_dense_deform_overrides_freeze_precise_pose_without_authoring_or_saving() {
     let (s, baseline) = fixture();
     let p = summary(&s);
@@ -581,6 +729,12 @@ fn all_key_ids(p: &ProjectSummary) -> Vec<u64> {
             crate::animation_slots::SlotTrackView::Rgba { keys, .. } => {
                 keys.iter().map(|key| key.id).collect()
             }
+            crate::animation_slots::SlotTrackView::Rgb2 { keys, .. } => {
+                keys.iter().map(|key| key.id).collect()
+            }
+            crate::animation_slots::SlotTrackView::Alpha { keys, .. } => {
+                keys.iter().map(|key| key.id).collect()
+            }
         }))
         .chain(clip.draw_order.iter().map(|key| key.id))
         .chain(
@@ -592,7 +746,7 @@ fn all_key_ids(p: &ProjectSummary) -> Vec<u64> {
 }
 
 #[test]
-fn json_deform_coordinate_bits_preserve_dormant_negative_zero_in_raw_and_combined_batches() {
+fn json_deform_bits_preserve_progress_controls_and_dormant_coordinates_through_history() {
     let (s, baseline) = fixture();
     let p = summary(&s);
     let id = p.slots[2].attachments[0].id;
@@ -611,25 +765,69 @@ fn json_deform_coordinate_bits_preserve_dormant_negative_zero_in_raw_and_combine
         first.animations[0].deform_tracks[0].keys[0].offsets[6].to_bits(),
         0x8000_0000
     );
-    let batch = json!({"type":"setAnimationKeyBatch","animation":p.animations[0].id,"boneKeys":[],"slotKeys":[],"deformKeys":[key(24)]});
+    let progress = [0., 0., 16., f32::from_bits(1)];
+    let controls_bits = [0x8000_0000, 0x8000_0000, 16.0_f32.to_bits(), 1];
+    let mut left = key(0);
+    left["keyId"] = json!(first.animations[0].deform_tracks[0].keys[0].id);
+    left["curve"] = json!("bezier");
+    left["controls"] = json!(progress);
+    left["controlsBits"] = json!(controls_bits);
+    let batch = |left: Value, bone_keys: Value| json!({"type":"setAnimationKeyBatch","animation":p.animations[0].id,"boneKeys":bone_keys,"slotKeys":[],"deformKeys":[left,key(24)]});
+    let before = state(&s);
+    let mut absent = left.clone();
+    absent["curve"] = json!("linear");
+    absent.as_object_mut().unwrap().remove("controls");
+    let mut mismatch = left.clone();
+    mismatch["controlsBits"][2] = json!(17.0_f32.to_bits());
+    for bad in [absent, mismatch] {
+        let operation = batch(
+            bad,
+            json!([{"bone":p.bones[0].id,"channel":"translate","frame":0,"values":[3,4],"curve":"linear"}]),
+        );
+        assert_eq!(
+            s.edit(
+                first.revision,
+                serde_json::from_str(&operation.to_string()).unwrap()
+            )
+            .unwrap_err()
+            .code,
+            "InvalidAnimation"
+        );
+        assert_eq!(state(&s), before);
+    }
     // Deserialize actual JSON text, as the desktop IPC does, rather than passing a Value alone.
     let changed = s
         .edit(
             first.revision,
-            serde_json::from_str(&batch.to_string()).unwrap(),
+            serde_json::from_str(&batch(left, json!([])).to_string()).unwrap(),
         )
         .unwrap();
     assert_eq!(changed.revision, first.revision + 1);
-    assert_eq!(changed.animations[0].deform_tracks[0].keys.len(), 2);
-    edit(&s, json!({"type":"undo"}));
-    assert_eq!(summary(&s).animations[0].deform_tracks[0].keys.len(), 1);
-    edit(&s, json!({"type":"redo"}));
+    let keys = &changed.animations[0].deform_tracks[0].keys;
+    assert_eq!(keys.len(), 2);
+    assert_eq!(keys[0].id, first.animations[0].deform_tracks[0].keys[0].id);
+    assert_eq!(keys[0].controls.unwrap().map(f32::to_bits), controls_bits);
+    assert_eq!(keys[0].offsets[6].to_bits(), 0x8000_0000);
+    let undone = edit(&s, json!({"type":"undo"}));
+    assert_eq!(
+        serde_json::to_value(&undone.animations).unwrap(),
+        before["animations"]
+    );
+    let redone = edit(&s, json!({"type":"redo"}));
+    assert_eq!(
+        serde_json::to_value(&redone.animations).unwrap(),
+        serde_json::to_value(&changed.animations).unwrap()
+    );
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("bundle/coordinate-bits.fbones");
     s.save_snapshot(s.prepare_save(true).unwrap(), path.clone())
         .unwrap();
     let raw = decode(&path);
     assert_eq!(setup_bytes(raw.clone()), setup_bytes(baseline));
+    let DeformCurve::Bezier { controls } = raw.animations[0].deform_tracks[0].keys[0].curve else {
+        panic!("encoded progress curve")
+    };
+    assert_eq!(controls.map(f32::to_bits), controls_bits);
     for key in &raw.animations[0].deform_tracks[0].keys {
         assert_eq!(
             key.offsets.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
@@ -638,6 +836,14 @@ fn json_deform_coordinate_bits_preserve_dormant_negative_zero_in_raw_and_combine
     }
     s.close(false).unwrap();
     let reopened = s.replace(open_document(path).unwrap(), false).unwrap();
+    assert!(!reopened.inspection_only && !reopened.dirty);
+    assert_eq!(
+        reopened.animations[0].deform_tracks[0].keys[0]
+            .controls
+            .unwrap()
+            .map(f32::to_bits),
+        controls_bits
+    );
     for key in &reopened.animations[0].deform_tracks[0].keys {
         assert_eq!(key.offsets[6].to_bits(), 0x8000_0000);
     }

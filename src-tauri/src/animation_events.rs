@@ -370,6 +370,9 @@ pub(crate) fn move_keys(
         .enumerate()
     {
         let ids = &mut frame.animation_event_key_ids[a][t];
+        if !ids.iter().any(|id| selected.contains(id)) {
+            continue;
+        }
         let mut values = track
             .keys
             .iter()
@@ -378,7 +381,7 @@ pub(crate) fn move_keys(
             .collect::<Vec<_>>();
         for (k, id) in &mut values {
             if selected.contains(id) {
-                k.frame = animation::checked_frame(k.frame + delta)?;
+                k.frame = animation::moved_frame(k.frame, delta)?;
             }
         }
         values.sort_by(|a, b| a.0.frame.total_cmp(&b.0.frame));

@@ -29,10 +29,12 @@ await build({entryPoints:['src/components/molecules/ProjectInspectionNotice.vue'
 const InspectionNotice=(await import(new URL('../'+noticeOutput,import.meta.url))).default;unlinkSync(noticeOutput);
 const ast=ts.createSourceFile('App.ts',descriptor.scriptSetup.content,ts.ScriptTarget.Latest,true),command=ast.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='command');
 const commandJs=ts.transpileModule(command.getText(ast),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
-const appCommand=w=>new Function('w','constraintCreator','clippingCreator','eventCreator','document','updater','mcp',commandJs+';return command;')(w,{value:null},{value:false},{value:false},document,{installing:{value:false},checkNow:async()=>{}},{state:{value:{enabled:false}},visible:{value:false}});
+const appCommand=(w,animationTools,creator={value:false},gifDialog={value:false})=>new Function('w','creatorModalOpen','linkedMeshCreator','closeCreators','findReplaceOpen','document','updater','mcp','animationTools','gifDialog','canExportGif',commandJs+';return command;')(
+  w,creator,creator,()=>{creator.value=false;},{value:false},document,{installing:{value:false},checkNow:async()=>{}},
+  {state:{value:{enabled:false}},visible:{value:false}},animationTools,gifDialog,{value:true});
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 const model=name=>({...draftSummary(name),dirty:false,sceneEditing:true,documentId:name==='Old'?1:2,logicalDocumentId:name==='Old'?11:12,revision:1,animations:[],constraints:[]});
-function fixture(){const pinia=createPinia(),w=useWorkspace(pinia),calls=[];w.project=model('Old');w.pauseSimulation();let release,reject;const gate=new Promise((resolve,fail)=>{release=resolve;reject=fail;});invoke=async(name,args)=>{calls.push({name,args});if(name==='open_project')return gate;if(name==='close_project')return null;throw Error('Unexpected native call '+name);};return{w,calls,release,reject,close:()=>disposePinia(pinia)};}
+function fixture(){const pinia=createPinia(),w=useWorkspace(pinia),calls=[];w.project=model('Old');w.pauseSimulation();let release,reject;const gate=new Promise((resolve,fail)=>{release=resolve;reject=fail;});invoke=async(name,args)=>{calls.push({name,args});if(name==='open_project'||name==='repair_linked_mesh_copy')return gate;if(name==='close_project')return null;throw Error('Unexpected native call '+name);};return{w,calls,release,reject,close:()=>disposePinia(pinia)};}
 function mount(w){const target=node('root'),app=renderer.createApp({render:()=>h(Status,{w})});app.use(i18n);app.mount(target);return{target,find:()=>flatten(target).find(n=>n.props['data-testid']==='project-opening'),close:()=>app.unmount()};}
 
 test('opening status publishes before transport and remains through delayed reply/publication, clearing old notice only after success',async()=>{
@@ -52,7 +54,56 @@ test('a non-Open operation never renders project-opening feedback and read-only 
 });
 
 test('actual App Open command reaches the same delayed workspace route used by File and native editor commands',async()=>{
- const e=fixture();try{appCommand(e.w)('open');await settle();assert.equal(e.w.openingProject,true);assert.equal(e.calls.length,1);assert.equal(e.calls[0].name,'open_project');e.release(model('New'));await settle();assert.equal(e.w.project.name,'New');assert.equal(e.w.openingProject,false);}finally{e.close();}
+ const e=fixture();
+ try{
+  const canceled=[];
+  appCommand(e.w,{value:{
+    cancelNumericDrag(){assert.equal(e.w.openingProject,false);canceled.push('drag');},
+    cancelWheel(){assert.equal(e.w.openingProject,false);canceled.push('wheel');},
+  }})('open');
+  assert.deepEqual(canceled,['drag','wheel']);
+  await settle();assert.equal(e.w.openingProject,true);assert.equal(e.calls.length,1);assert.equal(e.calls[0].name,'open_project');
+  e.release(model('New'));await settle();assert.equal(e.w.project.name,'New');assert.equal(e.w.openingProject,false);
+ }finally{e.close();}
+});
+
+test('actual App GIF export command leaves the Linked Mesh creator open',()=>{
+ const e=fixture(),creator={value:true},gifDialog={value:false};
+ try{
+  appCommand(e.w,{value:undefined},creator,gifDialog)('export-gif');
+  assert.equal(creator.value,true);
+  assert.equal(gifDialog.value,false);
+  assert.deepEqual(e.calls,[]);
+ }finally{e.close();}
+});
+
+test('repair routes the checked revision through the usual project opening lifecycle',async()=>{
+ for(const outcome of ['cancel','failure','open']){
+  const e=fixture();
+  const inspected={...model('Own chain'),revision:9,sceneEditing:false,bones:[],inspectionOnly:true,canSave:false,inspectionReason:{kind:'linkedMeshChain'}};
+  try{
+   e.w.project=inspected;
+   await e.w.request('repair-linked-mesh-copy');
+   assert.deepEqual(e.calls,[],'a diagnosis alone never starts a repair');
+   const source={...inspected,canRepairLinkedMeshCopy:true};
+   e.w.project=source;
+   const cmd=appCommand(e.w,{value:undefined});
+   cmd('repair-linked-mesh-copy');
+   await settle();
+   assert.equal(e.w.openingProject,true);assert.equal(e.w.busy,true);
+   assert.deepEqual(e.calls,[{name:'repair_linked_mesh_copy',args:{expectedRevision:9}}]);
+   await e.w.request('repair-linked-mesh-copy');assert.equal(e.calls.length,1);
+   const repaired={...model('Own repaired'),documentId:3,logicalDocumentId:3,revision:10};
+   if(outcome==='failure')e.reject(Error('Choose a new file in this folder.'));
+   else e.release(outcome==='open'?repaired:null);
+   await settle();
+   assert.equal(e.w.openingProject,false);assert.equal(e.w.busy,false);
+   assert.deepEqual(e.w.project,outcome==='open'?repaired:source);
+   assert.equal(e.w.canEdit,outcome==='open');
+   assert.equal(e.w.noticeError,outcome==='failure');
+   if(outcome==='open')assert.equal(e.w.notice,'Repaired copy opened.');
+  }finally{e.close();}
+ }
 });
 
 test('actual App status has localized live text, decorative reduced-motion spinner and no false percentage or abort action',async()=>{
@@ -61,4 +112,49 @@ test('actual App status has localized live text, decorative reduced-motion spinn
 
 test('actual inspection notice explains the blank canvas, emits existing Open/copy intents and respects busy/copy capability',async()=>{
  const props=reactive({name:'Own unsupported source',busy:false,canCopy:true}),intents=[],target=node('root'),app=renderer.createApp({render:()=>h(InspectionNotice,{...props,onOpen:()=>intents.push('open'),onCopy:()=>intents.push('copy')})});app.use(i18n);app.mount(target);await nextTick();const nodes=()=>flatten(target),text=n=>flatten(n).map(n=>n.text).join(' '),button=label=>nodes().find(n=>n.tagName==='BUTTON'&&text(n).includes(label));try{const status=nodes().find(n=>n.props['data-testid']==='project-inspection-notice');assert.equal(status.props.role,'status');assert.match(text(status),/cannot display or edit yet/);assert.match(text(status),/original file is preserved/);assert.match(text(status),/Own unsupported source/);button('Open project').props.onClick();button('Save a copy').props.onClick();assert.deepEqual(intents,['open','copy']);props.busy=true;await nextTick();assert.equal(button('Open project').props.disabled,true);assert.equal(button('Save a copy').props.disabled,true);props.busy=false;props.canCopy=false;await nextTick();assert.equal(button('Save a copy'),undefined);assert.doesNotMatch(text(target),/save an unchanged copy/);assert.equal(button('Open project').props.disabled,false);}finally{app.unmount();}
+});
+
+test('inspection notice localizes typed reasons and shows a decoded byte only for a known mismatch',async()=>{
+ const props=reactive({name:'Own inspected project',busy:false,canCopy:true,reason:undefined});
+ const target=node('root'),app=renderer.createApp({render:()=>h(InspectionNotice,{...props})});
+ const diagnostic=()=>flatten(target).find(n=>n.props['data-testid']==='project-inspection-reason');
+ app.use(i18n);app.mount(target);
+ try{
+  for(const [kind,message] of [
+   ['unsupportedStructure',/file structures/],['linkedMeshChain',/another linked mesh/],
+   ['roundtripMismatch',/byte for byte/],['clippingScopes',/clipping ranges/],
+   ['attachmentProfile',/editing profile/],['imageResources',/image references/],
+   ['unsafeImagePath',/unsafe or unsupported/],['ambiguousImagePath',/letter case/],
+  ]){
+   props.reason={kind};await nextTick();
+   assert.match(diagnostic().text,message);assert.match(diagnostic().text,/canvas is unavailable/);
+   assert.doesNotMatch(diagnostic().text,/decoded byte/);
+  }
+  props.reason={kind:'roundtripMismatch',offset:0};await nextTick();
+  assert.match(diagnostic().text,/decoded byte 0/);
+  i18n.global.locale.value='ro';await nextTick();
+  assert.match(diagnostic().text,/Prima diferență apare în datele decodate, la octetul 0/);
+  props.reason={kind:'futureCode',offset:87};await nextTick();
+  assert.equal(diagnostic(),undefined);
+  assert.match(flatten(target).map(n=>n.text).join(' '),/încă nu le poate afișa sau edita/);
+ }finally{i18n.global.locale.value='en';app.unmount();}
+});
+
+test('inspection notice offers the distinct repair action only with a proven capability',async()=>{
+ const props=reactive({name:'Own chain',busy:false,canCopy:true,reason:{kind:'linkedMeshChain'},canRepairLinkedMeshCopy:false});
+ const actions=[],target=node('root'),app=renderer.createApp({render:()=>h(InspectionNotice,{...props,onRepair:()=>actions.push('repair'),onCopy:()=>actions.push('copy')})});
+ const repair=()=>flatten(target).find(n=>n.props['data-testid']==='project-inspection-repair');
+ app.use(i18n);app.mount(target);
+ try{
+  assert.equal(repair(),undefined);
+  props.canRepairLinkedMeshCopy=true;await nextTick();
+  assert.match(flatten(repair()).map(n=>n.text).join(' '),/Open a repaired copy/);
+  assert.match(flatten(target).map(n=>n.text).join(' '),/new .fbones file in this folder/);
+  repair().props.onClick();
+  const copy=flatten(target).find(n=>n.tagName==='BUTTON'&&flatten(n).map(n=>n.text).join(' ').includes('Save a copy'));
+  copy.props.onClick();assert.deepEqual(actions,['repair','copy']);
+  props.busy=true;await nextTick();assert.equal(repair().props.disabled,true);
+  i18n.global.locale.value='ro';await nextTick();
+  assert.match(flatten(repair()).map(n=>n.text).join(' '),/Deschide o copie reparată/);
+ }finally{i18n.global.locale.value='en';app.unmount();}
 });
